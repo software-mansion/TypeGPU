@@ -386,8 +386,178 @@ describe('shaderBit', () => {
         },
       }),
     ).toThrowErrorMatchingInlineSnapshot(
-      `[Error: [@typegpu/pixi] The shader bit 'buffered' reads a TypeGPU buffer, texture or bind group layout, which PixiJS can't bind. Pass values through \`uniforms\` instead.]`,
+      `[Error: [@typegpu/pixi] The shader bit 'buffered' reads a TypeGPU buffer, texture or bind group layout, and PixiJS 3D binds everything in its shaders by itself. Pass values through \`uniforms\`, and give a material's shader bits their textures through \`textureSlot\`.]`,
     );
+  });
+
+  it("samples a material's textures through texture slots", () => {
+    const heightMap = p3d.textureSlot('heightMap');
+    const detail = p3d.textureSlot('detail');
+
+    const height = (uv: d.v2f) => {
+      'use gpu';
+      return heightMap.sampleDirect(uv).r;
+    };
+
+    const bit = p3d.shaderBit({
+      name: 'terrain',
+      vertex: {
+        beforeTransform: () => {
+          'use gpu';
+          const lift = p3d.vertex.normal.$ * height(p3d.vertex.uv.$);
+          p3d.vertex.position.$ += d.vec4f(lift, 0);
+        },
+      },
+      fragment: {
+        material: () => {
+          'use gpu';
+          const uv = p3d.fragment.uv.$;
+          p3d.fragment.albedo.$ = detail.sample(uv * 8).rgb * height(uv);
+        },
+      },
+    });
+
+    // In the order the slots are first sampled
+    expect(bit.textures).toStrictEqual(['heightMap', 'detail']);
+    expect(bit.gpu?.header).toMatchInlineSnapshot(`
+      "fn terrain_sampleDirect_heightMap(_pixiUv: vec2f) -> vec4f {
+        return sampleHeightMapDirect(_pixiUv);
+      }
+
+      fn terrain_height(uv: vec2f) -> f32 {
+        return terrain_sampleDirect_heightMap(uv).r;
+      }
+
+      var<private> terrain_vertex_uv: vec2f;
+
+      var<private> terrain_vertex_normal: vec3f;
+
+      var<private> terrain_vertex_position: vec4f;
+
+      fn terrain_beforeTransform() {
+        let lift = (terrain_vertex_normal * terrain_height(terrain_vertex_uv));
+        terrain_vertex_position += vec4f(lift, 0f);
+      }
+
+      var<private> terrain_fragment_uv: vec2f;
+
+      fn terrain_sample_detail(_pixiUv: vec2f) -> vec4f {
+        return sampleDetail(_pixiUv);
+      }
+
+      var<private> terrain_fragment_albedo: vec3f;
+
+      fn terrain_material() {
+        let uv = (&terrain_fragment_uv);
+        terrain_fragment_albedo = (terrain_sample_detail(((*uv) * 8f)).rgb * terrain_height((*uv)));
+      }"
+    `);
+    // GLSL needs the functions PixiJS 3D defines further down declared up front
+    expect(bit.gl?.vertex?.header).toMatchInlineSnapshot(`
+      "vec4 sampleHeightMapDirect(vec2 uv);
+
+      vec4 terrain_sampleDirect_heightMap(vec2 _pixiUv) {
+        return sampleHeightMapDirect(_pixiUv);
+      }
+
+      float terrain_height(vec2 uv) {
+        return terrain_sampleDirect_heightMap(uv).r;
+      }
+
+      vec2 terrain_vertex_uv;
+
+      vec3 terrain_vertex_normal;
+
+      vec4 terrain_vertex_position;
+
+      void terrain_beforeTransform() {
+        vec3 lift = (terrain_vertex_normal * terrain_height(terrain_vertex_uv));
+        terrain_vertex_position += vec4(lift, 0.0);
+      }"
+    `);
+    expect(bit.gl?.fragment?.header).toMatchInlineSnapshot(`
+      "vec4 sampleDetail(vec2 uv);
+      vec4 sampleHeightMapDirect(vec2 uv);
+
+      vec2 terrain_fragment_uv;
+
+      vec4 terrain_sample_detail(vec2 _pixiUv) {
+        return sampleDetail(_pixiUv);
+      }
+
+      vec4 terrain_sampleDirect_heightMap(vec2 _pixiUv) {
+        return sampleHeightMapDirect(_pixiUv);
+      }
+
+      float terrain_height(vec2 uv) {
+        return terrain_sampleDirect_heightMap(uv).r;
+      }
+
+      vec3 terrain_fragment_albedo;
+
+      void terrain_material() {
+        terrain_fragment_albedo = (terrain_sample_detail((terrain_fragment_uv * 8.0)).rgb * terrain_height(terrain_fragment_uv));
+      }"
+    `);
+  });
+
+  it('leaves `textures` out of a bit that samples none', () => {
+    const bit = p3d.shaderBit({
+      name: 'plain',
+      fragment: {
+        material: () => {
+          'use gpu';
+          p3d.fragment.alpha.$ = 1;
+        },
+      },
+    });
+    expect('textures' in bit).toBe(false);
+  });
+
+  it('rejects a mip-picking sample in a vertex slot', () => {
+    const heightMap = p3d.textureSlot('heightMap');
+    expect(() =>
+      p3d.shaderBit({
+        name: 'terrain',
+        vertex: {
+          beforeTransform: () => {
+            'use gpu';
+            p3d.vertex.position.$ += d.vec4f(0, heightMap.sample(p3d.vertex.uv.$).r, 0, 0);
+          },
+        },
+      }),
+    ).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:beforeTransform
+      - fn*:beforeTransform()
+      - fn:sample_heightMap: [@typegpu/pixi] \`heightMap.sample()\` picks a mip level from how the pixels around it are sampled, which only the fragment stage can tell, but the shader bit 'terrain' calls it in a vertex slot. Use \`heightMap.sampleDirect()\` there.]
+    `);
+  });
+
+  it('rejects names PixiJS 3D could not build function names from', () => {
+    expect(() => p3d.textureSlot('height-map')).toThrowErrorMatchingInlineSnapshot(
+      `[Error: [@typegpu/pixi] 'height-map' can't name a texture slot. PixiJS 3D takes camelCase names, like 'heightMap'.]`,
+    );
+    expect(() => p3d.textureSlot('HeightMap')).toThrow();
+  });
+
+  it('only samples texture slots in shader bits', () => {
+    const heightMap = p3d.textureSlot('heightMap');
+    expect(() =>
+      p3d.effectFragment({
+        effect: (uv) => {
+          'use gpu';
+          return heightMap.sample(uv);
+        },
+      }),
+    ).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:entry
+      - fn*:effect(vec2f)
+      - fn:sample_heightMap: [@typegpu/pixi] \`heightMap.sample()\` reads a texture slot of a material, so it can't be called in a post effect.]
+    `);
   });
 
   it('keeps shader values out of reach of JavaScript', () => {

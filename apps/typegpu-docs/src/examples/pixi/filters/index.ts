@@ -1,7 +1,7 @@
 import { perlin3d } from '@typegpu/noise';
 import * as tp from '@typegpu/pixi';
-import { Application, Container, Graphics, Text } from 'pixi.js';
-import { d, std } from 'typegpu';
+import { Application, Container, type Filter, Graphics, Text } from 'pixi.js';
+import { d, std, type TgpuRoot } from 'typegpu';
 import { defineControls } from '../../common/defineControls.ts';
 
 // #region Filters
@@ -64,13 +64,69 @@ const aberration = {
   },
 };
 
+// A ring that spreads from where the pointer was pressed. A filter's own uniforms can't
+// hold an array of these, but a TypeGPU buffer can.
+const Ripple = d.struct({ center: d.vec2f, start: d.f32 });
+const MAX_RIPPLES = 8;
+
+/** A filter that reads TypeGPU buffers, which only PixiJS's WebGPU renderer can bind */
+function createRipples(root: TgpuRoot) {
+  const now = root.createUniform(d.f32);
+  const ripples = root.createReadonly(
+    d.arrayOf(Ripple, MAX_RIPPLES),
+    // Ripples that ended long ago
+    Array.from({ length: MAX_RIPPLES }, () => ({ center: d.vec2f(), start: -100 })),
+  );
+
+  const options = {
+    name: 'ripples',
+    padding: 24,
+    resolution: 'inherit' as const,
+    fragment: ({ uv }: { uv: d.v2f }) => {
+      'use gpu';
+      const gfu = tp.filterGlobals.$.gfu;
+      // Where the pixel is on the screen, in the units of the pointer's position
+      const position = uv * gfu.uInputSize.xy + gfu.uOutputFrame.xy;
+
+      let offset = d.vec2f();
+      for (const ripple of ripples.$) {
+        const age = now.$ - ripple.start;
+        const fromCenter = position - ripple.center;
+        const distance = std.length(fromCenter);
+        // A wave packet that travels outwards and fades
+        const packet = std.exp(-std.pow((distance - age * 320) / 40, 2));
+        const wave = std.sin((distance - age * 320) * 0.15) * packet * std.exp(-age * 1.5);
+        offset += (fromCenter / std.max(distance, 1)) * wave * 18;
+      }
+      return sampleInside(uv + offset * gfu.uInputSize.zw);
+    },
+  };
+
+  let next = 0;
+  return {
+    options,
+    setTime: (seconds: number) => now.write(seconds),
+    add(x: number, y: number, seconds: number) {
+      ripples.patch({ [next]: { center: d.vec2f(x, y), start: seconds } });
+      next = (next + 1) % MAX_RIPPLES;
+    },
+  };
+}
+
 // #endregion
 
 // #region Scene
 
 type Backend = 'WebGPU' | 'WebGL';
 
-const settings = { strength: 14, speed: 0.4, amount: 3, wobble: true, aberration: true };
+const settings = {
+  strength: 14,
+  speed: 0.4,
+  amount: 3,
+  ripples: true,
+  wobble: true,
+  aberration: true,
+};
 let time = 0;
 
 async function createScene(backend: Backend) {
@@ -96,8 +152,24 @@ async function createScene(backend: Backend) {
     aberration: tp.createFilter(app.renderer, aberration),
   };
 
+  // TypeGPU's buffers live on PixiJS's GPU device, which only the WebGPU renderer has
+  const ripples = tp.isWebGPURenderer(app.renderer)
+    ? createRipples(tp.getRoot(app.renderer))
+    : undefined;
+  const rippleFilter: Filter | undefined =
+    ripples && tp.createFilter(app.renderer, ripples.options);
+
+  const startTime = performance.now();
+  const seconds = () => (performance.now() - startTime) / 1000;
+  const onPointerDown = (event: PointerEvent) => {
+    ripples?.add(event.offsetX, event.offsetY, seconds());
+  };
+  canvas.addEventListener('pointerdown', onPointerDown);
+  // One to start with, in the middle
+  ripples?.add(canvas.clientWidth / 2, canvas.clientHeight / 2, 0);
+
   const scene = new Container();
-  scene.filters = [filters.wobble, filters.aberration];
+  scene.filters = [...(rippleFilter ? [rippleFilter] : []), filters.wobble, filters.aberration];
   scene.filterArea = app.screen;
   app.stage.addChild(scene);
 
@@ -124,6 +196,8 @@ async function createScene(backend: Backend) {
 
     time += (ticker.deltaMS / 1000) * settings.speed;
     wobbleUniforms.write(filters.wobble, { time });
+    // The filter reads the buffer when PixiJS draws, so this write shows in the same frame
+    ripples?.setTime(seconds());
   });
 
   const resizeObserver = new ResizeObserver(() => {
@@ -134,8 +208,11 @@ async function createScene(backend: Backend) {
   return {
     backend,
     filters,
+    rippleFilter,
     dispose() {
       resizeObserver.disconnect();
+      canvas.removeEventListener('pointerdown', onPointerDown);
+      rippleFilter?.destroy();
       filters.wobble.destroy();
       filters.aberration.destroy();
       app.destroy(false, { children: true });
@@ -146,6 +223,9 @@ async function createScene(backend: Backend) {
 function applySettings() {
   wobbleUniforms.write(scene.filters.wobble, { strength: settings.strength });
   aberrationUniforms.write(scene.filters.aberration, { amount: settings.amount });
+  if (scene.rippleFilter) {
+    scene.rippleFilter.enabled = settings.ripples;
+  }
   scene.filters.wobble.enabled = settings.wobble;
   scene.filters.aberration.enabled = settings.aberration;
 }
@@ -180,6 +260,10 @@ function switchBackend(backend: Backend) {
 
 export const controls = defineControls({
   renderer: { initial: scene.backend, options: backends, onSelectChange: switchBackend },
+  'ripples (WebGPU)': {
+    initial: settings.ripples,
+    onToggleChange: (value) => update('ripples', value),
+  },
   wobble: { initial: settings.wobble, onToggleChange: (value) => update('wobble', value) },
   'wobble strength': {
     initial: settings.strength,

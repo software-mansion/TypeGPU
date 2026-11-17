@@ -1,3 +1,4 @@
+import { writeFileSync } from 'node:fs';
 import { FlatMaterial, Material3D, PhongMaterial } from '@pixi/3d';
 import { expect } from 'vitest';
 import { d, std, tgpu } from 'typegpu';
@@ -137,6 +138,47 @@ gpuIt('two bits that share helpers compile in one shader', async ({ gpu }) => {
   expect(wgsl).toContain('fn grainA_hash(');
   expect(wgsl).toContain('fn grainB_hash(');
   expect(await compileErrors(gpu.device, wgsl)).toStrictEqual([]);
+});
+
+const heightMap = p3d.textureSlot('heightMap');
+const detail = p3d.textureSlot('detail');
+
+const height = (uv: d.v2f) => {
+  'use gpu';
+  return heightMap.sampleDirect(uv).r;
+};
+
+/** Samples textures of the material in both stages, also through a function they share */
+const terrainBit = p3d.shaderBit({
+  name: 'terrain',
+  vertex: {
+    beforeTransform: () => {
+      'use gpu';
+      const lift = p3d.vertex.normal.$ * height(p3d.vertex.uv.$);
+      p3d.vertex.position.$ += d.vec4f(lift, 0);
+    },
+  },
+  fragment: {
+    material: () => {
+      'use gpu';
+      const uv = p3d.fragment.uv.$;
+      p3d.fragment.albedo.$ = detail.sample(uv * 8).rgb * height(uv);
+    },
+  },
+});
+
+gpuIt("a bit that samples a material's textures compiles", async ({ gpu }) => {
+  const shaders = await compileMaterialShaders(
+    () => new Material3D({ extraBits: [terrainBit, contourBit] }),
+  );
+
+  expect(shaders.wgsl).toContain('fn sampleHeightMapDirect(');
+  expect(await compileErrors(gpu.device, shaders.wgsl)).toStrictEqual([]);
+
+  // For checking the GLSL in a browser, which this test can't do
+  if (process.env.PIXI_SHADER_DUMP) {
+    writeFileSync(process.env.PIXI_SHADER_DUMP, JSON.stringify({ terrain: shaders }));
+  }
 });
 
 gpuIt('an effect compiles inside the shader of a FullscreenPass', async ({ gpu }) => {

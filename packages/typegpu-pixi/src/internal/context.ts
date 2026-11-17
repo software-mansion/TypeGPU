@@ -15,10 +15,16 @@ export interface ShaderTarget {
   builtin?(builtin: PixiBuiltinLike): unknown;
   /** Returns an expression copied into the shader as-is */
   raw?(expression: string, dataType: d.AnyWgslData): unknown;
+  /** Returns the result of sampling a texture of a material, at the `_pixiUv` in scope */
+  textureSlot?(slot: TextureSlotLike, helper: 'sample' | 'sampleDirect'): unknown;
 }
 
 export interface PixiBuiltinLike {
   readonly label: string;
+}
+
+export interface TextureSlotLike {
+  readonly name: string;
 }
 
 let currentTarget: ShaderTarget | undefined;
