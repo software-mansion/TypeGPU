@@ -7,6 +7,7 @@ import {
   type WgslTexture,
 } from '../data/texture.ts';
 import { dualImpl, MissingCpuImplError } from '../core/function/dualImpl.ts';
+import { WgslTypeError } from '../errors.ts';
 import { f32, i32, u32 } from '../data/numeric.ts';
 import { vec2u, vec3u, vec4f, vec4i, vec4u } from '../data/vector.ts';
 import {
@@ -462,7 +463,15 @@ export const textureStore = dualImpl({
   name: 'textureStore',
   normalImpl: textureStoreCpu,
   codegenImpl: (_ctx, args) => stitch`textureStore(${args})`,
-  signature: (...args) => ({ argTypes: args, returnType: Void }),
+  signature: (...args) => {
+    const texture = args[0] as WgslStorageTexture;
+    if (texture.access === 'read-only') {
+      throw new WgslTypeError(
+        `\`textureStore\` requires a storage texture with 'write-only' or 'read-write' access, got 'read-only'.`,
+      );
+    }
+    return { argTypes: args, returnType: Void };
+  },
   sideEffects: true,
 });
 
