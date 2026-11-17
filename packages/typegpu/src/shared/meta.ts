@@ -80,6 +80,18 @@ export function setName(definition: object, name: string): void {
   }
 }
 
+export function clearName(definition: object): void {
+  if (isForwarded(definition)) {
+    clearName(definition[$getNameForward] as object);
+    return;
+  }
+  nameMap.delete(definition);
+  const soul = soulOf(definition);
+  if (soul) {
+    soul.label = undefined;
+  }
+}
+
 // --- METADATA ---
 const metadataMap = new WeakMap<object, Metadata>();
 
