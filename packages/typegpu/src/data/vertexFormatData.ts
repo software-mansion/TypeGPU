@@ -111,6 +111,7 @@ export const formatToWGSLType = {
   sint32x4: vec4i,
   'unorm10-10-10-2': vec4f,
   'unorm8x4-bgra': vec4f,
+  'snorm10-10-10-2': vec4f,
 } as const;
 
 export const packedFormats = new Set(Object.keys(formatToWGSLType));
@@ -238,6 +239,9 @@ export const unorm10_10_10_2 = new TgpuVertexFormatDataImpl('unorm10-10-10-2') a
 export type unorm8x4_bgra = TgpuVertexFormatData<'unorm8x4-bgra'>;
 export const unorm8x4_bgra = new TgpuVertexFormatDataImpl('unorm8x4-bgra') as unorm8x4_bgra;
 
+export type snorm10_10_10_2 = TgpuVertexFormatData<'snorm10-10-10-2'>;
+export const snorm10_10_10_2 = new TgpuVertexFormatDataImpl('snorm10-10-10-2') as snorm10_10_10_2;
+
 export type PackedData =
   | uint8
   | uint8x2
@@ -279,7 +283,8 @@ export type PackedData =
   | sint32x3
   | sint32x4
   | unorm10_10_10_2
-  | unorm8x4_bgra;
+  | unorm8x4_bgra
+  | snorm10_10_10_2;
 
 export function isPackedData(value: unknown): value is PackedData {
   return packedFormats.has((value as PackedData)?.type) && isMarkedInternal(value);
@@ -331,4 +336,5 @@ export type FormatToAcceptedData = {
   sint32x4: I32Data;
   'unorm10-10-10-2': FloatData;
   'unorm8x4-bgra': FloatData;
+  'snorm10-10-10-2': FloatData;
 };

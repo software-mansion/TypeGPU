@@ -178,6 +178,32 @@ describe('TgpuRoot', () => {
         ],
       });
     });
+
+    it('should return the correct GPUVertexBufferLayout for snorm10-10-10-2', ({ root }) => {
+      const VertexData = d.unstruct({
+        normal: d.location(0, d.snorm10_10_10_2),
+        uv: d.location(1, d.unorm16x2),
+      });
+
+      const vertexLayout = tgpu.vertexLayout(d.disarrayOf(VertexData));
+
+      expect(root.unwrap(vertexLayout)).toStrictEqual({
+        arrayStride: 8,
+        stepMode: 'vertex',
+        attributes: [
+          {
+            format: 'snorm10-10-10-2',
+            offset: 0,
+            shaderLocation: 0,
+          },
+          {
+            format: 'unorm16x2',
+            offset: 4,
+            shaderLocation: 1,
+          },
+        ],
+      });
+    });
   });
 
   describe('.$usage', () => {

@@ -40,6 +40,7 @@ export const vertexFormats = [
   'sint32x4',
   'unorm10-10-10-2',
   'unorm8x4-bgra',
+  'snorm10-10-10-2',
 ] as const;
 
 export type VertexFormat = (typeof vertexFormats)[number];
@@ -132,7 +133,8 @@ type F32CompatibleFormats =
   | TgpuVertexAttrib<'float32x3'>
   | TgpuVertexAttrib<'float32x4'>
   | TgpuVertexAttrib<'unorm10-10-10-2'>
-  | TgpuVertexAttrib<'unorm8x4-bgra'>;
+  | TgpuVertexAttrib<'unorm8x4-bgra'>
+  | TgpuVertexAttrib<'snorm10-10-10-2'>;
 
 /**
  * All vertex attribute formats that can be interpreted as

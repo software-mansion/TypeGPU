@@ -39,7 +39,7 @@ export function connectAttributesToShader(
           stepMode: attributes._layout.stepMode,
           attributes: [
             {
-              format: attributes.format,
+              format: attributes.format as GPUVertexFormat,
               offset: attributes.offset,
               shaderLocation: getCustomLocation(shaderInputLayout) ?? 0,
             },
@@ -84,7 +84,7 @@ export function connectAttributesToShader(
     nextShaderLocation = getCustomLocation(member) ?? nextShaderLocation;
 
     attribList.push({
-      format: matchingAttribute.format,
+      format: matchingAttribute.format as GPUVertexFormat,
       offset: matchingAttribute.offset,
       shaderLocation: nextShaderLocation++,
     });

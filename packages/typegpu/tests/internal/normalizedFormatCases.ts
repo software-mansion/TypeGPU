@@ -26,6 +26,32 @@ const unorm1010102Fixtures = [
 ] satisfies Rgb10a2[];
 
 /**
+ * Packs `[r, g, b, a]` the way the WebGPU CTS does for `snorm10-10-10-2`
+ * (`makeRgb10a2Signed` in `api/operation/vertex_state/correctness.spec.ts`).
+ */
+function makeRgb10a2Signed([r, g, b, a]: Rgb10a2): number {
+  return ((r & 0x3ff) | ((g & 0x3ff) << 10) | ((b & 0x3ff) << 20) | ((a & 0x3) << 30)) >>> 0;
+}
+
+function normalizeRgb10a2Signed([r, g, b, a]: Rgb10a2): Rgb10a2 {
+  return [
+    Math.fround(Math.max(r / 511, -1)),
+    Math.fround(Math.max(g / 511, -1)),
+    Math.fround(Math.max(b / 511, -1)),
+    Math.max(a, -1),
+  ];
+}
+
+const snorm1010102Fixtures = [
+  [0, 0, 0, 0],
+  [511, 511, 511, 1],
+  [-512, -512, -512, -2],
+  [243, -123, 342, -1],
+  [511, 0, 0, 0],
+  [-1, 0, 0, 0],
+] satisfies Rgb10a2[];
+
+/**
  * Shared by the compiled-writer and the no-eval (fallback writer) suites, so both code paths
  * are held to the same byte-level expectations.
  */
@@ -111,6 +137,57 @@ export function normalizedFormatCases() {
         expect(readFromArrayBuffer(buffer, d.unorm10_10_10_2).w, `a = ${v}`).toBe(
           Math.fround(v / 3),
         );
+      }
+    });
+  });
+
+  describe('snorm10_10_10_2', () => {
+    it('reads the CTS fixtures', () => {
+      const buffer = new ArrayBuffer(4);
+      const view = new DataView(buffer);
+
+      for (const rgba of snorm1010102Fixtures) {
+        view.setUint32(0, makeRgb10a2Signed(rgba), true);
+        const { x, y, z, w } = readFromArrayBuffer(buffer, d.snorm10_10_10_2);
+        expect([x, y, z, w], `[${rgba}]`).toStrictEqual(normalizeRgb10a2Signed(rgba));
+      }
+    });
+
+    it('writes the CTS fixtures', () => {
+      const buffer = new ArrayBuffer(4);
+
+      // -512 and -511 both normalize to -1, which is written back as -511
+      for (const rgba of snorm1010102Fixtures.filter((rgba) => !rgba.includes(-512))) {
+        writeToArrayBuffer(buffer, d.snorm10_10_10_2, d.vec4f(...normalizeRgb10a2Signed(rgba)));
+        expect(new DataView(buffer).getUint32(0, true), `[${rgba}]`).toBe(makeRgb10a2Signed(rgba));
+      }
+
+      writeToArrayBuffer(buffer, d.snorm10_10_10_2, d.vec4f(-1, -1, -1, -1));
+      expect(new DataView(buffer).getUint32(0, true)).toBe(
+        makeRgb10a2Signed([-511, -511, -511, -1]),
+      );
+    });
+
+    it('round-trips every 10-bit value of every channel', () => {
+      const buffer = new ArrayBuffer(4);
+
+      for (let v = -511; v <= 511; v++) {
+        writeToArrayBuffer(buffer, d.snorm10_10_10_2, d.vec4f(v / 511, 0, 0, 0));
+        expect(readFromArrayBuffer(buffer, d.snorm10_10_10_2).x, `r = ${v}`).toBe(
+          Math.fround(v / 511),
+        );
+        writeToArrayBuffer(buffer, d.snorm10_10_10_2, d.vec4f(0, v / 511, 0, 0));
+        expect(readFromArrayBuffer(buffer, d.snorm10_10_10_2).y, `g = ${v}`).toBe(
+          Math.fround(v / 511),
+        );
+        writeToArrayBuffer(buffer, d.snorm10_10_10_2, d.vec4f(0, 0, v / 511, 0));
+        expect(readFromArrayBuffer(buffer, d.snorm10_10_10_2).z, `b = ${v}`).toBe(
+          Math.fround(v / 511),
+        );
+      }
+      for (const a of [-1, 0, 1]) {
+        writeToArrayBuffer(buffer, d.snorm10_10_10_2, d.vec4f(0, 0, 0, a));
+        expect(readFromArrayBuffer(buffer, d.snorm10_10_10_2).w, `a = ${a}`).toBe(a);
       }
     });
   });
