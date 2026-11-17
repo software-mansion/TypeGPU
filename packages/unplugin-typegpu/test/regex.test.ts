@@ -1,3 +1,5 @@
+import Babel from '@babel/standalone';
+import babelPlugin from '../src/babel.ts';
 import { defaultOptions } from '../src/core/common.ts';
 import { describe, expect, it } from 'vitest';
 
@@ -9,6 +11,8 @@ describe('default regex', () => {
     expect(regex.test('file.mts')).toBe(true);
     expect(regex.test('file.tsx')).toBe(true);
     expect(regex.test('file.mtsx')).toBe(true);
+    expect(regex.test('file.cts')).toBe(true);
+    expect(regex.test('file.ctsx')).toBe(true);
   });
 
   it('should match .js files', () => {
@@ -16,11 +20,15 @@ describe('default regex', () => {
     expect(regex.test('file.mjs')).toBe(true);
     expect(regex.test('file.jsx')).toBe(true);
     expect(regex.test('file.mjsx')).toBe(true);
+    expect(regex.test('file.cjs')).toBe(true);
+    expect(regex.test('file.cjsx')).toBe(true);
   });
 
   it('should match query parameters', () => {
     expect(regex.test('file.ts?query=1')).toBe(true);
     expect(regex.test('file.js?query=1')).toBe(true);
+    expect(regex.test('file.cts?query=1')).toBe(true);
+    expect(regex.test('file.cjs?query=1')).toBe(true);
   });
 
   it('should not match other file types', () => {
@@ -46,6 +54,8 @@ describe('default regex', () => {
     expect(regex.test('file.j')).toBe(false);
     expect(regex.test('file.tsv')).toBe(false);
     expect(regex.test('file.jso')).toBe(false);
+    expect(regex.test('file.xts')).toBe(false);
+    expect(regex.test('file.cmjs')).toBe(false);
   });
 
   it('should not match files without extensions', () => {
@@ -65,5 +75,25 @@ describe('default regex', () => {
     expect(regex.test('file.jsx?=')).toBe(true);
     expect(regex.test('file.mts?&&&')).toBe(true);
     expect(regex.test('file.js?#hash')).toBe(true);
+  });
+});
+
+describe('[BABEL] default include', () => {
+  const transform = (filename: string) =>
+    Babel.transform(`const f = () => { 'use gpu'; return 1; };`, {
+      filename,
+      plugins: [babelPlugin],
+      parserOpts: { plugins: ['typescript'] },
+    }).code;
+
+  it.each(['shader.ts', 'shader.mts', 'shader.cts', 'shader.js', 'shader.mjs', 'shader.cjs'])(
+    'transforms %s',
+    (filename) => {
+      expect(transform(filename)).toContain('__TYPEGPU_META__');
+    },
+  );
+
+  it('skips files that do not match', () => {
+    expect(transform('shader.json')).not.toContain('__TYPEGPU_META__');
   });
 });
