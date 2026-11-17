@@ -325,3 +325,34 @@ gpuIt('a filter draws with resources read in each stage', async ({ gpu }) => {
   expect(errors).toStrictEqual([]);
   expect(pixel).toStrictEqual([51, 102, 153, 204]);
 });
+
+gpuIt('a TypeGPU texture becomes a PixiJS texture without a copy', ({ gpu }) => {
+  const renderer = fakeWebGPURenderer(gpu.device);
+  const root = tp.getRoot(renderer);
+  const texture = root
+    .createTexture({ size: [16, 8], format: 'rgba16float' })
+    .$usage('sampled', 'render');
+
+  const pixiTexture = tp.textureFrom(renderer, texture, { label: 'simulation' });
+
+  expect(pixiTexture.source.resource).toBe(root.unwrap(texture));
+  expect([pixiTexture.width, pixiTexture.height]).toStrictEqual([16, 8]);
+  expect(pixiTexture.source.format).toBe('rgba16float');
+  expect(pixiTexture.source.label).toBe('simulation');
+
+  // PixiJS leaves the texture alone when its own is destroyed
+  pixiTexture.destroy(true);
+  expect(() => texture.write(new Uint16Array(16 * 8 * 4))).not.toThrow();
+});
+
+gpuIt('a TypeGPU texture that cannot be sampled is rejected', ({ gpu }) => {
+  const renderer = fakeWebGPURenderer(gpu.device);
+  const texture = tp
+    .getRoot(renderer)
+    .createTexture({ size: [4, 4], format: 'rgba8unorm' })
+    .$usage('render');
+
+  expect(() => tp.textureFrom(renderer, texture)).toThrowErrorMatchingInlineSnapshot(
+    `[Error: [@typegpu/pixi] PixiJS can only draw with a texture that can be sampled. Add \`.$usage('sampled')\` to the TypeGPU texture.]`,
+  );
+});

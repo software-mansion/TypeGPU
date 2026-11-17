@@ -7,6 +7,8 @@ export type {
   UniformValues,
 } from './uniforms.ts';
 export { getRoot, isWebGPURenderer } from './root.ts';
+export { textureFrom } from './texture.ts';
+export type { TextureFromOptions } from './texture.ts';
 export { createFilter } from './filter.ts';
 export type {
   FilterFragmentIn,

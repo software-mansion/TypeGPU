@@ -863,6 +863,13 @@ describe('createFilter errors', () => {
     );
   });
 
+  it('only wraps TypeGPU textures on the WebGPU renderer', ({ root }) => {
+    const texture = root.createTexture({ size: [4, 4], format: 'rgba8unorm' }).$usage('sampled');
+    expect(() => tp.textureFrom(fakeWebGLRenderer(), texture)).toThrowErrorMatchingInlineSnapshot(
+      `[Error: [@typegpu/pixi] A TypeGPU texture only exists on PixiJS's WebGPU renderer, but PixiJS started with a different one.]`,
+    );
+  });
+
   it('rejects renderers other than WebGPU and WebGL', () => {
     const canvasRenderer = { type: RendererType.CANVAS } as unknown as Renderer;
     expect(() => tp.createFilter(canvasRenderer, wobble)).toThrowErrorMatchingInlineSnapshot(

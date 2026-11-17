@@ -7,11 +7,14 @@ export type {
   UniformValues,
 } from '../uniforms.ts';
 export { getRoot, isWebGPURenderer } from '../root.ts';
+export { textureFrom } from '../texture.ts';
+export type { TextureFromOptions } from '../texture.ts';
 
 export { cameraPosition, fragment, time, vertex } from './builtins.ts';
 export type { ShaderInput, ShaderVariable } from './builtins.ts';
 export { shaderBit } from './shaderBit.ts';
 export type { FragmentSlots, ShaderBitOptions, SlotFunction, VertexSlots } from './shaderBit.ts';
+export { textureSlot, TextureSlot } from './textureSlot.ts';
 export {
   depthTexel,
   effectFragment,

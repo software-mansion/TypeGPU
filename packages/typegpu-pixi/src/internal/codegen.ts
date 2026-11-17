@@ -131,7 +131,7 @@ export function generateModule(options: GenerateModuleOptions): GeneratedModule 
 
   if (result.catchall !== undefined || result.usedBindGroupLayouts.length > 0) {
     throw new Error(
-      `[@typegpu/pixi] ${capitalize(target.label)} reads a TypeGPU buffer, texture or bind group layout, which PixiJS can't bind. Pass values through \`uniforms\` instead.`,
+      `[@typegpu/pixi] ${capitalize(target.label)} reads a TypeGPU buffer, texture or bind group layout, and PixiJS 3D binds everything in its shaders by itself. Pass values through \`uniforms\`, and give a material's shader bits their textures through \`textureSlot\`.`,
     );
   }
 

@@ -31,6 +31,7 @@ DOMAdapter.set({
 export function fakeWebGPURenderer(device: GPUDevice): Renderer {
   return {
     type: RendererType.WEBGPU,
+    uid: 1,
     gpu: { device },
     bindGroup: {
       getBindGroup(): GPUBindGroup {

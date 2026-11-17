@@ -1,14 +1,16 @@
 import type { ShaderBit } from '@pixi/3d';
-import { tgpu, type d, type TgpuVar } from 'typegpu';
+import { tgpu, d, type TgpuVar } from 'typegpu';
 import {
   generateModule,
   type GeneratedModule,
+  rawExpression,
   type ShaderLanguage,
   toIdentifier,
 } from '../internal/codegen.ts';
 import { capitalize, type ShaderTarget, withShaderTarget } from '../internal/context.ts';
 import { type PixiUniforms, toPixiType, type UniformRecord } from '../uniforms.ts';
 import { PixiBuiltin, type ShaderStage } from './builtins.ts';
+import { pixiHelperName, type TextureSlot, type TextureSlotHelper } from './textureSlot.ts';
 
 /**
  * A `'use gpu'` function that fills one slot of a material's shader.
@@ -93,6 +95,8 @@ function uniformBridge(uniforms: PixiUniforms<UniformRecord>, key: string): Brid
 class BitTarget implements ShaderTarget {
   readonly label: string;
   readonly used = new Set<Bridge>();
+  /** The texture slots that were sampled, and how */
+  readonly textures = new Map<TextureSlot, Set<TextureSlotHelper>>();
   readonly #uniforms: PixiUniforms<UniformRecord> | undefined;
   readonly #stage: ShaderStage | undefined;
 
@@ -126,6 +130,21 @@ class BitTarget implements ShaderTarget {
     }
     this.used.add(builtin);
     return builtin.variable.$;
+  }
+
+  textureSlot(slot: TextureSlot, helper: TextureSlotHelper): unknown {
+    if (helper === 'sample' && this.#stage === 'vertex') {
+      throw new Error(
+        `[@typegpu/pixi] \`${slot.name}.sample()\` picks a mip level from how the pixels around it are sampled, which only the fragment stage can tell, but ${this.label} calls it in a vertex slot. Use \`${slot.name}.sampleDirect()\` there.`,
+      );
+    }
+    let helpers = this.textures.get(slot);
+    if (!helpers) {
+      helpers = new Set();
+      this.textures.set(slot, helpers);
+    }
+    helpers.add(helper);
+    return rawExpression(`${pixiHelperName(slot, helper)}(_pixiUv)`, d.vec4f);
   }
 }
 
@@ -194,6 +213,7 @@ export function shaderBit(options: ShaderBitOptions): ShaderBit {
   const prefix = toIdentifier(name);
 
   const slots: Slot[] = [];
+  const textureNames = new Set<string>();
   for (const stage of ['vertex', 'fragment'] as const) {
     for (const [slotName, fn] of Object.entries(options[stage] ?? {})) {
       if (!fn) {
@@ -204,6 +224,9 @@ export function shaderBit(options: ShaderBitOptions): ShaderBit {
       const target = new BitTarget(label, uniforms, stage);
       withShaderTarget(target, () => tgpu.resolve([fn]));
       slots.push({ stage, name: slotName, fn, used: [...target.used] });
+      for (const slot of target.textures.keys()) {
+        textureNames.add(slot.name);
+      }
     }
   }
 
@@ -223,17 +246,33 @@ export function shaderBit(options: ShaderBitOptions): ShaderBit {
     bit.bindings = { material: fields };
   }
 
+  if (textureNames.size > 0) {
+    bit.textures = [...textureNames];
+  }
+
   if (options.requires) {
     bit.requires = options.requires;
   }
 
-  const generate = (language: ShaderLanguage, stageSlots: Slot[]) =>
-    generateModule({
+  const generate = (language: ShaderLanguage, stageSlots: Slot[]): GeneratedModule => {
+    const target = new BitTarget(label, uniforms);
+    const module = generateModule({
       language,
       items: stageSlots.map((slot) => slot.fn),
       prefix,
-      target: new BitTarget(label, uniforms),
+      target,
     });
+    if (language === 'wgsl' || target.textures.size === 0) {
+      return module;
+    }
+
+    // PixiJS 3D defines the functions that sample a material's textures below the code
+    // of its bits, and GLSL only lets a function call what's declared above it
+    const prototypes = [...target.textures].flatMap(([slot, helpers]) =>
+      [...helpers].map((helper) => `vec4 ${pixiHelperName(slot, helper)}(vec2 uv);`),
+    );
+    return { header: `${prototypes.join('\n')}\n\n${module.header}`, idOf: module.idOf };
+  };
 
   const slotsOf = (stage: ShaderStage) => slots.filter((slot) => slot.stage === stage);
 
