@@ -3,6 +3,21 @@
 // This service worker is responsible for intercepting fetch requests to
 // assets hosted on the same origin, and attaching CORS headers that
 // allow SharedArrayBuffer to function (required by @rolldown/browser).
+//
+// COEP/COOP is only applied for pages listed in COEP_ROUTES below.
+// Other pages (e.g. the landing page with YouTube embeds) are left untouched.
+
+// Routes that require cross-origin isolation for SharedArrayBuffer.
+const COEP_ROUTES = ['/TypeGPU/translator'];
+
+function needsCOEP(url) {
+  try {
+    const pathname = new URL(url).pathname;
+    return COEP_ROUTES.some((route) => pathname.startsWith(route));
+  } catch {
+    return false;
+  }
+}
 
 let coepCredentialless = false;
 if (typeof window === 'undefined') {
@@ -33,6 +48,10 @@ if (typeof window === 'undefined') {
   self.addEventListener('fetch', (event) => {
     const r = event.request;
     if (r.cache === 'only-if-cached' && r.mode !== 'same-origin') {
+      return;
+    }
+
+    if (!needsCOEP(r.url)) {
       return;
     }
 
@@ -70,6 +89,9 @@ if (typeof window === 'undefined') {
   });
 } else {
   (() => {
+    // Skip COEP/COOP setup on pages that don't need it.
+    if (!needsCOEP(window.location.href)) return;
+
     const reloadedBySelf = window.sessionStorage.getItem('coiReloadedBySelf');
     window.sessionStorage.removeItem('coiReloadedBySelf');
     const coepDegrading = reloadedBySelf === 'coepdegrade';
