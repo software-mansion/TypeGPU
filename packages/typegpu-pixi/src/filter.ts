@@ -12,6 +12,7 @@ import {
   tgpu,
   d,
   type AnyAutoCustoms,
+  type TgpuBindGroup,
   type TgpuBindGroupLayout,
   type TgpuFragmentFn,
   type TgpuRoot,
@@ -26,6 +27,7 @@ import {
   GLOBAL_UNIFORM_NAMES,
   GlobalFilterUniforms,
 } from './filterGlobals.ts';
+import { fixedResourcesOf, type FixedResources, foreignBindGroup } from './internal/resources.ts';
 import { getRoot, isWebGPURenderer } from './root.ts';
 import {
   type PixiUniforms,
@@ -69,8 +71,10 @@ export interface TgpuFilterOptions<
   /** A name for the shader program, shown by debugging tools */
   name?: string | undefined;
   /**
-   * The filter's values, from `uniforms()`. The filter's shaders can only read these uniforms.
-   * Set them with `uniforms.write(filter, ...)`.
+   * The filter's values, from `uniforms()`. Set them with `uniforms.write(filter, ...)`.
+   *
+   * Besides these, on PixiJS's WebGPU renderer the filter's shaders can read the buffers,
+   * textures and samplers of the TypeGPU root that `getRoot(renderer)` returns.
    */
   uniforms?: PixiUniforms<UniformRecord> | undefined;
   /**
@@ -293,23 +297,37 @@ function pipelineFor(
   } as unknown as PipelineDescriptor);
 }
 
+/**
+ * @returns The resources the shaders read straight from TypeGPU, if any
+ */
 function checkLayouts(
   label: string,
-  result: { usedBindGroupLayouts: readonly unknown[]; catchall: unknown },
+  language: ShaderLanguage,
+  result: {
+    usedBindGroupLayouts: readonly unknown[];
+    catchall: [number, TgpuBindGroup] | undefined;
+  },
   uniforms: PixiUniforms<UniformRecord> | undefined,
-) {
-  const allowed = new Set<unknown>([filterGlobalsLayout]);
+): [number, TgpuBindGroup] | undefined {
+  const allowed = new Set<unknown>([filterGlobalsLayout, result.catchall?.[1].layout]);
   if (uniforms) {
     allowed.add(uniformLayouts.get(uniforms));
   }
-  if (
-    result.catchall !== undefined ||
-    result.usedBindGroupLayouts.some((layout) => !allowed.has(layout))
-  ) {
+  if (result.usedBindGroupLayouts.some((layout) => !allowed.has(layout))) {
     throw new Error(
-      `[@typegpu/pixi] ${capitalize(label)} reads a TypeGPU buffer, texture or bind group layout, which PixiJS can't bind. Pass values through \`uniforms\` instead.`,
+      `[@typegpu/pixi] ${capitalize(label)} reads a TypeGPU bind group layout, and a filter has no bind group to fill it with. Read buffers, textures and samplers directly instead, like \`buffer.$\`.`,
     );
   }
+  if (result.catchall && language === 'glsl') {
+    throw webglResourcesError(label);
+  }
+  return result.catchall;
+}
+
+function webglResourcesError(label: string): Error {
+  return new Error(
+    `[@typegpu/pixi] ${capitalize(label)} reads a TypeGPU buffer, texture or sampler, which only exist on PixiJS's WebGPU renderer. For the WebGL renderer, pass values through \`uniforms\` instead.`,
+  );
 }
 
 function findEntryPoint(wgsl: string, stage: 'vertex' | 'fragment'): string {
@@ -324,6 +342,8 @@ interface GeneratedWgsl {
   program: GpuProgram;
   /** The filter's uniform group, keyed by the name PixiJS finds at `@group(1) @binding(0)` */
   resources: Record<string, UniformGroup>;
+  /** The TypeGPU resources the shaders read, to bind next to PixiJS's own */
+  fixed: FixedResources | undefined;
 }
 
 function generateWgsl(
@@ -337,26 +357,47 @@ function generateWgsl(
   const result = withShaderTarget(new FilterTarget(label, 'wgsl', uniforms), () =>
     tgpu.resolveWithContext([pipeline]),
   );
-  checkLayouts(label, result, uniforms);
+  const catchall = checkLayouts(label, 'wgsl', result, uniforms);
 
-  const wgsl = result.code;
+  let wgsl = result.code;
+  let fixed: FixedResources | undefined;
+  if (catchall) {
+    let [index] = catchall;
+    if (index === 0) {
+      // TypeGPU gives its resources the first free group, but PixiJS puts its own bind group
+      // at index 0 on every draw, whether or not the shaders read anything from it
+      index = uniforms && uniformLayouts.get(uniforms) === result.usedBindGroupLayouts[1] ? 2 : 1;
+      wgsl = wgsl.replaceAll('@group(0)', `@group(${index})`);
+    }
+    fixed = fixedResourcesOf(root, index, catchall[1]);
+  }
+
   const program = GpuProgram.from({
     name: programName,
     vertex: { source: wgsl, entryPoint: findEntryPoint(wgsl, 'vertex') },
     fragment: { source: wgsl, entryPoint: findEntryPoint(wgsl, 'fragment') },
   });
 
+  if (fixed) {
+    // PixiJS reads a bind group's layout off the WGSL, which doesn't say everything: which
+    // stages read a resource, or whether a texture can be filtered. TypeGPU knows, and its
+    // bind group only fits a pipeline whose layout says the same.
+    program.gpuLayout[fixed.index] = fixed.layoutEntries;
+  }
+
   // PixiJS binds a filter's resources by the names of the WGSL variables, but TypeGPU
   // renames a variable when another item has the same name. The binding index stays,
   // so the group goes under whatever name PixiJS finds at `@group(1) @binding(0)`.
   const resources: Record<string, UniformGroup> = {};
-  for (const { group: groupIndex, binding, name } of program.structsAndGroups.groups) {
-    if (groupIndex === 1 && binding === 0 && group) {
-      resources[name] = group;
+  if (group && uniforms && result.usedBindGroupLayouts.includes(uniformsLayoutOf(uniforms))) {
+    for (const { group: groupIndex, binding, name } of program.structsAndGroups.groups) {
+      if (groupIndex === 1 && binding === 0) {
+        resources[name] = group;
+      }
     }
   }
 
-  return { program, resources };
+  return { program, resources, fixed };
 }
 
 /** Names PixiJS's WebGL renderer looks for in a filter's GLSL */
@@ -452,9 +493,19 @@ function generateGlsl(options: GenerateOptions, group: UniformGroup | undefined)
         tgpu.resolveWithContext([pipeline], { names: namespace, ...glOptions[stage] }),
       );
     } catch (error) {
-      throw glslError(label, error);
+      // The GLSL generator may not get as far as noticing a TypeGPU resource
+      let readsResources = false;
+      try {
+        readsResources =
+          withShaderTarget(new FilterTarget(label, 'wgsl', uniforms), () =>
+            tgpu.resolveWithContext([pipeline]),
+          ).catchall !== undefined;
+      } catch {
+        // Whatever is wrong shows in both languages, so the first error says it
+      }
+      throw readsResources ? webglResourcesError(label) : glslError(label, error);
     }
-    checkLayouts(label, result, uniforms);
+    checkLayouts(label, 'glsl', result, uniforms);
 
     const { code, used } = reachableFromMain(
       result.declarations.map(({ name, code }) => ({ name, code: simplifyGlobals(code) })),
@@ -542,9 +593,28 @@ interface GenerateOptions {
  * });
  * ```
  *
+ * On the WebGPU renderer, the functions can also read the buffers, textures and samplers of
+ * the root that `getRoot(renderer)` returns, the way any TypeGPU shader does.
+ *
+ * @example
+ * ```ts
+ * // A filter that reads a TypeGPU buffer, which a compute pipeline could be writing to
+ * const root = getRoot(app.renderer);
+ * const tint = root.createUniform(d.vec3f, d.vec3f(1, 0.8, 0.6));
+ *
+ * const tinted = createFilter(app.renderer, {
+ *   fragment: ({ uv }) => {
+ *     'use gpu';
+ *     const color = sampleInput(uv);
+ *     return d.vec4f(color.rgb * tint.$, color.a);
+ *   },
+ * });
+ * tint.write(d.vec3f(0.6, 0.8, 1));
+ * ```
+ *
  * @throws If PixiJS started with a renderer other than WebGPU or WebGL, if the functions
- *   read uniforms that weren't passed as `uniforms`, or if they read TypeGPU resources,
- *   which PixiJS can't bind.
+ *   read uniforms that weren't passed as `uniforms`, or if they read TypeGPU resources
+ *   on the WebGL renderer.
  */
 export function createFilter(
   renderer: Renderer,
@@ -575,9 +645,11 @@ export function createFilter(
   const group = uniforms?.createGroup();
 
   let programs;
+  let fixed: FixedResources | undefined;
   if (isWebGPURenderer(renderer)) {
-    const { program, resources } = generateWgsl(getRoot(renderer), generateOptions, group);
-    programs = { gpuProgram: program, resources };
+    const generated = generateWgsl(getRoot(renderer), generateOptions, group);
+    programs = { gpuProgram: generated.program, resources: generated.resources };
+    fixed = generated.fixed;
   } else if (renderer.type === RendererType.WEBGL) {
     const { program, resources } = generateGlsl(generateOptions, group);
     programs = { glProgram: program, resources };
@@ -588,6 +660,9 @@ export function createFilter(
   }
 
   const filter = new Filter({ ...pixiOptions, ...programs });
+  if (fixed && isWebGPURenderer(renderer)) {
+    filter.groups[fixed.index] = foreignBindGroup(renderer, fixed.bindGroup);
+  }
   if (uniforms && group) {
     registerUniformGroup(filter, uniforms, group);
   }

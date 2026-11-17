@@ -1,7 +1,14 @@
 /**
  * Just enough of a PixiJS renderer for `createFilter`, without a canvas.
  */
-import { DOMAdapter, type Filter, type Renderer, RendererType } from 'pixi.js';
+import {
+  type BindGroup,
+  DOMAdapter,
+  type Filter,
+  type Renderer,
+  RendererType,
+  type WebGPURenderer,
+} from 'pixi.js';
 
 // PixiJS asks a WebGL context for its float precision when it creates a GLSL program
 DOMAdapter.set({
@@ -17,9 +24,29 @@ DOMAdapter.set({
     }) as unknown as HTMLCanvasElement,
 });
 
-/** A WebGPU renderer that has nothing but its device */
+/**
+ * A WebGPU renderer that has nothing but its device, and a bind group system
+ * that can't build bind groups of its own
+ */
 export function fakeWebGPURenderer(device: GPUDevice): Renderer {
-  return { type: RendererType.WEBGPU, gpu: { device } } as unknown as Renderer;
+  return {
+    type: RendererType.WEBGPU,
+    gpu: { device },
+    bindGroup: {
+      getBindGroup(): GPUBindGroup {
+        throw new Error('This renderer only binds what TypeGPU built');
+      },
+    },
+  } as unknown as Renderer;
+}
+
+/** The bind group PixiJS would set at `index` when it draws with the filter */
+export function gpuBindGroupOf(renderer: Renderer, filter: Filter, index: number): GPUBindGroup {
+  return (renderer as WebGPURenderer).bindGroup.getBindGroup(
+    filter.groups[index] as BindGroup,
+    filter.gpuProgram,
+    index,
+  );
 }
 
 /** A WebGL renderer that has nothing but its type */

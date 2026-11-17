@@ -1,9 +1,15 @@
 import { createUboElementsWGSL, Filter, type Renderer, RendererType, UniformGroup } from 'pixi.js';
-import { describe, expect } from 'vitest';
-import { d, std } from 'typegpu';
+import { describe, expect, vi } from 'vitest';
+import { d, std, tgpu } from 'typegpu';
 import { it } from 'typegpu-testing-utility';
 import * as tp from '@typegpu/pixi';
-import { fakeWebGLRenderer, fakeWebGPURenderer, glslOf, wgslOf } from './utils/pixiFilter.ts';
+import {
+  fakeWebGLRenderer,
+  fakeWebGPURenderer,
+  glslOf,
+  gpuBindGroupOf,
+  wgslOf,
+} from './utils/pixiFilter.ts';
 
 const wobbleUniforms = tp.uniforms({ time: d.f32, strength: d.f32 });
 
@@ -300,6 +306,214 @@ describe('createFilter on the WebGPU renderer', () => {
 
     expect(pixiOffsets).toStrictEqual(typegpuOffsets);
     expect(pixiLayout.size).toBeGreaterThanOrEqual(d.sizeOf(Struct));
+  });
+});
+
+describe('createFilter with TypeGPU resources', () => {
+  it("binds them in a group next to PixiJS's own", ({ device, root }) => {
+    const tint = root.createUniform(d.vec3f);
+    const palette = root.createReadonly(d.arrayOf(d.vec3f, 4));
+    const noise = root
+      .createTexture({ size: [64, 64], format: 'rgba8unorm' })
+      .$usage('sampled')
+      .createView(d.texture2d(d.f32));
+    const repeat = root.createSampler({ addressModeU: 'repeat', addressModeV: 'repeat' });
+
+    const renderer = fakeWebGPURenderer(device);
+    const filter = tp.createFilter(renderer, {
+      uniforms: wobbleUniforms,
+      fragment: ({ uv }) => {
+        'use gpu';
+        const grain = std.textureSample(noise.$, repeat.$, uv * 8).r;
+        const index = d.u32(grain * wobbleUniforms.$.strength);
+        const color = palette.$[index] as d.v3f;
+        return tp.sampleInput(uv) * d.vec4f(color * tint.$, 1);
+      },
+    });
+
+    expect(wgslOf(filter)).toMatchInlineSnapshot(`
+      "struct GlobalFilterUniforms {
+        uInputSize: vec4f,
+        uInputPixel: vec4f,
+        uInputClamp: vec4f,
+        uOutputFrame: vec4f,
+        uGlobalFrame: vec4f,
+        uOutputTexture: vec4f,
+      }
+
+      @group(0) @binding(0) var<uniform> gfu: GlobalFilterUniforms;
+
+      fn filterVertexPosition(aPosition: vec2f) -> vec4f {
+        let outputFrame = (&gfu.uOutputFrame);
+        let outputTexture = (&gfu.uOutputTexture);
+        let position = ((aPosition * (*outputFrame).zw) + (*outputFrame).xy);
+        return vec4f(((position.x * (2f / (*outputTexture).x)) - 1f), ((position.y * ((2f * (*outputTexture).z) / (*outputTexture).y)) - (*outputTexture).z), 0f, 1f);
+      }
+
+      fn filterTextureCoord(aPosition: vec2f) -> vec2f {
+        return (aPosition * (gfu.uOutputFrame.zw * gfu.uInputSize.zw));
+      }
+
+      struct filterVertex_Output {
+        @builtin(position) position: vec4f,
+        @location(0) uv: vec2f,
+      }
+
+      @vertex fn filterVertex(@location(0) aPosition: vec2f) -> filterVertex_Output {
+        return filterVertex_Output(filterVertexPosition(aPosition), filterTextureCoord(aPosition));
+      }
+
+      @group(2) @binding(0) var noise: texture_2d<f32>;
+
+      @group(2) @binding(1) var repeat: sampler;
+
+      struct FilterUniforms {
+        time: f32,
+        strength: f32,
+      }
+
+      @group(1) @binding(0) var<uniform> filterUniforms: FilterUniforms;
+
+      @group(2) @binding(2) var<storage, read> palette: array<vec3f, 4>;
+
+      @group(0) @binding(1) var uTexture: texture_2d<f32>;
+
+      @group(0) @binding(2) var uSampler: sampler;
+
+      fn sampleInput(uv: vec2f) -> vec4f {
+        return textureSample(uTexture, uSampler, uv);
+      }
+
+      @group(2) @binding(3) var<uniform> tint: vec3f;
+
+      struct FragmentIn {
+        @location(0) uv: vec2f,
+      }
+
+      @fragment fn fragment(_arg_0: FragmentIn) -> @location(0) vec4f {
+        let grain = textureSample(noise, repeat, (_arg_0.uv * 8f)).r;
+        let index = u32((grain * filterUniforms.strength));
+        let color = (&palette[index]);
+        return (sampleInput(_arg_0.uv) * vec4f(((*color) * tint), 1f));
+      }"
+    `);
+
+    // The layout says what the WGSL can't: only the fragment stage reads these
+    expect(filter.gpuProgram.gpuLayout[2]).toMatchInlineSnapshot(`
+      [
+        {
+          "binding": 0,
+          "texture": {
+            "multisampled": false,
+            "sampleType": "float",
+            "viewDimension": "2d",
+          },
+          "visibility": 2,
+        },
+        {
+          "binding": 1,
+          "sampler": {
+            "type": "non-filtering",
+          },
+          "visibility": 2,
+        },
+        {
+          "binding": 2,
+          "buffer": {
+            "type": "read-only-storage",
+          },
+          "visibility": 2,
+        },
+        {
+          "binding": 3,
+          "buffer": {
+            "type": "uniform",
+          },
+          "visibility": 2,
+        },
+      ]
+    `);
+    expect(Object.keys(filter.groups)).toStrictEqual(['0', '1', '2']);
+    expect(filter.resources.filterUniforms).toBeInstanceOf(UniformGroup);
+
+    const bindGroup = gpuBindGroupOf(renderer, filter, 2);
+    expect(bindGroup).toBe(vi.mocked(device.createBindGroup).mock.results.at(-1)?.value);
+    expect(vi.mocked(device.createBindGroup).mock.lastCall?.[0].entries).toHaveLength(4);
+  });
+
+  it('takes the group of the uniforms when the filter has none', ({ device, root }) => {
+    const tint = root.createUniform(d.vec4f);
+    const renderer = fakeWebGPURenderer(device);
+    const filter = tp.createFilter(renderer, {
+      // Uniforms that aren't read leave no trace in the shader
+      uniforms: wobbleUniforms,
+      fragment: ({ uv }) => {
+        'use gpu';
+        return tp.sampleInput(uv) * tint.$;
+      },
+    });
+
+    expect(wgslOf(filter)).toContain('@group(1) @binding(0) var<uniform> tint: vec4f;');
+    expect(Object.keys(filter.groups)).toStrictEqual(['0', '1']);
+    expect(gpuBindGroupOf(renderer, filter, 1)).toBe(
+      vi.mocked(device.createBindGroup).mock.results.at(-1)?.value,
+    );
+  });
+
+  it('stays out of the group PixiJS fills on every draw', ({ device, root }) => {
+    const tint = root.createUniform(d.vec4f);
+    const corners = root.createReadonly(d.arrayOf(d.vec4f, 4));
+    const filter = tp.createFilter(fakeWebGPURenderer(device), {
+      uniforms: wobbleUniforms,
+      vertex: ({ aPosition, $vertexIndex }) => {
+        'use gpu';
+        return { $position: corners.$[$vertexIndex] as d.v4f, uv: aPosition };
+      },
+      fragment: ({ uv }) => {
+        'use gpu';
+        return tint.$ * uv.x * wobbleUniforms.$.strength;
+      },
+    });
+
+    const wgsl = wgslOf(filter);
+    expect(wgsl).not.toContain('@group(0)');
+    expect(wgsl).toContain('@group(1) @binding(0) var<uniform> filterUniforms: FilterUniforms;');
+    expect(wgsl).toContain('@group(2) @binding(0) var<storage, read> corners: array<vec4f, 4>;');
+    expect(wgsl).toContain('@group(2) @binding(1) var<uniform> tint: vec4f;');
+    expect(filter.gpuProgram.gpuLayout[2]).toMatchInlineSnapshot(`
+      [
+        {
+          "binding": 0,
+          "buffer": {
+            "type": "read-only-storage",
+          },
+          "visibility": 1,
+        },
+        {
+          "binding": 1,
+          "buffer": {
+            "type": "uniform",
+          },
+          "visibility": 2,
+        },
+      ]
+    `);
+  });
+
+  it('gives two filters that read the same resources the same program', ({ device, root }) => {
+    const tint = root.createUniform(d.vec4f);
+    const options = {
+      fragment: ({ uv }: { uv: d.v2f }) => {
+        'use gpu';
+        return tp.sampleInput(uv) * tint.$;
+      },
+    };
+    const renderer = fakeWebGPURenderer(device);
+    const first = tp.createFilter(renderer, options);
+    const second = tp.createFilter(renderer, options);
+
+    expect(second.gpuProgram).toBe(first.gpuProgram);
+    expect(second.groups[1]).not.toBe(first.groups[1]);
   });
 });
 
@@ -612,20 +826,41 @@ describe('createFilter errors', () => {
     ).toThrow("[@typegpu/pixi] A filter reads the uniform 'strength', which isn't one of its own.");
   });
 
-  it('rejects TypeGPU resources, which PixiJS cannot bind', ({ device, root }) => {
+  it('rejects TypeGPU resources on the WebGL renderer', ({ root }) => {
     const scale = root.createUniform(d.f32);
-    for (const renderer of [fakeWebGPURenderer(device), fakeWebGLRenderer()]) {
-      expect(() =>
-        tp.createFilter(renderer, {
-          fragment: ({ uv }) => {
-            'use gpu';
-            return tp.sampleInput(uv * scale.$);
-          },
-        }),
-      ).toThrowErrorMatchingInlineSnapshot(
-        `[Error: [@typegpu/pixi] A filter reads a TypeGPU buffer, texture or bind group layout, which PixiJS can't bind. Pass values through \`uniforms\` instead.]`,
-      );
-    }
+    const tint = root.createUniform(d.vec4f);
+    expect(() =>
+      tp.createFilter(fakeWebGLRenderer(), {
+        fragment: () => {
+          'use gpu';
+          return tint.$;
+        },
+      }),
+    ).toThrow("which only exist on PixiJS's WebGPU renderer");
+    expect(() =>
+      tp.createFilter(fakeWebGLRenderer(), {
+        fragment: ({ uv }) => {
+          'use gpu';
+          return tp.sampleInput(uv * scale.$);
+        },
+      }),
+    ).toThrowErrorMatchingInlineSnapshot(
+      `[Error: [@typegpu/pixi] A filter reads a TypeGPU buffer, texture or sampler, which only exist on PixiJS's WebGPU renderer. For the WebGL renderer, pass values through \`uniforms\` instead.]`,
+    );
+  });
+
+  it('rejects bind group layouts, which it has no bind group for', ({ device }) => {
+    const layout = tgpu.bindGroupLayout({ scale: { uniform: d.f32 } });
+    expect(() =>
+      tp.createFilter(fakeWebGPURenderer(device), {
+        fragment: ({ uv }) => {
+          'use gpu';
+          return tp.sampleInput(uv * layout.$.scale);
+        },
+      }),
+    ).toThrowErrorMatchingInlineSnapshot(
+      `[Error: [@typegpu/pixi] A filter reads a TypeGPU bind group layout, and a filter has no bind group to fill it with. Read buffers, textures and samplers directly instead, like \`buffer.$\`.]`,
+    );
   });
 
   it('rejects renderers other than WebGPU and WebGL', () => {
