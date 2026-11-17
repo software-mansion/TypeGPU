@@ -744,6 +744,83 @@ describe('TgpuBuffer', () => {
     expect(device.queue.submit).toHaveBeenCalledTimes(1);
   });
 
+  describe('write offsets', () => {
+    const Values = d.arrayOf(d.u32, 4); // 16 bytes
+
+    it('throws when the range ends past the end of the buffer', ({ root, device }) => {
+      const buffer = root.createBuffer(Values).$name('values');
+
+      expect(() =>
+        buffer.write([1, 2, 3, 4], { endOffset: 64 }),
+      ).toThrowErrorMatchingInlineSnapshot(
+        `[Error: Cannot write to bytes 0-64 of buffer 'values', which is 16 bytes long.]`,
+      );
+      expect(device.mock.queue.writeBuffer).not.toHaveBeenCalled();
+    });
+
+    it('throws when the range starts past the end of the buffer', ({ root, device }) => {
+      const buffer = root.createBuffer(Values).$name('values');
+
+      expect(() =>
+        buffer.write([1, 2, 3, 4], { startOffset: 32 }),
+      ).toThrowErrorMatchingInlineSnapshot(
+        `[Error: Cannot write to bytes 32-16 of buffer 'values'. The start offset cannot be greater than the end offset.]`,
+      );
+      expect(device.mock.queue.writeBuffer).not.toHaveBeenCalled();
+    });
+
+    it('throws when the start offset is negative', ({ root, device }) => {
+      const buffer = root.createBuffer(Values).$name('values');
+
+      expect(() =>
+        buffer.write([1, 2, 3, 4], { startOffset: -4, endOffset: 4 }),
+      ).toThrowErrorMatchingInlineSnapshot(
+        `[Error: Cannot write to bytes -4-4 of buffer 'values', which is 16 bytes long.]`,
+      );
+      expect(device.mock.queue.writeBuffer).not.toHaveBeenCalled();
+    });
+
+    it('throws when the start offset is greater than the end offset', ({ root, device }) => {
+      const buffer = root.createBuffer(Values).$name('values');
+
+      expect(() =>
+        buffer.write([1, 2, 3, 4], { startOffset: 8, endOffset: 4 }),
+      ).toThrowErrorMatchingInlineSnapshot(
+        `[Error: Cannot write to bytes 8-4 of buffer 'values'. The start offset cannot be greater than the end offset.]`,
+      );
+      expect(device.mock.queue.writeBuffer).not.toHaveBeenCalled();
+    });
+
+    it('throws for out of range offsets while the buffer is mapped', ({ root }) => {
+      const rawBuffer = root.device.createBuffer({
+        size: 16,
+        usage: GPUBufferUsage.STORAGE,
+        mappedAtCreation: true,
+      });
+      const buffer = root.createBuffer(Values, rawBuffer).$name('values');
+
+      expect(() =>
+        buffer.write([1, 2, 3, 4], { endOffset: 64 }),
+      ).toThrowErrorMatchingInlineSnapshot(
+        `[Error: Cannot write to bytes 0-64 of buffer 'values', which is 16 bytes long.]`,
+      );
+    });
+
+    it('accepts ranges that touch the bounds of the buffer', ({ root, device }) => {
+      const buffer = root.createBuffer(Values);
+
+      buffer.write([1, 2, 3, 4], { endOffset: 16 });
+      buffer.write([1, 2, 3, 4], { startOffset: 8, endOffset: 8 });
+      buffer.write([1, 2, 3, 4], { startOffset: 16 });
+
+      expect(device.mock.queue.writeBuffer.mock.calls.map((call) => call.slice(1))).toStrictEqual([
+        [0, expect.any(ArrayBuffer), 0, 16],
+        [8, expect.any(ArrayBuffer), 8, 0],
+        [16, expect.any(ArrayBuffer), 16, 0],
+      ]);
+    });
+  });
+
   describe('schemas with a size that is not a multiple of 4', () => {
     const Indices = d.arrayOf(d.u16, 3); // 6 bytes
 

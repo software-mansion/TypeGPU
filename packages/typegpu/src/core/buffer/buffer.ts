@@ -409,6 +409,8 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
   write(data: ArrayBuffer, options?: BufferWriteOptions): void;
   write(data: InferInput<TData> | ArrayBuffer, options?: BufferWriteOptions): void {
     const gpuBuffer = this.buffer;
+    const { startOffset, endOffset } = calculateOffsets(options, this.dataType, data);
+    this.#assertWriteInBounds(startOffset, endOffset);
 
     if (gpuBuffer.mapState === 'mapped') {
       const mapped = this.#getMappedRange();
@@ -421,7 +423,6 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
       return;
     }
 
-    const { startOffset, endOffset } = calculateOffsets(options, this.dataType, data);
     const size = this.#alignedWriteSize(startOffset, endOffset);
 
     // If the caller already wrote directly into #hostBuffer via
@@ -437,6 +438,24 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
       startOffset,
       size,
     );
+  }
+
+  #assertWriteInBounds(startOffset: number, endOffset: number): void {
+    const name = getName(this) ?? '<unnamed>';
+
+    if (startOffset > endOffset) {
+      throw new Error(
+        `Cannot write to bytes ${startOffset}-${endOffset} of buffer '${name}'. ` +
+          'The start offset cannot be greater than the end offset.',
+      );
+    }
+
+    const bufferSize = physicalSizeOf(this.dataType);
+    if (startOffset < 0 || endOffset > bufferSize) {
+      throw new Error(
+        `Cannot write to bytes ${startOffset}-${endOffset} of buffer '${name}', which is ${bufferSize} bytes long.`,
+      );
+    }
   }
 
   /**
