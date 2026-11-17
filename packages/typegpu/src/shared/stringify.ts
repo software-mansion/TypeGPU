@@ -1,4 +1,5 @@
 import { isMatInstance, isVecInstance } from '../data/wgslTypes.ts';
+import { DEV, TEST } from './env.ts';
 import { logger } from '../tgpuLogger.ts';
 
 export function safeStringify(item: unknown): string {
@@ -14,7 +15,9 @@ export function safeStringify(item: unknown): string {
   try {
     return JSON.stringify(item);
   } catch (error) {
-    logger.warn('suspicious', 'Error parsing JSON:', error);
+    if (DEV || TEST) {
+      logger.warn('suspicious', 'Error parsing JSON:', error);
+    }
     return '<invalid json>';
   }
 }

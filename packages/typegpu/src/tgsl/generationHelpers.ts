@@ -24,6 +24,7 @@ import {
 } from '../types.ts';
 import { WgslTypeError } from '../errors.ts';
 import { $comptimeValueOf, $internal, $resolve } from '../shared/symbols.ts';
+import { DEV, TEST } from '../shared/env.ts';
 import { logger } from '../tgpuLogger.ts';
 import { stringifySnippet } from './stringifySnippet.ts';
 
@@ -34,7 +35,7 @@ export function numericLiteralToSnippet(value: number): Snippet {
   // WGSL AbstractInt uses 64-bit precision, but JS numbers are only safe up to 2^53 - 1.
   // Warn when values exceed this range to prevent precision loss.
   if (Number.isInteger(value)) {
-    if (!Number.isSafeInteger(value)) {
+    if ((DEV || TEST) && !Number.isSafeInteger(value)) {
       logger.warn(
         'precision-loss',
         `The integer ${value} exceeds the safe integer range and may have lost precision.`,

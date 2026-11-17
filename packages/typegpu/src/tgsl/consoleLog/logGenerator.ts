@@ -18,6 +18,7 @@ import {
 import { invariant } from '../../errors.ts';
 import type { ResolutionCtx } from '../../internal.ts';
 import { $internal } from '../../shared/symbols.ts';
+import { DEV, TEST } from '../../shared/env.ts';
 import { logger } from '../../tgpuLogger.ts';
 import { convertToCommonType } from '../conversion.ts';
 import { concretizeSnippet } from '../generationHelpers.ts';
@@ -44,7 +45,9 @@ export class LogGeneratorNullImpl implements LogGenerator {
     return undefined;
   }
   generateLog(): Snippet {
-    logger.warn('fallback', "'console.log' is only supported when resolving pipelines.");
+    if (DEV || TEST) {
+      logger.warn('fallback', "'console.log' is only supported when resolving pipelines.");
+    }
     return fallbackSnippet;
   }
 }
@@ -81,7 +84,9 @@ export class LogGeneratorImpl implements LogGenerator {
    */
   generateLog(ctx: ResolutionCtx, op: SupportedLogOp, args: Snippet[]): Snippet {
     if (shaderStageSlot.$ === 'vertex') {
-      logger.warn('suspicious', `'console' operations are not supported in vertex shaders.`);
+      if (DEV || TEST) {
+        logger.warn('suspicious', `'console' operations are not supported in vertex shaders.`);
+      }
       return fallbackSnippet;
     }
 

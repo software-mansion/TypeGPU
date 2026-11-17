@@ -1,6 +1,7 @@
 import { MissingBindGroupsError, MissingVertexBuffersError } from '../../errors.ts';
 import type { BaseData } from '../../data/wgslTypes.ts';
 import { $internal } from '../../shared/symbols.ts';
+import { DEV, TEST } from '../../shared/env.ts';
 import { logger } from '../../tgpuLogger.ts';
 import {
   isBindGroup,
@@ -218,12 +219,14 @@ export function requireIndexBuffer(indexBuffer: IndexBufferEntry | undefined): v
 }
 
 function warnAboutUnreachableSubmission(core: object, what: string): void {
-  logger.warnOnce(
-    'suspicious',
-    core,
-    what,
-    `${what} is ignored when recording into a raw GPUCommandEncoder, since there is no submission to report after. Use root.createCommandEncoder() instead.`,
-  );
+  if (DEV || TEST) {
+    logger.warnOnce(
+      'suspicious',
+      core,
+      what,
+      `${what} is ignored when recording into a raw GPUCommandEncoder, since there is no submission to report after. Use root.createCommandEncoder() instead.`,
+    );
+  }
 }
 
 /** Returns false when there is no encoder to defer the read to, meaning the output is lost */
@@ -281,7 +284,7 @@ function reportIgnoredPriors(
 ): void {
   const wording = PassKindWording[passKind];
 
-  if (hasAttachments) {
+  if ((DEV || TEST) && hasAttachments) {
     logger.warnOnce(
       'suspicious',
       core,
@@ -290,7 +293,7 @@ function reportIgnoredPriors(
     );
   }
 
-  if (hasTimestampWrites) {
+  if ((DEV || TEST) && hasTimestampWrites) {
     logger.warnOnce(
       'suspicious',
       core,
@@ -300,12 +303,14 @@ function reportIgnoredPriors(
   }
 
   if (logResources && !queueLogDrain(owner, logResources)) {
-    logger.warnOnce(
-      'suspicious',
-      core,
-      'logs',
-      `Shader console.log output is ignored when ${wording.intoRaw} encoder, since there is no submission to read it back after.`,
-    );
+    if (DEV || TEST) {
+      logger.warnOnce(
+        'suspicious',
+        core,
+        'logs',
+        `Shader console.log output is ignored when ${wording.intoRaw} encoder, since there is no submission to read it back after.`,
+      );
+    }
   }
 }
 

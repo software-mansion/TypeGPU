@@ -53,6 +53,7 @@ import {
   type TextureWriteOptions,
   writeRegionSize,
 } from './textureWrite.ts';
+import { DEV, TEST } from '../../shared/env.ts';
 import { logger } from '../../tgpuLogger.ts';
 
 export type TextureInternals = {
@@ -513,12 +514,14 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
     const actualMipLevels = mipLevels ?? (this.props.mipLevelCount ?? 1) - baseMipLevel;
 
     if (actualMipLevels <= 1) {
-      logger.warn(
-        'suspicious',
-        `generateMipmaps is a no-op: would generate ${actualMipLevels} mip levels (base: ${baseMipLevel}, total: ${
-          this.props.mipLevelCount ?? 1
-        })`,
-      );
+      if (DEV || TEST) {
+        logger.warn(
+          'suspicious',
+          `generateMipmaps is a no-op: would generate ${actualMipLevels} mip levels (base: ${baseMipLevel}, total: ${
+            this.props.mipLevelCount ?? 1
+          })`,
+        );
+      }
       return;
     }
 
@@ -571,7 +574,7 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
     const baseLayer = imageOptions.origin?.[2] ?? 0;
     const layerCount = mipLevelSize(this.props, imageOptions.mipLevel ?? 0)[2];
 
-    if (baseLayer + sources.length > layerCount) {
+    if ((DEV || TEST) && baseLayer + sources.length > layerCount) {
       logger.warn(
         'suspicious',
         `Too many image sources provided. Texture has ${layerCount} layers, got ${sources.length} sources starting at layer ${baseLayer}. Extra sources will be ignored.`,

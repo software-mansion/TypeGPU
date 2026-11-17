@@ -4,6 +4,7 @@ import { getName } from '../../internal.ts';
 import { type ResolutionResult, resolve as resolveImpl } from '../../resolutionCtx.ts';
 import { $internal, $resolve, $soul } from '../../shared/symbols.ts';
 import { isBindGroupLayout } from '../../tgpuBindGroupLayout.ts';
+import { DEV, TEST } from '../../shared/env.ts';
 import { logger } from '../../tgpuLogger.ts';
 import type { ShaderGenerator } from '../../tgsl/shaderGenerator.ts';
 import { isBuffer, type ResolvableObject, type SelfResolvable, type Wgsl } from '../../types.ts';
@@ -201,7 +202,7 @@ function resolveFromTemplate(options: TgpuExtendedResolveOptions): ResolutionRes
     enableExtensions,
   } = options;
 
-  if (!template) {
+  if ((DEV || TEST) && !template) {
     logger.warn(
       'deprecated',
       "Calling resolve with an empty template is deprecated and will soon return an empty string. Consider using the 'tgpu.resolve(resolvableArray, options)' API instead.",

@@ -22,6 +22,7 @@ import { invariant, WgslTypeError } from '../errors.ts';
 import { getName } from '../shared/meta.ts';
 import { safeStringify } from '../shared/stringify.ts';
 import { assertExhaustive } from '../shared/utilityTypes.ts';
+import { DEV, TEST } from '../shared/env.ts';
 import { logger } from '../tgpuLogger.ts';
 import type { ResolutionCtx } from '../types.ts';
 import { accessStructProp } from './accessStructProp.ts';
@@ -297,7 +298,7 @@ function applyActionToSnippet(
     case 'abstract-cast':
       const converted = schemaCallWrapperGPU(ctx, targetType, snippet);
 
-      if (verbose && converted.value !== snippet.value) {
+      if ((DEV || TEST) && verbose && converted.value !== snippet.value) {
         logger.warn(
           'implicit-conversion',
           `Implicit abstract conversion from ${stringifySnippet(snippet)}: ${safeStringify(snippet.dataType)} to ${safeStringify(targetType)} changes the value to ${stringifySnippet(converted)}. Use an explicit conversion if this behavior is intended.`,
@@ -421,7 +422,7 @@ export function convertToCommonType<T extends Snippet[]>(
     return undefined;
   }
 
-  if (verbose && conversion.hasImplicitConversions) {
+  if ((DEV || TEST) && verbose && conversion.hasImplicitConversions) {
     logger.warn(
       'implicit-conversion',
       `Implicit conversions from [\n${values

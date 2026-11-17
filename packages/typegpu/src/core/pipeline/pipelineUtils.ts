@@ -5,6 +5,7 @@ import type { BaseData } from '../../data/wgslTypes.ts';
 import type { TgpuBindGroup, TgpuBindGroupLayout } from '../../tgpuBindGroupLayout.ts';
 import type { TgpuVertexLayout } from '../vertexLayout/vertexLayout.ts';
 import { isGPUBuffer } from '../../types.ts';
+import { DEV, TEST } from '../../shared/env.ts';
 import { logger } from '../../tgpuLogger.ts';
 import type { Timeable, TimestampWritesPriors } from './timeable.ts';
 import { $internal } from '../../shared/symbols.ts';
@@ -100,7 +101,7 @@ export function resolveIndirectOffset(
 
   validateIndirectBufferSize(sizeOf(indirectBuffer.dataType), offset, requiredSize, operation);
 
-  if (contiguous < requiredSize) {
+  if ((DEV || TEST) && contiguous < requiredSize) {
     logger.warn(
       'suspicious',
       `${operation}: Starting at offset ${offset}, only ${contiguous} contiguous bytes are available before padding. '${operation}' requires ${requiredSize} bytes (${IndirectOperationToRequiredData[operation]}). Reading across padding may result in undefined behavior.`,

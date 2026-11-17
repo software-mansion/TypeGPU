@@ -1,6 +1,7 @@
 import { isQuerySet, type TgpuQuerySet } from '../querySet/querySet.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import { $internal } from '../../shared/symbols.ts';
+import { DEV, TEST } from '../../shared/env.ts';
 import { logger } from '../../tgpuLogger.ts';
 import type { TgpuCommandEncoder } from '../commandEncoder/commandEncoder.ts';
 
@@ -186,12 +187,14 @@ export function queueTimestampResolve(
   }
 
   if (registrations.some((reg) => reg.priors === priors)) {
-    logger.warnOnce(
-      'suspicious',
-      querySet,
-      'repeated-timed-execution',
-      'Repeated executions of a timed pipeline within one command encoder write to the same query set indices, so the performance callback reports only the last execution.',
-    );
+    if (DEV || TEST) {
+      logger.warnOnce(
+        'suspicious',
+        querySet,
+        'repeated-timed-execution',
+        'Repeated executions of a timed pipeline within one command encoder write to the same query set indices, so the performance callback reports only the last execution.',
+      );
+    }
   } else {
     registrations.push({ priors, callback });
   }
