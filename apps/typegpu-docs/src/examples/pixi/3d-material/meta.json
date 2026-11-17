@@ -1,0 +1,7 @@
+{
+  "title": "PixiJS 3D - Material and Post Effect",
+  "description": "Displaces and colours a PixiJS 3D material with TypeGPU functions and Perlin noise, then adds a TypeGPU post effect. The same functions run on PixiJS's WebGPU and WebGL renderers.",
+  "category": "pixi",
+  "tags": ["3d", "ecosystem", "noise", "webgl"],
+  "coolFactor": 5
+}

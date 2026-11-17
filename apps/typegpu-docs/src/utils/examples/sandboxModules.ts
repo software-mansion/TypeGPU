@@ -68,6 +68,14 @@ const threeModules = import.meta.glob('../../../node_modules/@types/three/**/*.d
   import: 'default',
 }) as Record<string, () => Promise<string>>;
 
+const pixiModules = import.meta.glob(
+  ['../../../node_modules/pixi.js/lib/**/*.d.ts', '../../../node_modules/@pixi/3d/dist/**/*.d.ts'],
+  {
+    query: 'raw',
+    import: 'default',
+  },
+) as Record<string, () => Promise<string>>;
+
 const mediacaptureModules = import.meta.glob(
   '../../../node_modules/@types/dom-mediacapture-transform/**/*.d.ts',
   {
@@ -84,6 +92,7 @@ export const sandboxModulesAtom = atom(
 
     const nodeModulePromises = [
       ...entries(threeModules),
+      ...entries(pixiModules),
       ...entries(mediacaptureModules),
       ...entries(reactModules),
     ].map(async ([key, getContent]) =>
@@ -134,6 +143,17 @@ export const sandboxModulesAtom = atom(
         typeDef: { reroute: '@types/three/build/three.tsl.d.ts' },
       },
 
+      // PixiJS and PixiJS 3D, for examples of @typegpu/pixi
+      'pixi.js': {
+        typeDef: { reroute: 'pixi.js/lib/index.d.ts' },
+      },
+      '@pixi/3d': {
+        typeDef: { reroute: '@pixi/3d/dist/index.d.ts' },
+      },
+      '@pixi/3d/extras': {
+        typeDef: { reroute: '@pixi/3d/dist/extras/index.d.ts' },
+      },
+
       // Utility modules
       '@typegpu/noise': {
         import: { reroute: 'typegpu-noise/src/index.ts' },
@@ -149,6 +169,12 @@ export const sandboxModulesAtom = atom(
       },
       '@typegpu/three': {
         typeDef: { reroute: 'typegpu-three/src/index.ts' },
+      },
+      '@typegpu/pixi': {
+        typeDef: { reroute: 'typegpu-pixi/src/index.ts' },
+      },
+      '@typegpu/pixi/3d': {
+        typeDef: { reroute: 'typegpu-pixi/src/3d/index.ts' },
       },
       '@typegpu/algorithm': {
         import: { reroute: 'typegpu-algorithm/src/index.ts' },

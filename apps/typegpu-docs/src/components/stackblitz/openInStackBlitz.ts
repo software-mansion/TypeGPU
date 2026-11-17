@@ -5,6 +5,7 @@ import typegpuNoisePackageJson from '@typegpu/noise/package.json' with { type: '
 import typegpuRadiancePackageJson from '@typegpu/radiance-cascades/package.json' with { type: 'json' };
 import typegpuSdfPackageJson from '@typegpu/sdf/package.json' with { type: 'json' };
 import typegpuThreePackageJson from '@typegpu/three/package.json' with { type: 'json' };
+import typegpuPixiPackageJson from '@typegpu/pixi/package.json' with { type: 'json' };
 import typegpuReactPackageJson from '@typegpu/react/package.json' with { type: 'json' };
 import typegpuPackageJson from 'typegpu/package.json' with { type: 'json' };
 import unpluginPackageJson from 'unplugin-typegpu/package.json' with { type: 'json' };
@@ -112,6 +113,13 @@ ${exampleSource.htmlFile.content}
       '@typegpu/sdf': typegpuSdfPackageJson.version,
       '@typegpu/radiance-cascades': typegpuRadiancePackageJson.version,
       '@typegpu/three': typegpuThreePackageJson.version,
+      ...(example.usedApis.includes('@typegpu/pixi')
+        ? {
+            '@typegpu/pixi': typegpuPixiPackageJson.version,
+            'pixi.js': pnpmWorkspaceYaml.catalogs.example['pixi.js'],
+            '@pixi/3d': pnpmWorkspaceYaml.catalogs.example['@pixi/3d'],
+          }
+        : {}),
       ...(example.usedApis.includes('@typegpu/react')
         ? {
             '@typegpu/react': typegpuReactPackageJson.version,
