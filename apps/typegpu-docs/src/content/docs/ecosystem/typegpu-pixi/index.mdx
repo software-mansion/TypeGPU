@@ -9,7 +9,7 @@ import materialExample from './material-example.png';
 `@typegpu/pixi` lets you write shaders for [PixiJS](https://pixijs.com) and [PixiJS 3D](https://pixijs.com/3d) as TypeGPU functions,
 and run TypeGPU code on the same GPU device PixiJS draws with. It has two entry points:
 
-- `@typegpu/pixi`, for PixiJS: uniforms, 2D filters, and a TypeGPU root on PixiJS's device.
+- `@typegpu/pixi`, for PixiJS: uniforms, 2D filters, and a TypeGPU root on PixiJS's device, whose buffers and textures PixiJS can draw with.
 - `@typegpu/pixi/3d`, for PixiJS 3D: shader bits that extend materials, and post effects.
 
 PixiJS can draw with WebGPU or with WebGL 2. The package turns each `'use gpu'` function into WGSL for PixiJS's WebGPU renderer
@@ -91,6 +91,38 @@ if (isWebGPURenderer(app.renderer)) {
 `preference: 'webgpu'` makes PixiJS try WebGPU first, but it falls back to WebGL 2 where WebGPU isn't available.
 `getRoot` throws in that case, so check with `isWebGPURenderer` first.
 Calling `getRoot` again with the same renderer returns the same root. Destroying the root leaves the device alone, since PixiJS owns it.
+
+What the root creates isn't cut off from PixiJS's rendering. There are three ways across:
+
+- A [filter](#typegpu-buffers-and-textures-in-a-filter) reads the root's buffers, textures and samplers directly in its shaders.
+- `textureFrom` turns a TypeGPU texture into a PixiJS texture, for a sprite, a mesh, or anything else PixiJS draws with a texture.
+- A PixiJS 3D material samples such a texture through a [texture slot](#textures) of a shader bit.
+
+### TypeGPU textures as PixiJS textures
+
+`textureFrom` wraps a TypeGPU texture in a regular PixiJS `Texture`, without copying it. PixiJS shows whatever the texture holds when it draws,
+so a TypeGPU pipeline can keep rendering into it, or a compute pipeline can keep writing to it:
+
+```ts twoslash
+import { Application, Sprite } from 'pixi.js';
+import { getRoot, textureFrom } from '@typegpu/pixi';
+
+const app = new Application();
+await app.init({ preference: 'webgpu', resizeTo: window });
+// ---cut---
+const root = getRoot(app.renderer);
+
+const simulation = root
+  .createTexture({ size: [512, 512], format: 'rgba8unorm' })
+  .$usage('sampled', 'render');
+
+const sprite = new Sprite(textureFrom(app.renderer, simulation));
+app.stage.addChild(sprite);
+```
+
+The texture has to be a 2D texture with the `'sampled'` usage, created by the root of the same renderer. PixiJS expects colours with premultiplied alpha.
+Filtering and wrapping are set the PixiJS way, on the result's `source.style`.
+Destroying the PixiJS texture leaves the TypeGPU texture alone. Destroy the TypeGPU texture only once PixiJS has stopped drawing with it.
 
 ## Uniforms
 
@@ -231,6 +263,57 @@ PixiJS gives every filter the same global uniforms, input texture and sampler. A
 `sampleInput(uv)` is a shorthand for `std.textureSample(tp.filterGlobals.$.uTexture, tp.filterGlobals.$.uSampler, uv)`.
 `filterGlobals` only exists in filters. Reading it in a shader bit or a post effect throws.
 
+### TypeGPU buffers and textures in a filter
+
+On PixiJS's WebGPU renderer, a filter's functions can read the buffers, textures and samplers of the root that `getRoot` returns,
+the way any other TypeGPU shader does, through `.$`:
+
+```ts twoslash
+import { Application } from 'pixi.js';
+import * as tp from '@typegpu/pixi';
+import { d, std } from 'typegpu';
+
+const app = new Application();
+await app.init({ preference: 'webgpu', resizeTo: window });
+// ---cut---
+const root = tp.getRoot(app.renderer);
+
+// A texture that a TypeGPU pipeline draws into, and a buffer that JavaScript writes to
+const trail = root
+  .createTexture({ size: [512, 512], format: 'rgba8unorm' })
+  .$usage('sampled', 'render');
+const trailView = trail.createView(d.texture2d(d.f32));
+const linear = root.createSampler({ magFilter: 'linear', minFilter: 'linear' });
+const glow = root.createUniform(d.vec3f, d.vec3f(1, 0.6, 0.2));
+
+const trails = tp.createFilter(app.renderer, {
+  fragment: ({ uv }) => {
+    'use gpu';
+    const heat = std.textureSample(trailView.$, linear.$, uv).r;
+    return tp.sampleInput(uv) + d.vec4f(glow.$ * heat, 0);
+  },
+});
+
+glow.write(d.vec3f(0.2, 0.6, 1));
+```
+
+The shaders see what the resources hold when PixiJS draws the filter. A `write` from JavaScript, a compute pipeline or a render pass that ran before it
+all show up in that frame, with nothing to copy over. This is the way to feed a filter data that uniforms can't hold, such as an array in a storage buffer.
+
+A few things to know:
+
+- **Uniform and storage buffers, texture views and samplers** work, in either stage: `createUniform`, `createReadonly`, `buffer.as(...)`, `texture.createView(...)` and `createSampler`.
+  A buffer from `createMutable` can only be read in the fragment stage, since WebGPU doesn't let a vertex stage hold a writable buffer.
+- **The resources are fixed when the filter is created.** To read a different texture, say after a resize, create the filter again.
+  Bind group layouts (`tgpu.bindGroupLayout`), which TypeGPU pipelines use to swap resources, don't work in a filter.
+- **They have to come from `getRoot(renderer)`**, or from another TypeGPU root on the same device. A resource from another device fails when PixiJS draws.
+- **Only on WebGPU.** On the WebGL renderer there's no TypeGPU root, and creating a filter that reads TypeGPU resources throws.
+  A filter that has to run on both renderers takes its values through `uniforms`.
+- The filter's own `uniforms` keep working next to them.
+
+TypeGPU builds the bind group that holds these resources, and PixiJS binds it next to its own. For that, `createFilter` wraps the `getBindGroup` method
+of the renderer's `bindGroup` system the first time such a filter is created. Bind groups that PixiJS builds itself go through unchanged.
+
 The [PixiJS filters example](/TypeGPU/examples#example=pixi--filters) stacks a Perlin noise wobble and a chromatic aberration with its own vertex stage,
 on both of PixiJS's renderers.
 
@@ -324,6 +407,66 @@ These are the values a slot function can use. Writable values can be assigned to
 
 A `vertex` value used in a fragment slot, or the other way around, throws when the bit is created. Within a stage, use each value in the slots the table lists:
 in other slots PixiJS 3D may not have set it yet, or may overwrite it afterwards, and on a material that doesn't declare a value, such as `roughness` on a `PhongMaterial`, the shader fails to compile.
+
+### Textures
+
+A bit samples textures of the material through texture slots. `textureSlot` declares one by name, and gives you `sample` and `sampleDirect` to call in slot functions:
+
+```ts twoslash
+import { Material3D } from '@pixi/3d';
+import { Assets } from 'pixi.js';
+import * as p3d from '@typegpu/pixi/3d';
+import { d } from 'typegpu';
+// ---cut---
+const heightMap = p3d.textureSlot('heightMap');
+
+const terrainBit = p3d.shaderBit({
+  name: 'terrain',
+  vertex: {
+    beforeTransform: () => {
+      'use gpu';
+      const height = heightMap.sampleDirect(p3d.vertex.uv.$).r;
+      p3d.vertex.position.$ += d.vec4f(p3d.vertex.normal.$ * height, 0);
+    },
+  },
+  fragment: {
+    material: () => {
+      'use gpu';
+      p3d.fragment.albedo.$ *= heightMap.sample(p3d.fragment.uv.$).r;
+    },
+  },
+});
+
+const terrain = new Material3D({
+  extraBits: [terrainBit],
+  textures: { heightMap: await Assets.load('height.png') },
+});
+```
+
+`sample(uv)` picks a mip level that fits the pixel, which only the fragment stage can do, so calling it in a vertex slot throws.
+`sampleDirect(uv)` reads the largest mip level and works in both stages. Both return a `vec4f`.
+
+The bit declares the slots its functions sample, so there's nothing to list. Each material fills them by name, through its `textures` option or later
+with `terrain.textures.heightMap = texture`, and a slot nobody filled holds a white texture. Filtering and wrapping come from the texture's `source.style`.
+PixiJS uploads images with their alpha premultiplied, so divide a sample's `rgb` by its `a` to read the colour an image stores.
+
+Texture slots work on both renderers, with any PixiJS texture. On WebGPU that includes a TypeGPU texture, wrapped with [`textureFrom`](#typegpu-textures-as-pixijs-textures):
+
+```ts twoslash
+import { Material3D } from '@pixi/3d';
+import type { Renderer } from 'pixi.js';
+import * as p3d from '@typegpu/pixi/3d';
+declare const renderer: Renderer;
+declare const terrain: Material3D;
+// ---cut---
+const root = p3d.getRoot(renderer);
+const heights = root
+  .createTexture({ size: [256, 256], format: 'rgba8unorm' })
+  .$usage('sampled', 'render');
+
+// The material now shows whatever TypeGPU draws into `heights`
+terrain.textures.heightMap = p3d.textureFrom(renderer, heights);
+```
 
 ### The bit's own values
 
@@ -627,11 +770,15 @@ PixiJS 3D's guide to [custom render passes](https://3d.pixijs.download/v0.1.0/do
 
 ## Limitations
 
-- **No TypeGPU resources in shaders made for PixiJS.** A filter, shader bit or post effect can't read a TypeGPU buffer, texture or bind group layout, because PixiJS wouldn't bind them.
-  Generating one that does throws. Pass values through `uniforms` instead. A root from `getRoot` shares PixiJS's device, but its resources don't reach PixiJS's shaders.
+- **TypeGPU resources only reach PixiJS 3D as textures.** A [filter](#typegpu-buffers-and-textures-in-a-filter) reads TypeGPU buffers, textures and samplers directly,
+  but a shader bit or a post effect can't: PixiJS 3D builds the bind groups of its shaders itself, and has no place for a buffer of ours. Generating one that reads a TypeGPU resource throws.
+  A material gets a TypeGPU texture through a [texture slot](#textures), which also carries data a compute pipeline wrote. A post effect only has its `uniforms`.
+- **No bind group layouts.** A shader made for PixiJS can't read a `tgpu.bindGroupLayout`, so the TypeGPU resources of a filter can't be swapped after it's created.
+- **TypeGPU resources need WebGPU.** They live on a `GPUDevice`, so nothing that reads one runs on PixiJS's WebGL renderer.
 - **Material values have fewer types.** A shader bit's uniforms can only be `f32`, `i32`, `u32`, `vec2f`, `vec3f`, `vec4f` or `mat2x2f`, the types a PixiJS 3D material can hold.
 - **Helpers are generated per bit.** Each bit carries its own copy of the functions it calls, under its own name. Two bits that call the same library function put two copies of it in a material's shader.
-- **Missing wrappers.** There's nothing yet for a bit's own `textures`, for `createLightingBit`, or for PixiJS 3D's `decodeColor`. A bit that needs them has to be written by hand, as a plain `ShaderBit`.
+- **Missing wrappers.** There's nothing yet for `createLightingBit`, or for PixiJS 3D's `decodeColor`. A bit that needs them has to be written by hand, as a plain `ShaderBit`.
+- **Texture slots are 2D colour textures.** That's what PixiJS 3D gives a bit: a `texture_2d<f32>` with the sampler of the texture's own style, read through two functions.
 - **No fragment-only functions in post effects on WebGL.** PixiJS 3D puts an effect's GLSL in both the vertex and the fragment shader of its pass,
   so functions that only exist in fragment shaders, such as derivatives (`std.dpdx`, `std.fwidth`, ...) and `std.discard`, break the effect on WebGL.
   Shader bits don't have this problem, since each stage gets its own code.
@@ -683,6 +830,19 @@ function isWebGPURenderer(renderer: Renderer): renderer is WebGPURenderer;
 
 Whether PixiJS started its WebGPU renderer, rather than WebGL or canvas.
 
+#### textureFrom
+
+```ts
+function textureFrom(
+  renderer: Renderer,
+  texture: TgpuTexture,
+  options?: { label?: string | undefined },
+): Texture;
+```
+
+Wraps a TypeGPU texture in a PixiJS `Texture`, without copying it. The texture needs the `'sampled'` usage, and a root on the renderer's device.
+Throws if PixiJS isn't using its WebGPU renderer, or if the texture can't be sampled. See [TypeGPU textures as PixiJS textures](#typegpu-textures-as-pixijs-textures).
+
 #### createFilter
 
 ```ts
@@ -700,7 +860,8 @@ interface TgpuFilterOptions<TVertexOut> extends FilterOptions {
 ```
 
 Creates a PixiJS filter from a `fragment` function, and optionally a `vertex` function, with WGSL or GLSL depending on `renderer`.
-Throws if PixiJS started with a renderer other than WebGPU or WebGL 2. See [2D filters](#2d-filters).
+On the WebGPU renderer, the functions can also read [TypeGPU buffers, textures and samplers](#typegpu-buffers-and-textures-in-a-filter).
+Throws if PixiJS started with a renderer other than WebGPU or WebGL 2, or if the functions read TypeGPU resources on WebGL 2. See [2D filters](#2d-filters).
 
 #### sampleInput
 
@@ -746,10 +907,11 @@ The vertex stage a filter has when it doesn't bring its own. It places the filte
 `UniformSchema`, `UniformRecord`, `UniformValues`, `UniformInput` and `UniformTarget` describe the schemas, values and targets of `uniforms`.
 `FilterVertexIn` is what a filter's vertex function receives (`aPosition`), `FilterVertexOut` what it returns (`$position` and the values to pass on),
 and `FilterFragmentIn` what the fragment function receives: the values the vertex function passes on, or `uv` without one.
+`TextureFromOptions` are the options of `textureFrom`.
 
 ### `@typegpu/pixi/3d`
 
-This entry point re-exports `uniforms`, `PixiUniforms`, `getRoot`, `isWebGPURenderer` and the uniform types, so a PixiJS 3D app can import everything from one place.
+This entry point re-exports `uniforms`, `PixiUniforms`, `getRoot`, `isWebGPURenderer`, `textureFrom` and the uniform types, so a PixiJS 3D app can import everything from one place.
 
 #### shaderBit
 
@@ -768,6 +930,22 @@ interface ShaderBitOptions {
 
 Creates a PixiJS 3D shader bit from TypeGPU functions. `vertex` and `fragment` map slot names to `SlotFunction`s (`() => void`).
 `requires` lists other bits whose code this one needs, and is passed through as it is. See [PixiJS 3D materials](#pixijs-3d-materials).
+
+#### textureSlot
+
+```ts
+function textureSlot<TName extends string>(name: TName): TextureSlot<TName>;
+
+class TextureSlot<TName extends string = string> {
+  readonly name: TName;
+  readonly sample: (uv: d.v2f) => d.v4f;
+  readonly sampleDirect: (uv: d.v2f) => d.v4f;
+}
+```
+
+Declares a texture that a material gives to its shader bits, under `name` in the material's `textures`. The name is in camelCase, like `'heightMap'`.
+`sample` reads the texture at the mip level that fits the pixel, in fragment slots only, and `sampleDirect` reads its largest mip level in any slot.
+A bit declares every slot its functions sample. See [Textures](#textures).
 
 #### vertex, fragment
 

@@ -271,7 +271,10 @@ export function shaderBit(options: ShaderBitOptions): ShaderBit {
     const prototypes = [...target.textures].flatMap(([slot, helpers]) =>
       [...helpers].map((helper) => `vec4 ${pixiHelperName(slot, helper)}(vec2 uv);`),
     );
-    return { header: `${prototypes.join('\n')}\n\n${module.header}`, idOf: module.idOf };
+    return {
+      header: `${prototypes.join('\n')}\n\n${module.header}`,
+      idOf: (item) => module.idOf(item),
+    };
   };
 
   const slotsOf = (stage: ShaderStage) => slots.filter((slot) => slot.stage === stage);

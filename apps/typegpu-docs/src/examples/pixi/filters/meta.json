@@ -1,6 +1,6 @@
 {
   "title": "PixiJS - Filters",
-  "description": "Two PixiJS filters written as TypeGPU functions: a Perlin noise wobble and a chromatic aberration with its own vertex stage. The same functions run on PixiJS's WebGPU and WebGL renderers.",
+  "description": "PixiJS filters written as TypeGPU functions: ripples kept in a TypeGPU buffer, a Perlin noise wobble, and a chromatic aberration with its own vertex stage. Press anywhere to add a ripple. The wobble and the aberration run on PixiJS's WebGPU and WebGL renderers alike.",
   "category": "pixi",
   "tags": ["ecosystem", "filtering", "noise", "webgl"],
   "coolFactor": 4

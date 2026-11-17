@@ -18,12 +18,9 @@ function hookBindGroups(renderer: WebGPURenderer) {
   }
   hookedSystems.add(system);
 
-  const getBindGroup = system.getBindGroup;
-  system.getBindGroup = function (bindGroup, program, groupIndex) {
-    return (
-      foreignBindGroups.get(bindGroup) ?? getBindGroup.call(this, bindGroup, program, groupIndex)
-    );
-  };
+  const getBindGroup = system.getBindGroup.bind(system);
+  system.getBindGroup = (bindGroup, program, groupIndex) =>
+    foreignBindGroups.get(bindGroup) ?? getBindGroup(bindGroup, program, groupIndex);
 }
 
 /**

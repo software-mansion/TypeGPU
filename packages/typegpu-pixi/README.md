@@ -53,6 +53,26 @@ const ground = new Material3D({ roughness: 0.6, extraBits: [contourBit] });
 contourUniforms.write(ground, { lowColor: d.vec3f(0.03, 0.2, 0.03), highColor: d.vec3f(1), frequency: 4 });
 ```
 
+On PixiJS's WebGPU renderer, TypeGPU's resources and PixiJS's rendering share a device. A filter reads TypeGPU buffers,
+textures and samplers directly, and `textureFrom` hands a TypeGPU texture to anything in PixiJS that draws with one:
+
+```ts
+const root = tp.getRoot(app.renderer);
+const tint = root.createUniform(d.vec3f, d.vec3f(1, 0.8, 0.6));
+const canvas = root.createTexture({ size: [512, 512], format: 'rgba8unorm' }).$usage('sampled', 'render');
+
+const tinted = tp.createFilter(app.renderer, {
+  fragment: ({ uv }) => {
+    'use gpu';
+    const color = tp.sampleInput(uv);
+    return d.vec4f(color.rgb * tint.$, color.a);
+  },
+});
+
+const sprite = new Sprite(tp.textureFrom(app.renderer, canvas));
+sprite.filters = [tinted];
+```
+
 Read more in the [documentation](https://docs.swmansion.com/TypeGPU/ecosystem/typegpu-pixi/).
 
 ## TypeGPU is created by Software Mansion
