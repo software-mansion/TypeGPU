@@ -504,6 +504,50 @@ describe('GlslGenerator - standard function calls', () => {
     `);
   });
 
+  it('translates a scalar ternary to a ternary expression', () => {
+    function foo(cond: boolean) {
+      'use gpu';
+      return cond ? d.f32(1) : d.f32(0);
+    }
+
+    function main() {
+      'use gpu';
+      return foo(true);
+    }
+
+    expect(tgpu.resolve([main], glOptions())).toMatchInlineSnapshot(`
+      "float foo(bool cond) {
+        return (cond ? 1.0 : 0.0);
+      }
+
+      float main() {
+        return foo(true);
+      }"
+    `);
+  });
+
+  it('translates a vector ternary to mix()', () => {
+    function foo(cond: boolean) {
+      'use gpu';
+      return cond ? d.vec3f(1, 0, 0) : d.vec3f(0, 1, 0);
+    }
+
+    function main() {
+      'use gpu';
+      return foo(true);
+    }
+
+    expect(tgpu.resolve([main], glOptions())).toMatchInlineSnapshot(`
+      "vec3 foo(bool cond) {
+        return mix(vec3(0, 1, 0), vec3(1, 0, 0), bvec3(cond));
+      }
+
+      vec3 main() {
+        return foo(true);
+      }"
+    `);
+  });
+
   it('translates vector `select()` to mix()', () => {
     function foo() {
       'use gpu';
