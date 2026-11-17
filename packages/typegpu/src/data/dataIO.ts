@@ -452,10 +452,10 @@ const dataWriters = {
   },
   'unorm10-10-10-2'(output, _, value) {
     let packed = 0;
-    packed |= (Math.round(value.x * 1023) & 1023) << 22; // r (10 bits)
-    packed |= (Math.round(value.y * 1023) & 1023) << 12; // g (10 bits)
-    packed |= (Math.round(value.z * 1023) & 1023) << 2; // b (10 bits)
-    packed |= Math.round(value.w * 3) & 3; // a (2 bits)
+    packed |= Math.round(value.x * 1023) & 1023; // r (10 bits)
+    packed |= (Math.round(value.y * 1023) & 1023) << 10; // g (10 bits)
+    packed |= (Math.round(value.z * 1023) & 1023) << 20; // b (10 bits)
+    packed |= (Math.round(value.w * 3) & 3) << 30; // a (2 bits)
     output.writeUint32(packed);
   },
   'unorm8x4-bgra'(output, _, value) {
@@ -738,10 +738,10 @@ const dataReaders = {
   sint32x4: (i) => vec4i(i.readInt32(), i.readInt32(), i.readInt32(), i.readInt32()),
   'unorm10-10-10-2'(i) {
     const packed = i.readUint32();
-    const r = (packed >>> 22) / 1023;
-    const g = ((packed >> 12) & 1023) / 1023;
-    const b = ((packed >> 2) & 1023) / 1023;
-    const a = (packed & 3) / 3;
+    const r = (packed & 1023) / 1023;
+    const g = ((packed >>> 10) & 1023) / 1023;
+    const b = ((packed >>> 20) & 1023) / 1023;
+    const a = (packed >>> 30) / 3;
     return vec4f(r, g, b, a);
   },
   'unorm8x4-bgra'(i) {

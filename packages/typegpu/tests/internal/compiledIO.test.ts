@@ -329,7 +329,7 @@ describe('buildWriter (partial mode)', () => {
       "if (((offset + 0) + 0) < endOffset) { output.setUint16(((offset + 0) + 0), value.a.x, littleEndian); }
       if (((offset + 0) + 2) < endOffset) { output.setUint16(((offset + 0) + 2), value.a.y, littleEndian); }
       if (((offset + 4)) < endOffset) {
-      output.setUint32((offset + 4), ((Math.round(value.b.x*1023)&0x3FF)<<22)|((Math.round(value.b.y*1023)&0x3FF)<<12)|((Math.round(value.b.z*1023)&0x3FF)<<2)|(Math.round(value.b.w*3)&3), littleEndian);
+      output.setUint32((offset + 4), (Math.round(value.b.x*1023)&0x3FF)|((Math.round(value.b.y*1023)&0x3FF)<<10)|((Math.round(value.b.z*1023)&0x3FF)<<20)|((Math.round(value.b.w*3)&3)<<30), littleEndian);
       }
       if (((offset + 8) + 0) < endOffset) { output.setUint8(((offset + 8) + 0), value.c.x, littleEndian); }
       if (((offset + 8) + 1) < endOffset) { output.setUint8(((offset + 8) + 1), value.c.y, littleEndian); }
@@ -907,7 +907,7 @@ describe('createCompileInstructions', () => {
     expect(unstructWriter).toMatchInlineSnapshot(`
       "output.setUint16(((offset + 0) + 0), value.a.x, littleEndian);
       output.setUint16(((offset + 0) + 2), value.a.y, littleEndian);
-      output.setUint32((offset + 4), ((Math.round(value.b.x*1023)&0x3FF)<<22)|((Math.round(value.b.y*1023)&0x3FF)<<12)|((Math.round(value.b.z*1023)&0x3FF)<<2)|(Math.round(value.b.w*3)&3), littleEndian);
+      output.setUint32((offset + 4), (Math.round(value.b.x*1023)&0x3FF)|((Math.round(value.b.y*1023)&0x3FF)<<10)|((Math.round(value.b.z*1023)&0x3FF)<<20)|((Math.round(value.b.w*3)&3)<<30), littleEndian);
       output.setUint8(((offset + 8) + 0), value.c.x, littleEndian);
       output.setUint8(((offset + 8) + 1), value.c.y, littleEndian);
       output.setUint8(((offset + 10) + 0), Math.round(value.d.x * 255), littleEndian);
@@ -935,10 +935,10 @@ describe('createCompileInstructions', () => {
       b: (() => {
         const packed = dataView.getUint32(4, true);
         return d.vec4f(
-          ((packed >> 22) & 0x3ff) / 1023,
-          ((packed >> 12) & 0x3ff) / 1023,
-          ((packed >> 2) & 0x3ff) / 1023,
-          (packed & 3) / 3,
+          (packed & 0x3ff) / 1023,
+          ((packed >>> 10) & 0x3ff) / 1023,
+          ((packed >>> 20) & 0x3ff) / 1023,
+          (packed >>> 30) / 3,
         );
       })(),
       c: d.vec2u(dataView.getUint8(8), dataView.getUint8(9)),
