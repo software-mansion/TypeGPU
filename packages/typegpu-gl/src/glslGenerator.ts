@@ -263,14 +263,17 @@ export function translateWgslTypeToGlsl(wgslType: string): string {
 function resolveStruct(ctx: ResolutionCtx, struct: d.WgslStruct) {
   const id = ctx.makeUniqueIdentifier(getName(struct), 'global');
 
-  ctx.addDeclaration(`\
+  ctx.addDeclaration(
+    `\
 struct ${id} {
 ${Object.entries(struct.propTypes)
   .map(
     ([prop, type]) => `  ${ctx.resolve(type).value} ${prop}${resolveArraySizeSuffix(ctx, type)};\n`,
   )
   .join('')}\
-};`);
+};`,
+    id,
+  );
 
   return id;
 }
@@ -562,6 +565,7 @@ export class GlslGenerator extends WgslGenerator {
 
     this.ctx.addDeclaration(
       `const ${typeStr} ${options.id}${resolveArraySizeSuffix(this.ctx, options.dataType)} = ${initStr};`,
+      options.id,
     );
 
     return snip(options.id, options.dataType, 'constant-immutable-def');
@@ -608,6 +612,7 @@ export class GlslGenerator extends WgslGenerator {
 
     this.ctx.addDeclaration(
       options.init ? `${pre} = ${this.ctx.resolveSnippet(options.init).value};` : `${pre};`,
+      options.id,
     );
 
     return snip(options.id, options.dataType, options.scope);

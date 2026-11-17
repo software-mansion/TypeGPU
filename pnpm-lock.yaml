@@ -29,6 +29,12 @@ catalogs:
       specifier: ^19.3.1
       version: 19.3.1
   example:
+    '@pixi/3d':
+      specifier: ^0.1.0
+      version: 0.1.0
+    pixi.js:
+      specifier: ^8.23.0
+      version: 8.23.0
     wgpu-matrix:
       specifier: ^3.4.0
       version: 3.4.0
@@ -306,6 +312,9 @@ importers:
       '@monaco-editor/react':
         specifier: ^4.7.0
         version: 4.7.0(monaco-editor@0.55.1)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
+      '@pixi/3d':
+        specifier: catalog:example
+        version: 0.1.0(pixi.js@8.23.0)
       '@radix-ui/react-select':
         specifier: ^2.2.6
         version: 2.2.6(@types/react-dom@19.2.3(@types/react@19.2.17))(@types/react@19.2.17)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
@@ -336,6 +345,9 @@ importers:
       '@typegpu/noise':
         specifier: workspace:*
         version: link:../../packages/typegpu-noise
+      '@typegpu/pixi':
+        specifier: workspace:*
+        version: link:../../packages/typegpu-pixi
       '@typegpu/radiance-cascades':
         specifier: workspace:*
         version: link:../../packages/typegpu-radiance-cascades
@@ -396,6 +408,9 @@ importers:
       pathe:
         specifier: ^2.0.3
         version: 2.0.3
+      pixi.js:
+        specifier: catalog:example
+        version: 8.23.0
       react:
         specifier: 'catalog:'
         version: 19.3.1
@@ -886,6 +901,46 @@ importers:
       unplugin-typegpu:
         specifier: workspace:*
         version: link:../unplugin-typegpu
+    publishDirectory: dist
+
+  packages/typegpu-pixi:
+    devDependencies:
+      '@pixi/3d':
+        specifier: catalog:example
+        version: 0.1.0(pixi.js@8.23.0)
+      '@typegpu/gl':
+        specifier: workspace:*
+        version: link:../typegpu-gl
+      '@typegpu/tgpu-dev-cli':
+        specifier: workspace:*
+        version: link:../tgpu-dev-cli
+      '@webgpu/types':
+        specifier: catalog:types
+        version: 0.1.71
+      jiti:
+        specifier: catalog:build
+        version: 2.6.1
+      pixi.js:
+        specifier: catalog:example
+        version: 8.23.0
+      tsdown:
+        specifier: catalog:build
+        version: 0.15.12(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3)(tsover@6.0.2)(unrun@0.2.31(@emnapi/core@1.11.3)(@emnapi/runtime@1.11.3))
+      typegpu:
+        specifier: workspace:*
+        version: link:../typegpu
+      typegpu-testing-utility:
+        specifier: workspace:*
+        version: link:../typegpu-testing-utility
+      typescript:
+        specifier: npm:tsover@^6.0.2
+        version: tsover@6.0.2
+      unplugin-typegpu:
+        specifier: workspace:*
+        version: link:../unplugin-typegpu
+      vitest:
+        specifier: catalog:test
+        version: 4.1.12(@types/node@24.10.0)(@vitest/browser-preview@4.1.12)(@vitest/coverage-v8@4.1.12)(jsdom@27.0.0(postcss@8.5.32))(vite@8.1.6(@types/node@24.10.0)(jiti@2.6.1)(terser@5.51.2)(tsx@4.20.6)(yaml@2.9.1))
     publishDirectory: dist
 
   packages/typegpu-radiance-cascades:
@@ -3202,6 +3257,11 @@ packages:
     cpu: [x64]
     os: [win32]
 
+  '@pixi/3d@0.1.0':
+    resolution: {integrity: sha512-6mwC1nD4pDRix9QVl8aRDSHeMZtqb00vKiKb6U5cFeaYxZbwEnn9gXJphnk9udQKqf0jz2z8YUXaGudsACLaOQ==}
+    peerDependencies:
+      pixi.js: ^8.23.0
+
   '@pkgjs/parseargs@0.11.0':
     resolution: {integrity: sha512-+1VkjdD0QBLPodGrJUeqarH8VAIvQODIbwh9XpP5Syisf7YoQgsJKPNFoqqLQlu+VQ/tVSshMR6loPMn8U+dPg==}
     engines: {node: '>=14'}
@@ -4525,6 +4585,10 @@ packages:
   '@types/deep-eql@4.0.2':
     resolution: {integrity: sha512-c9h9dVVMigMPc4bwTvC5dxqtqJZwQPePsWjPlpSOnojbor6pGqdk541lfA7AqFQr5pB1BRdq0juY9db81BwyFw==}
 
+  '@types/earcut@3.2.4':
+    resolution: {integrity: sha512-I688mi107oflZOpzhs4EwasCN4ycLlZHf7XAGhM6EQIHEJkRTEuTL08lemIZOQ1YAACJoNoCzAiSDCJujpJLHA==}
+    deprecated: This is a stub types definition. earcut provides its own type definitions, so you do not need this installed.
+
   '@types/estree-jsx@1.0.5':
     resolution: {integrity: sha512-52CcUVNFyfb1A2ALocQw/Dd1BQFNmSdkuC3BkZ6iqhdMfQz7JWOFRuJFloOzjk+6WijU56m9oKXFAXc7o3Towg==}
 
@@ -4879,6 +4943,10 @@ packages:
     peerDependenciesMeta:
       webpack-dev-server:
         optional: true
+
+  '@xmldom/xmldom@0.8.15':
+    resolution: {integrity: sha512-/5NV/vDALVFDXgLmfsy9TRCBlKwO2LNBFzpzvb9iIj+jR+eSc6DLYYvVOdivT/jm7MtU6TebYuRmzEOI7w40UA==}
+    engines: {node: '>=10.0.0'}
 
   '@xmldom/xmldom@0.9.12':
     resolution: {integrity: sha512-5AXjrcMClTryPe9LgZrygpB1lj7s0S9E0+W+AHaVKAVyHanafK86iPSvG5xHVSp/jC+VH1UXu0TAEmY279xH7A==}
@@ -5361,8 +5429,8 @@ packages:
   color-name@1.1.4:
     resolution: {integrity: sha512-dOy+3AuW3a2wNbZHIuMZpTcgjGuLU/uBL/ubcZF9OXbDo8ff4O8yVp5Bf0efS8uEoYo5q4Fx7dY9OgQGXgAsQA==}
 
-  colord@2.9.3:
-    resolution: {integrity: sha512-jeC1axXpnb0/2nn/Y1LPuLdgXBLH7aDcHu4KEKfqw3CUhX7ZpfBSlPKyqXE6btIgEzfWtrX3/tyBCaCvXvMkOw==}
+  colord@2.13.0:
+    resolution: {integrity: sha512-2g8RPH6UvoD1ZXYmccAuo0zfMw4mxqzXbeToeVoMSm6na0QEDXggahcZdlTFnFdahlV3I158ipRb2AIvCcwiAQ==}
 
   colorette@2.0.20:
     resolution: {integrity: sha512-IfEDxwoWIjkeXL1eXcDiow4UbKjhLdq6/EuSVR9GMN7KVH3r9gQ83e73hsz1Nd1T3ijd5xv1wcWRYO+D6kCI2w==}
@@ -5799,6 +5867,9 @@ packages:
     peerDependenciesMeta:
       oxc-resolver:
         optional: true
+
+  earcut@3.2.4:
+    resolution: {integrity: sha512-FHc6yNpnTORB0tM5kmZ03iD2mDuNakDE2lvf4Hw1XkfxtEHIGVi01B/GqUSwx+NcC1WGjidAfpTXzeALtPtfpg==}
 
   eastasianwidth@0.2.0:
     resolution: {integrity: sha512-I88TYZWc9XiYHRQ4/3c5rjjfgkjhLyW2luGIheGERbNQ6OY7yTybanSpDXZa8y7VUP9YmDcYa+eyq4ca7iLqWA==}
@@ -6262,6 +6333,9 @@ packages:
     resolution: {integrity: sha512-X6fBC0pmImC70gvX2zm56go9hx0MyoGVdG0tUCkg/D+Xnh5TJsOZ7iDbOdI3PvmtrDxnu1YdDufpK2QJX1Meqw==}
     engines: {node: '>=20.20.0'}
 
+  gifuct-js@2.1.2:
+    resolution: {integrity: sha512-rI2asw77u0mGgwhV3qA+OEgYqaDn5UNqgs+Bx0FGwSpuqfYn+Ir6RQY5ENNQ8SbIiG/m5gVa7CD5RriO4f4Lsg==}
+
   github-slugger@2.0.0:
     resolution: {integrity: sha512-IaOQ9puYtjrkq7Y0Ygl9KDZnrf/aiUJYUpVf89y8kyaxbRG7Y1SrX/jaumrv81vc61+kiMempujsM3Yw7w5qcw==}
 
@@ -6609,6 +6683,9 @@ packages:
   isexe@2.0.0:
     resolution: {integrity: sha512-RHxMLp9lnKHGHRng9QFhRCMbYAcVpn69smSGcq3f36xjgVVWThj4qqLbTLlq7Ssj8B+fIQ1EuCEGI2lKsyQeIw==}
 
+  ismobilejs@1.1.1:
+    resolution: {integrity: sha512-VaFW53yt8QO61k2WJui0dHf4SlL8lxBofUuUmwBo0ljPk0Drz2TiuDW4jo3wDcv41qy/SxrJ+VAzJ/qYqsmzRw==}
+
   isobject@3.0.1:
     resolution: {integrity: sha512-WhB9zCku7EGTj/HQQRz5aUQEUeoQZH2bWcltRErOpymJ4boYE6wL9Tbr23krRPSZ+C5zqNSrSw+Cc7sZZ4b7vg==}
     engines: {node: '>=0.10.0'}
@@ -6713,6 +6790,9 @@ packages:
         optional: true
       react:
         optional: true
+
+  js-binary-schema-parser@2.0.3:
+    resolution: {integrity: sha512-xezGJmOb4lk/M1ZZLTR/jaBHQ4gG/lqQnJqdIv4721DMggsa1bDVlHXNeHYogaIEHD9vCRv0fcL4hMA+Coarkg==}
 
   js-tokens@10.0.0:
     resolution: {integrity: sha512-lM/UBzQmfJRo9ABXbPWemivdCW8V2G8FHaHdypQaIy523snUjog0W71ayWXTjiR+ixeMyVHN2XcpnTd/liPg/Q==}
@@ -7164,6 +7244,9 @@ packages:
 
   meshoptimizer@0.22.0:
     resolution: {integrity: sha512-IebiK79sqIy+E4EgOr+CAw+Ke8hAspXKzBd0JdgEmPHiAwmvEj2S4h1rfvo+o/BnfEYd/jAOg5IeeIjzlzSnDg==}
+
+  meshoptimizer@1.3.0:
+    resolution: {integrity: sha512-2oZqMAcEEiCtXWUjIGtZ71oPx1B0ZxYGTqIKsXB1wzWFhleNsCFxQuUJzgCV706bRcwPWtMGf1odmQvAcqKkIw==}
 
   metro-babel-transformer@0.83.5:
     resolution: {integrity: sha512-d9FfmgUEVejTiSb7bkQeLRGl6aeno2UpuPm3bo3rCYwxewj03ymvOn8s8vnS4fBqAPQ+cE9iQM40wh7nGXR+eA==}
@@ -7773,6 +7856,9 @@ packages:
     resolution: {integrity: sha512-TXfryirbmq34y8QBwgqCVLi+8oA3oWx2eAnSn62ITyEhEYaWRlVZ2DvMM9eZbMs/RfxPu/PK/aBLyGj4IrqMHw==}
     engines: {node: '>=18'}
 
+  parse-svg-path@0.2.0:
+    resolution: {integrity: sha512-Tf7FFIrguPKQwzD4pWnYkR2VOv3raoHeKED80Bm+BYHI3KxC8KsgsGC5+fSMzAGDA6UEk4bHvmi+RsjmL3khpg==}
+
   parse5@7.3.0:
     resolution: {integrity: sha512-IInvU7fabl34qmi9gY8XOVxhYyMyuH2xUNpb2q8/Y+7552KlejkRvqvD19nMoUW/uQGGbqNpA6Tufu5FL5BZgw==}
 
@@ -7837,6 +7923,9 @@ packages:
   pirates@4.0.7:
     resolution: {integrity: sha512-TfySrs/5nm8fQJDcBDuUng3VOUKsd7S+zqvbOTiGXHfxX4wK31ard+hoNuvkicM/2YFzlpDgABOevKSsB4G/FA==}
     engines: {node: '>= 6'}
+
+  pixi.js@8.23.0:
+    resolution: {integrity: sha512-RkWSwo+mAR0d7MKnJ20IjKkWGPdFh1C0adBRYYLa+SGdxTfbrr6RnQyZZRwjBaG/bDAIQqgBcTBbiNsN6iKFVQ==}
 
   pkg-dir@4.2.0:
     resolution: {integrity: sha512-HRDzbaKjC+AOWVXxAU/x54COGeIv9eb+6CkDSQoNTt4XyWoIJvuPsXizxu/Fr23EiekbtZwmh1IcIG/l/a10GQ==}
@@ -8916,6 +9005,10 @@ packages:
 
   tiny-inflate@1.0.3:
     resolution: {integrity: sha512-pkY1fj1cKHb2seWDy0B16HeWyczlJA9/WW3u3c4z/NiWDsO3DOU5D7nhTLE9CF0yXv/QZFY7sEJmj24dK+Rrqw==}
+
+  tiny-lru@11.4.7:
+    resolution: {integrity: sha512-w/Te7uMUVeH0CR8vZIjr+XiN41V+30lkDdK+NRIDCUYKKuL9VcmaUEmaPISuwGhLlrTGh5yu18lENtR9axSxYw==}
+    engines: {node: '>=12'}
 
   tinybench@2.9.0:
     resolution: {integrity: sha512-0+DUvqWMValLmha6lr4kD8iAMK1HzV0/aKnCtWb9v9641TnP/MFb7Pc2bxoxQjTXAErryXVgUOfv2YqNllqGeg==}
@@ -11802,6 +11895,11 @@ snapshots:
   '@pagefind/windows-x64@1.5.2':
     optional: true
 
+  '@pixi/3d@0.1.0(pixi.js@8.23.0)':
+    dependencies:
+      meshoptimizer: 1.3.0
+      pixi.js: 8.23.0
+
   '@pkgjs/parseargs@0.11.0':
     optional: true
 
@@ -12859,6 +12957,10 @@ snapshots:
 
   '@types/deep-eql@4.0.2': {}
 
+  '@types/earcut@3.2.4':
+    dependencies:
+      earcut: 3.2.4
+
   '@types/estree-jsx@1.0.5':
     dependencies:
       '@types/estree': 1.0.8
@@ -13338,6 +13440,8 @@ snapshots:
     dependencies:
       webpack: 5.112.2(esbuild@0.25.12)(postcss@8.5.32)(webpack-cli@6.0.1)
       webpack-cli: 6.0.1(webpack@5.112.2)
+
+  '@xmldom/xmldom@0.8.15': {}
 
   '@xmldom/xmldom@0.9.12': {}
 
@@ -13936,7 +14040,7 @@ snapshots:
 
   color-name@1.1.4: {}
 
-  colord@2.9.3: {}
+  colord@2.13.0: {}
 
   colorette@2.0.20: {}
 
@@ -14380,6 +14484,8 @@ snapshots:
   dset@3.1.4: {}
 
   dts-resolver@2.1.3: {}
+
+  earcut@3.2.4: {}
 
   eastasianwidth@0.2.0: {}
 
@@ -14901,6 +15007,10 @@ snapshots:
     dependencies:
       resolve-pkg-maps: 1.0.0
 
+  gifuct-js@2.1.2:
+    dependencies:
+      js-binary-schema-parser: 2.0.3
+
   github-slugger@2.0.0: {}
 
   gl-matrix@3.4.4: {}
@@ -15341,6 +15451,8 @@ snapshots:
 
   isexe@2.0.0: {}
 
+  ismobilejs@1.1.1: {}
+
   isobject@3.0.1: {}
 
   isoformat@0.2.1: {}
@@ -15477,6 +15589,8 @@ snapshots:
       '@babel/template': 7.29.7
       '@types/react': 19.2.17
       react: 19.3.1
+
+  js-binary-schema-parser@2.0.3: {}
 
   js-tokens@10.0.0: {}
 
@@ -15999,6 +16113,8 @@ snapshots:
   merge-stream@2.0.0: {}
 
   meshoptimizer@0.22.0: {}
+
+  meshoptimizer@1.3.0: {}
 
   metro-babel-transformer@0.83.5:
     dependencies:
@@ -17016,6 +17132,8 @@ snapshots:
 
   parse-ms@4.0.0: {}
 
+  parse-svg-path@0.2.0: {}
+
   parse5@7.3.0:
     dependencies:
       entities: 6.0.1
@@ -17060,6 +17178,19 @@ snapshots:
 
   pirates@4.0.7: {}
 
+  pixi.js@8.23.0:
+    dependencies:
+      '@types/earcut': 3.2.4
+      '@webgpu/types': 0.1.74
+      '@xmldom/xmldom': 0.8.15
+      colord: 2.13.0
+      earcut: 3.2.4
+      eventemitter3: 5.0.4
+      gifuct-js: 2.1.2
+      ismobilejs: 1.1.1
+      parse-svg-path: 0.2.0
+      tiny-lru: 11.4.7
+
   pkg-dir@4.2.0:
     dependencies:
       find-up: 4.1.0
@@ -17101,7 +17232,7 @@ snapshots:
     dependencies:
       browserslist: 4.29.0
       caniuse-api: 3.0.0
-      colord: 2.9.3
+      colord: 2.13.0
       postcss: 8.5.32
       postcss-value-parser: 4.2.0
 
@@ -17149,7 +17280,7 @@ snapshots:
 
   postcss-minify-gradients@7.0.0(postcss@8.5.32):
     dependencies:
-      colord: 2.9.3
+      colord: 2.13.0
       cssnano-utils: 5.0.0(postcss@8.5.32)
       postcss: 8.5.32
       postcss-value-parser: 4.2.0
@@ -18371,6 +18502,8 @@ snapshots:
       readable-stream: 3.6.2
 
   tiny-inflate@1.0.3: {}
+
+  tiny-lru@11.4.7: {}
 
   tinybench@2.9.0: {}
 
