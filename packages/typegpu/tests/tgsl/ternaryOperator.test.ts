@@ -348,7 +348,7 @@ describe('ternary operator', () => {
     expect(() => tgpu.resolve([myFn])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn:myFn: Ternary operator '(a > 0) ? (b = a) : 0' is invalid. For more complex branching, please use 'std.select' or if/else statements.]
+      - fn:myFn: 'b = a' is invalid because assignment is only allowed as a standalone statement.]
     `);
   });
 
