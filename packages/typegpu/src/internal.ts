@@ -11,6 +11,7 @@ export { snip, withValue, withDataType, withSideEffects } from './data/snippet.t
 export { stringifyNode, stringifyObjectProperty } from './shared/tseynit.ts';
 export { dualImpl } from './core/function/dualImpl.ts';
 export { getLogResources } from './core/pipeline/pipelineUtils.ts';
+export { calculateOffsets } from './data/dataIO.ts';
 export {
   isNonTransferableResource,
   isTransferableResource,

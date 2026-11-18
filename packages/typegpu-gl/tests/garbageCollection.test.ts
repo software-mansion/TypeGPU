@@ -104,7 +104,7 @@ describe('TgpuRootWebGL - garbage collection', () => {
     expect(await collect(refs)).toBe(0);
     pipeline.draw(3);
     expect(gl.uniform1f).not.toHaveBeenCalled();
-    expect(gl.drawArrays).toHaveBeenCalledTimes(1);
+    expect(gl.drawArraysInstanced).toHaveBeenCalledTimes(1);
     root.destroy();
   });
 
@@ -156,7 +156,10 @@ describe('TgpuRootWebGL - garbage collection', () => {
       .createTexture({ size: [1, 1], format: 'rgba8unorm' })
       .$usage('sampled')
       .createView();
-    function createPipeline() {
+    function createPipeline(): {
+      refs: WeakRef<object>[];
+      pipeline: Pick<TgpuWebGLRenderPipeline, 'draw'> | undefined;
+    } {
       const sampler = root.createSampler({ magFilter: 'linear' });
       return {
         refs: [new WeakRef(sampler)],
@@ -170,7 +173,7 @@ describe('TgpuRootWebGL - garbage collection', () => {
             return std.textureSample(view.$, sampler.$, d.vec2f(0.5));
           },
         }),
-      } as { refs: WeakRef<object>[]; pipeline: TgpuWebGLRenderPipeline | undefined };
+      };
     }
     const resources = createPipeline();
     const [rawSampler] = vi.mocked(gl.createSampler).mock.results.map((r) => r.value);

@@ -372,7 +372,7 @@ describe('TgpuRootWebGL - depth-only passes', () => {
     // The fragment output is written into no draw buffer
     expect(gl.drawBuffers).toHaveBeenCalledWith([gl.NONE]);
     // The framebuffer bound when drawing (the default one gets bound back after the pass)
-    const drawOrder = vi.mocked(gl.drawArrays).mock.invocationCallOrder[0] ?? Number.NaN;
+    const drawOrder = vi.mocked(gl.drawArraysInstanced).mock.invocationCallOrder[0] ?? Number.NaN;
     const bindsBeforeDraw = vi
       .mocked(gl.bindFramebuffer)
       .mock.calls.filter(
@@ -382,7 +382,7 @@ describe('TgpuRootWebGL - depth-only passes', () => {
     expect(gl.viewport).toHaveBeenLastCalledWith(0, 0, 16, 8);
     // No color buffer to clear
     expect(gl.clear).toHaveBeenCalledWith(gl.DEPTH_BUFFER_BIT);
-    expect(gl.drawArrays).toHaveBeenCalledOnce();
+    expect(gl.drawArraysInstanced).toHaveBeenCalledOnce();
   });
 
   it('throws for a placeholder view when there is no color attachment', ({ gl }) => {
@@ -393,7 +393,7 @@ describe('TgpuRootWebGL - depth-only passes', () => {
         .withDepthStencilAttachment({ view: placeholderView, depthLoadOp: 'clear' })
         .draw(3),
     ).toThrow('A render pass without a color attachment needs a depth texture');
-    expect(gl.drawArrays).not.toHaveBeenCalled();
+    expect(gl.drawArraysInstanced).not.toHaveBeenCalled();
   });
 });
 
