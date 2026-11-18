@@ -2,7 +2,11 @@ import * as t from '@babel/types';
 import type { NodePath, TraverseOptions } from '@babel/traverse';
 import type { FilterPattern } from 'unplugin';
 import MagicString from 'magic-string';
-import { transpileBabelFn, type TranspilationResult } from 'tinyest-for-wgsl';
+import {
+  transpileBabelFn,
+  type NodePositionProvider,
+  type TranspilationResult,
+} from 'tinyest-for-wgsl';
 import { getEmbeddedTypegpuMetadata } from './embeddedMetadata.ts';
 import { obfuscate } from './obfuscate.ts';
 import { embedSourceMap, type Block, type SourceMappedNode } from 'tinyest';
@@ -145,8 +149,6 @@ export interface PluginState extends TransformMethods {
    */
   originalPositionFor?: NodePositionProvider;
 }
-
-export type NodePositionProvider = (node: t.Node) => [line: number, column: number] | undefined;
 
 export interface NodeLocation {
   start?: number | null;

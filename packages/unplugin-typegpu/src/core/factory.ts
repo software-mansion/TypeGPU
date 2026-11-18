@@ -3,7 +3,7 @@ import MagicString from 'magic-string';
 import { getBabelParserOptions, getLang } from 'ast-kit';
 import type { UnpluginBuildContext, UnpluginContext, UnpluginFactory } from 'unplugin';
 import _traverse, { type NodePath } from '@babel/traverse';
-import type { Externals } from 'tinyest-for-wgsl';
+import type { Externals, NodePositionProvider } from 'tinyest-for-wgsl';
 import * as parser from '@babel/parser';
 import * as t from '@babel/types';
 import { METADATA_FORMAT_VERSION } from './version.ts';
@@ -24,7 +24,6 @@ import type {
   UnpluginPluginState,
   MetadatableFunction,
   NodeLocation,
-  NodePositionProvider,
   PluginTranspilationResult,
 } from './common.ts';
 

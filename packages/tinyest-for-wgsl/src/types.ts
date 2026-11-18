@@ -52,6 +52,10 @@ export type Transpilers<TNode extends JsNode> = Partial<{
   ) => tinyest.AnyNode;
 }>;
 
+export type NodePositionProvider<TNode extends JsNode = JsNode> = (
+  node: TNode,
+) => [line: number, column: number] | undefined;
+
 export type TranspilationOptions<TNode extends JsNode = JsNode> = {
   /**
    * With this option enabled, identifiers and boolean literals will be wrapped
@@ -67,5 +71,5 @@ export type TranspilationOptions<TNode extends JsNode = JsNode> = {
    * When source-mapping, it is recommended to set `verboseNodes` to true as well;
    * otherwise, identifier and boolean nodes, as well as external chains, will not be mapped.
    */
-  sourceMap?: undefined | ((node: TNode) => [line: number, column: number] | undefined);
+  sourceMap?: NodePositionProvider<TNode> | undefined;
 };
