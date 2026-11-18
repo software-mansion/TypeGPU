@@ -2,7 +2,7 @@ import { describe, expect, test, vi } from 'vitest';
 import * as t from '@babel/types';
 import type { Plugin } from 'rollup';
 import * as parser from '@babel/parser';
-import traverse, { type TraverseOptions } from '@babel/traverse';
+import traverse, { NodePath, type TraverseOptions } from '@babel/traverse';
 import MagicString from 'magic-string';
 import { getBabelParserOptions, getLang } from 'ast-kit';
 import { createUnplugin, type UnpluginFactory } from 'unplugin';
@@ -12,6 +12,8 @@ import {
   rollupTransform,
   webpackTransform,
 } from './transform.ts';
+import { getEmbeddedTypegpuMetadata } from '../src/core/embeddedMetadata.ts';
+import type { MetadatableFunction } from '../src/core/common.ts';
 
 // Both plugins inject a `console.log()` in the first line.
 const babelPlugin: BabelTestPlugin = {
@@ -63,21 +65,25 @@ const unpluginPlugin = createUnplugin(unpluginFactory);
 const rollupPlugin = unpluginPlugin.rollup() as Plugin;
 const webpackPlugin = unpluginPlugin.webpack();
 
-// The result includes many irrelevant comments,
-// including the path that is different with each test execution.
-function stripWebpackResult(res: string) {
-  return res.split('/* harmony export */ });\n').at(-1)?.split('/******/ })()').at(0);
-}
+function extractEmbeddedBody(transformed: string | null | undefined) {
+  const ast = parser.parse(transformed ?? '', { sourceType: 'module', plugins: ['typescript'] });
+  const bodies: unknown[] = [];
 
-function stripAstBody(res: string | null | undefined) {
-  if (!res) {
-    return res;
+  function collect(path: NodePath<MetadatableFunction>) {
+    const body = getEmbeddedTypegpuMetadata(path)?.function?.ast.body;
+    if (body) {
+      bodies.push(body);
+    }
   }
-  return res
-    .split(/body: |"body":/)
-    .at(-1)
-    ?.split('},\n')
-    .at(0);
+
+  traverse(ast, {
+    ArrowFunctionExpression: collect,
+    FunctionExpression: collect,
+    FunctionDeclaration: collect,
+  });
+
+  expect(bodies).toHaveLength(1);
+  return bodies[0];
 }
 
 function countMapped(ast: string | null | undefined) {
@@ -172,24 +178,20 @@ describe('source maps', () => {
 
     test('[BABEL]', () => {
       const transformed = babelTransform(code, { unstable_sourceMaps: true });
-      const stripped = stripAstBody(transformed);
+      const body = extractEmbeddedBody(transformed);
 
       expect(countMapped(transformed)).toMatchInlineSnapshot(`12`);
-      expect(stripped).toMatchInlineSnapshot(`
-        "[-1, 1, 30, [0, [[-1, 3, 8, [13, [-1, 3, 14, [9, "a"]], [-1, 3, 18, [5, "1"]]]], [-1, 4, 8, [13, [-1, 4, 14, [9, "b"]], [-1, 4, 18, [107, true]]]], [-1, 5, 8, [13, [-1, 5, 14, [9, "c"]], [-1, 5, 18, [104, {
-              p: [-1, 5, 23, [5, "1"]],
-              q: [-1, 5, 29, [5, "1"]]
-            }]]]]]]]
-          "
-      `);
+      expect(JSON.stringify(body)).toMatchInlineSnapshot(
+        `"[-1,1,30,[0,[[-1,3,8,[13,[-1,3,14,[9,"a"]],[-1,3,18,[5,"1"]]]],[-1,4,8,[13,[-1,4,14,[9,"b"]],[-1,4,18,[107,true]]]],[-1,5,8,[13,[-1,5,14,[9,"c"]],[-1,5,18,[104,{"p":[-1,5,23,[5,"1"]],"q":[-1,5,29,[5,"1"]]}]]]]]]]"`,
+      );
     });
 
     test('[ROLLUP]', async () => {
       const transformed = await rollupTransform(code, { unstable_sourceMaps: true });
-      const stripped = stripAstBody(transformed);
+      const body = extractEmbeddedBody(transformed);
 
       expect(countMapped(transformed)).toMatchInlineSnapshot(`12`);
-      expect(stripped).toMatchInlineSnapshot(
+      expect(JSON.stringify(body)).toMatchInlineSnapshot(
         `"[-1,1,30,[0,[[-1,3,8,[13,[-1,3,14,[9,"a"]],[-1,3,18,[5,"1"]]]],[-1,4,8,[13,[-1,4,14,[9,"b"]],[-1,4,18,[107,true]]]],[-1,5,8,[13,[-1,5,14,[9,"c"]],[-1,5,18,[104,{"p":[-1,5,23,[5,"1"]],"q":[-1,5,29,[5,"1"]]}]]]]]]]"`,
       );
     });
@@ -203,21 +205,18 @@ describe('source maps', () => {
 
     test('[BABEL]', () => {
       const transformed = babelTransform(code, { unstable_sourceMaps: true });
-      const stripped = stripAstBody(transformed);
+      const body = extractEmbeddedBody(transformed);
 
       expect(countMapped(transformed)).toMatchInlineSnapshot(`1`);
-      expect(stripped).toMatchInlineSnapshot(`
-        "[0, [[10, [-1, 3, 49, [5, "42"]]]]]
-          "
-      `);
+      expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[0,[[10,[-1,3,49,[5,"42"]]]]]"`);
     });
 
     test('[ROLLUP]', async () => {
       const transformed = await rollupTransform(code, { unstable_sourceMaps: true });
-      const stripped = stripAstBody(transformed);
+      const body = extractEmbeddedBody(transformed);
 
       expect(countMapped(transformed)).toMatchInlineSnapshot(`1`);
-      expect(stripped).toMatchInlineSnapshot(`"[0,[[10,[-1,3,49,[5,"42"]]]]]"`);
+      expect(JSON.stringify(body)).toMatchInlineSnapshot(`"[0,[[10,[-1,3,49,[5,"42"]]]]]"`);
     });
   });
 
@@ -231,25 +230,26 @@ describe('source maps', () => {
     describe('retains original source maps when run second', () => {
       test('[BABEL]', () => {
         const transformed = babelTransform(code, { unstable_sourceMaps: true }, [babelPlugin]);
-        const stripped = stripAstBody(transformed);
+        const body = extractEmbeddedBody(transformed);
 
         expect(transformed?.startsWith('console.log')).toBe(true);
         expect(countMapped(transformed)).toMatchInlineSnapshot(`3`);
-        expect(stripped).toMatchInlineSnapshot(`
-          "[-1, 1, 30, [0, [[-1, 3, 8, [10, [-1, 3, 15, [5, "1"]]]]]]]
-            "
-        `);
+        expect(JSON.stringify(body)).toMatchInlineSnapshot(
+          `"[-1,1,30,[0,[[-1,3,8,[10,[-1,3,15,[5,"1"]]]]]]]"`,
+        );
       });
 
       test('[ROLLUP]', async () => {
         const transformed = await rollupTransform(code, { unstable_sourceMaps: true }, [
           rollupPlugin,
         ]);
-        const stripped = stripAstBody(transformed);
+        const body = extractEmbeddedBody(transformed);
 
         expect(transformed?.startsWith('console.log')).toBe(true);
         expect(countMapped(transformed)).toMatchInlineSnapshot(`3`);
-        expect(stripped).toMatchInlineSnapshot(`"[-1,1,30,[0,[[-1,3,8,[10,[-1,3,15,[5,"1"]]]]]]]"`);
+        expect(JSON.stringify(body)).toMatchInlineSnapshot(
+          `"[-1,1,30,[0,[[-1,3,8,[10,[-1,3,15,[5,"1"]]]]]]]"`,
+        );
       });
     });
 
@@ -260,10 +260,12 @@ describe('source maps', () => {
       using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
       const transformed = await webpackTransform(code, { unstable_sourceMaps: true });
-      const stripped = stripAstBody(stripWebpackResult(transformed));
+      const body = extractEmbeddedBody(transformed);
 
       expect(countMapped(transformed)).toMatchInlineSnapshot(`3`);
-      expect(stripped).toMatchInlineSnapshot(`"[-1,1,30,[0,[[-1,3,8,[10,[-1,3,15,[5,"1"]]]]]]]"`);
+      expect(JSON.stringify(body)).toMatchInlineSnapshot(
+        `"[-1,1,30,[0,[[-1,3,8,[10,[-1,3,15,[5,"1"]]]]]]]"`,
+      );
 
       expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
       expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
@@ -278,11 +280,13 @@ describe('source maps', () => {
       const transformed = await webpackTransform(code, { unstable_sourceMaps: true }, [
         webpackPlugin,
       ]);
-      const stripped = stripAstBody(stripWebpackResult(transformed));
+      const body = extractEmbeddedBody(transformed);
 
       expect(transformed).toContain('console.log');
       expect(countMapped(transformed)).toMatchInlineSnapshot(`3`);
-      expect(stripped).toMatchInlineSnapshot(`"[-1,2,30,[0,[[-1,4,8,[10,[-1,4,15,[5,"1"]]]]]]]"`);
+      expect(JSON.stringify(body)).toMatchInlineSnapshot(
+        `"[-1,2,30,[0,[[-1,4,8,[10,[-1,4,15,[5,"1"]]]]]]]"`,
+      );
     });
 
     test('[WEBPACK] warns only once', async () => {
@@ -319,13 +323,12 @@ describe('source maps', () => {
           inputSourceMap: magicString.generateMap({ hires: 'boundary' }),
         },
       );
-      const stripped = stripAstBody(transformed);
+      const body = extractEmbeddedBody(transformed);
 
       expect(countMapped(transformed)).toMatchInlineSnapshot(`3`);
-      expect(stripped).toMatchInlineSnapshot(`
-        "[-1, 1, 30, [0, [[-1, 3, 8, [10, [-1, 3, 15, [5, "1"]]]]]]]
-          "
-      `);
+      expect(JSON.stringify(body)).toMatchInlineSnapshot(
+        `"[-1,1,30,[0,[[-1,3,8,[10,[-1,3,15,[5,"1"]]]]]]]"`,
+      );
     });
 
     describe('retains original source maps when multiple plugins run before', () => {
@@ -336,14 +339,13 @@ describe('source maps', () => {
           [babelPlugin, babelPlugin, babelPlugin],
           [babelPlugin],
         );
-        const stripped = stripAstBody(transformed);
+        const body = extractEmbeddedBody(transformed);
 
         expect(transformed?.startsWith('console.log')).toBe(true);
         expect(countMapped(transformed)).toMatchInlineSnapshot(`3`);
-        expect(stripped).toMatchInlineSnapshot(`
-          "[-1, 1, 30, [0, [[-1, 3, 8, [10, [-1, 3, 15, [5, "1"]]]]]]]
-            "
-        `);
+        expect(JSON.stringify(body)).toMatchInlineSnapshot(
+          `"[-1,1,30,[0,[[-1,3,8,[10,[-1,3,15,[5,"1"]]]]]]]"`,
+        );
       });
 
       test('[ROLLUP]', async () => {
@@ -353,11 +355,13 @@ describe('source maps', () => {
           [rollupPlugin, rollupPlugin, rollupPlugin],
           [rollupPlugin],
         );
-        const stripped = stripAstBody(transformed);
+        const body = extractEmbeddedBody(transformed);
 
         expect(transformed?.startsWith('console.log')).toBe(true);
         expect(countMapped(transformed)).toMatchInlineSnapshot(`3`);
-        expect(stripped).toMatchInlineSnapshot(`"[-1,1,30,[0,[[-1,3,8,[10,[-1,3,15,[5,"1"]]]]]]]"`);
+        expect(JSON.stringify(body)).toMatchInlineSnapshot(
+          `"[-1,1,30,[0,[[-1,3,8,[10,[-1,3,15,[5,"1"]]]]]]]"`,
+        );
       });
     });
   });
