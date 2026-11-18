@@ -69,6 +69,13 @@ import {
   validateImmediateUsage,
 } from '../immediate/immediateVar.ts';
 import {
+  collectOverrideConstants,
+  mergeOverrideValues,
+  type OverrideValue,
+  type OverrideValues,
+  type TgpuOverride,
+} from '../override/tgpuOverride.ts';
+import {
   INTERNAL_adoptRenderCommands,
   type TgpuRenderCommands,
   type TgpuRenderPassDescriptor,
@@ -107,9 +114,13 @@ import { logger } from '../../tgpuLogger.ts';
 import type { RestoreContext } from '../../serial/types.ts';
 
 export interface RenderPipelineInternals {
+  /** Shader-level state, shared by every variant */
   readonly core: RenderPipelineCore;
+  /** Owns this pipeline's GPU pipeline, shared by everything derived through `with*` */
+  readonly variant: RenderPipelineVariant;
   readonly priors: TgpuRenderPipelinePriors & TimestampWritesPriors;
   readonly root: ExperimentalTgpuRoot;
+  /** Returns this variant's GPU pipeline, compiling it on first use */
   readonly materialize: () => GPURenderPipeline;
 }
 
@@ -228,6 +239,21 @@ export interface TgpuRenderPipeline<in Targets = never>
   pipe<T>(transform: (pipeline: this) => T): T;
 
   /**
+   * Creates a separate pipeline from the same shader, with the given options applied
+   * on top of this pipeline's. The variant shares the shader module and layouts, and
+   * keeps everything bound with `with*`, but compiles its own GPU pipeline on first use.
+   *
+   * Compiling is expensive, so create variants once and keep them around,
+   * rather than calling this every frame.
+   *
+   * @example
+   * ```ts
+   * const foggy = pipeline.createVariant({ overrides: [[useFog, true]] });
+   * ```
+   */
+  createVariant(options: TgpuRenderPipeline.VariantOptions): this;
+
+  /**
    * Attaches texture views to the pipeline's targets (outputs).
    *
    * @example
@@ -304,7 +330,17 @@ export interface TgpuRenderPipeline<in Targets = never>
 }
 
 export declare namespace TgpuRenderPipeline {
-  interface DescriptorBase {
+  /**
+   * Options that differ between variants of a pipeline, without resolving the shader again.
+   */
+  interface VariantOptions {
+    /**
+     * Values for pipeline-overridable constants, as `[override, value]` pairs.
+     */
+    overrides?: OverrideValues | undefined;
+  }
+
+  interface DescriptorBase extends VariantOptions {
     /**
      * Describes the primitive-related properties of the pipeline.
      */
@@ -383,7 +419,12 @@ export type RenderPipelineCoreOptions = {
 };
 
 export function INTERNAL_createRenderPipeline(options: RenderPipelineCoreOptions) {
-  return new TgpuRenderPipelineImpl(new RenderPipelineCore(options), {});
+  const core = new RenderPipelineCore(options);
+  const variant = new RenderPipelineVariant(
+    core,
+    mergeVariantOptions(undefined, options.descriptor ?? {}),
+  );
+  return new TgpuRenderPipelineImpl(core, variant, {});
 }
 
 export function INTERNAL_restoreRenderPipeline(
@@ -393,7 +434,6 @@ export function INTERNAL_restoreRenderPipeline(
   invariant(soul.raw, 'A render pipeline soul is only complete once materialized.');
   const root = ctx.getRoot(soul.device) as ExperimentalTgpuRoot;
   const core = RenderPipelineCore.precompiled(root, {
-    pipeline: soul.raw,
     usedBindGroupLayouts: soul.usedBindGroupLayouts ?? [],
     // The catchall group is already one of `bindGroups`, keyed by the layout it was resolved with
     catchall: undefined,
@@ -402,7 +442,8 @@ export function INTERNAL_restoreRenderPipeline(
     connectedTargets: soul.connectedTargets,
     usedImmediate: soul.usedImmediate,
   });
-  const pipeline: TgpuRenderPipeline = new TgpuRenderPipelineImpl(core, {
+  const variant = new RenderPipelineVariant(core, mergeVariantOptions(undefined, {}), soul.raw);
+  const pipeline: TgpuRenderPipeline = new TgpuRenderPipelineImpl(core, variant, {
     bindGroupLayoutMap: new Map(soul.bindGroups),
     immediatesMap: new Map(soul.immediates),
     vertexLayoutMap: new Map(soul.vertexBuffers),
@@ -439,15 +480,37 @@ type TgpuRenderPipelinePriors = {
   readonly immediatesMap?: Map<TgpuImmediateVar, ImmediateSnapshot> | undefined;
 } & TimestampWritesPriors;
 
+/** Shader-level state, resolved once and shared by every variant */
 type Memo = {
-  pipeline: GPURenderPipeline;
+  /**
+   * The descriptor every variant starts from, before its options are applied.
+   * Undefined for precompiled pipelines, which are never compiled again.
+   */
+  descriptor: GPURenderPipelineDescriptor | undefined;
   usedBindGroupLayouts: TgpuBindGroupLayout[];
   catchall: [number, TgpuBindGroup] | undefined;
   logResources: LogResources | undefined;
   usedVertexLayouts: TgpuVertexLayout[];
   connectedTargets: (ConnectedTarget | null)[] | undefined;
   usedImmediate: TgpuImmediateVar | undefined;
+  usedOverrides: ReadonlyMap<TgpuOverride, string>;
 };
+
+/**
+ * Everything that differs between variants of a pipeline, fully merged.
+ * New fields have to be merged in `mergeVariantOptions` and applied in
+ * `RenderPipelineCore.#pipelineDescriptor`.
+ */
+type ResolvedVariantOptions = {
+  readonly overrides: ReadonlyMap<TgpuOverride, OverrideValue>;
+};
+
+function mergeVariantOptions(
+  base: ResolvedVariantOptions | undefined,
+  patch: TgpuRenderPipeline.VariantOptions,
+): ResolvedVariantOptions {
+  return { overrides: mergeOverrideValues(base?.overrides, patch.overrides) };
+}
 
 class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
   public readonly [$internal]: RenderPipelineInternals;
@@ -456,7 +519,11 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
   public readonly resourceType = 'render-pipeline';
   [$getNameForward]: RenderPipelineCore;
 
-  constructor(core: RenderPipelineCore, priors: TgpuRenderPipelinePriors) {
+  constructor(
+    core: RenderPipelineCore,
+    variant: RenderPipelineVariant,
+    priors: TgpuRenderPipelinePriors,
+  ) {
     this[$soul] = {
       type: 'render-pipeline',
       device: core.options.root.device,
@@ -465,13 +532,14 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     };
     this[$internal] = {
       core,
+      variant,
       priors,
       root: core.options.root,
       materialize: () => {
         const soul = this[$soul];
         if (!soul.raw) {
           const memo = core.unwrap();
-          soul.raw = memo.pipeline;
+          soul.raw = variant.unwrap();
           soul.usedBindGroupLayouts = memo.usedBindGroupLayouts;
           soul.usedVertexLayouts = memo.usedVertexLayouts;
           soul.connectedTargets = memo.connectedTargets;
@@ -512,9 +580,23 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
   }
 
   #withPriors(patch: Partial<TgpuRenderPipelinePriors>): this {
-    const { core, priors } = this[$internal];
+    const { core, variant, priors } = this[$internal];
 
-    return new TgpuRenderPipelineImpl(core, { ...priors, ...patch }) as this;
+    return new TgpuRenderPipelineImpl(core, variant, { ...priors, ...patch }) as this;
+  }
+
+  createVariant(options: TgpuRenderPipeline.VariantOptions): this {
+    const { core, variant, priors } = this[$internal];
+
+    if (core.isPrecompiled) {
+      throw new Error('Cannot create variants of a restored pipeline.');
+    }
+
+    const newVariant = new RenderPipelineVariant(
+      core,
+      mergeVariantOptions(variant.options, options),
+    );
+    return new TgpuRenderPipelineImpl(core, newVariant, priors) as this;
   }
 
   with<TData extends WgslArray>(
@@ -710,11 +792,11 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
   }
 
   initAsync(): Promise<void> {
-    return this[$internal].core.initAsync();
+    return this[$internal].variant.initAsync();
   }
 
   initSync() {
-    this[$internal].core.initSync();
+    this[$internal].materialize();
   }
 
   get hasIndexBuffer() {
@@ -816,7 +898,6 @@ class RenderPipelineCore implements SelfResolvable {
   readonly options: RenderPipelineCoreOptions;
   #performanceTracker: PerformanceTracker;
 
-  #initAsyncPromise: Promise<void> | undefined;
   #memo: Memo | undefined;
 
   #latestAutoVertexIn: TgpuVertexFn.In | undefined;
@@ -830,13 +911,16 @@ class RenderPipelineCore implements SelfResolvable {
       : new NullPerformanceTracker();
   }
 
-  static precompiled(root: ExperimentalTgpuRoot, memo: Memo): RenderPipelineCore {
+  static precompiled(
+    root: ExperimentalTgpuRoot,
+    memo: Omit<Memo, 'descriptor' | 'usedOverrides'>,
+  ): RenderPipelineCore {
     const core = new RenderPipelineCore({
       root,
       slotBindings: [],
       descriptor: undefined,
     });
-    core.#memo = memo;
+    core.#memo = { ...memo, descriptor: undefined, usedOverrides: new Map() };
     return core;
   }
 
@@ -901,73 +985,69 @@ class RenderPipelineCore implements SelfResolvable {
     return (this.#performanceCallbackQuerySet ??= this.options.root.createQuerySet('timestamp', 2));
   }
 
-  initAsync(): Promise<void> {
-    if (this.#memo !== undefined) {
-      // the pipeline was already resolved & compiled
-      return Promise.resolve();
-    }
-
-    if (this.#initAsyncPromise === undefined) {
-      // the pipeline did not start resolution & compilation
-      const device = this.options.root.device;
-      const { resolutionResult, descriptor, connectedTargets, connectedAttribs } =
-        this.resolveAndCreateShaderModule();
-      const { usedBindGroupLayouts, catchall, logResources } = resolutionResult;
-
-      this.#initAsyncPromise = device
-        .createRenderPipelineAsync(descriptor)
-        .then((pipeline) => {
-          this.#memo = {
-            pipeline,
-            usedBindGroupLayouts,
-            catchall,
-            logResources,
-            usedVertexLayouts: connectedAttribs.usedVertexLayouts,
-            connectedTargets,
-            usedImmediate: resolutionResult.usedImmediate,
-          };
-          this.#performanceTracker.measureCompile(device);
-        })
-        .finally(() => {
-          this.#initAsyncPromise = undefined;
-        });
-    }
-    return this.#initAsyncPromise;
+  /** Restored pipelines have no shader to compile new variants from */
+  get isPrecompiled(): boolean {
+    return this.options.descriptor === undefined;
   }
 
-  initSync() {
-    if (this.#memo !== undefined) {
-      return;
-    }
-
-    if (this.#initAsyncPromise !== undefined) {
-      throw new Error("'pipeline.initAsync()' was called and is not yet resolved.");
-    }
-
+  /** Compiles a new GPU pipeline from the shared shader module. Not cached. */
+  compile(options: ResolvedVariantOptions): GPURenderPipeline {
     const device = this.options.root.device;
-    const { resolutionResult, descriptor, connectedTargets, connectedAttribs } =
-      this.resolveAndCreateShaderModule();
-    const { usedBindGroupLayouts, catchall, logResources } = resolutionResult;
-
-    this.#memo = {
-      pipeline: device.createRenderPipeline(descriptor),
-      usedBindGroupLayouts,
-      catchall,
-      logResources,
-      usedVertexLayouts: connectedAttribs.usedVertexLayouts,
-      connectedTargets,
-      usedImmediate: resolutionResult.usedImmediate,
-    };
-
+    const pipeline = device.createRenderPipeline(this.#pipelineDescriptor(options));
     this.#performanceTracker.measureCompile(device);
+    return pipeline;
   }
 
+  /** Compiles a new GPU pipeline from the shared shader module. Not cached. */
+  compileAsync(options: ResolvedVariantOptions): Promise<GPURenderPipeline> {
+    const device = this.options.root.device;
+    return device.createRenderPipelineAsync(this.#pipelineDescriptor(options)).then((pipeline) => {
+      this.#performanceTracker.measureCompile(device);
+      return pipeline;
+    });
+  }
+
+  #pipelineDescriptor(options: ResolvedVariantOptions): GPURenderPipelineDescriptor {
+    const { descriptor, usedOverrides } = this.unwrap();
+    invariant(descriptor, 'Expected the shader module to be created.');
+
+    const constants = collectOverrideConstants(usedOverrides, options.overrides);
+    if (Object.keys(constants).length === 0) {
+      return descriptor;
+    }
+
+    // Both stages come from the same shader module, so they share override identifiers
+    return {
+      ...descriptor,
+      vertex: { ...descriptor.vertex, constants },
+      ...(descriptor.fragment && { fragment: { ...descriptor.fragment, constants } }),
+    };
+  }
+
+  /**
+   * Resolves the shader and creates the shader module & pipeline layout,
+   * shared by every variant of the pipeline.
+   */
   public unwrap(): Memo {
-    this.initSync();
-    return this.#memo as Memo;
+    if (this.#memo === undefined) {
+      const { resolutionResult, descriptor, connectedTargets, connectedAttribs } =
+        this.#resolveAndCreateShaderModule();
+
+      this.#memo = {
+        descriptor,
+        usedBindGroupLayouts: resolutionResult.usedBindGroupLayouts,
+        catchall: resolutionResult.catchall,
+        logResources: resolutionResult.logResources,
+        usedVertexLayouts: connectedAttribs.usedVertexLayouts,
+        connectedTargets,
+        usedImmediate: resolutionResult.usedImmediate,
+        usedOverrides: resolutionResult.usedOverrides,
+      };
+    }
+    return this.#memo;
   }
 
-  public resolveAndCreateShaderModule() {
+  #resolveAndCreateShaderModule() {
     const { root, descriptor: tgpuDescriptor } = this.options;
     if (!tgpuDescriptor) {
       throw new Error('Precompiled pipelines are never resolved again.');
@@ -1067,6 +1147,64 @@ class RenderPipelineCore implements SelfResolvable {
     }
 
     return { resolutionResult, descriptor, connectedTargets, connectedAttribs };
+  }
+}
+
+/**
+ * A single compiled GPU pipeline, created lazily from the shared core.
+ * Shared by every pipeline derived from it through `with*`, but never between variants.
+ */
+class RenderPipelineVariant {
+  readonly core: RenderPipelineCore;
+  readonly options: ResolvedVariantOptions;
+  #pipeline: GPURenderPipeline | undefined;
+  #initAsyncPromise: Promise<void> | undefined;
+
+  constructor(
+    core: RenderPipelineCore,
+    options: ResolvedVariantOptions,
+    /** Given only for restored pipelines */
+    precompiled?: GPURenderPipeline,
+  ) {
+    this.core = core;
+    this.options = options;
+    this.#pipeline = precompiled;
+  }
+
+  /**
+   * @privateRemarks
+   * This function cannot be a regular async function
+   * because when called multiple times before the promise finishes,
+   * we want it to return the same promise each time.
+   */
+  initAsync(): Promise<void> {
+    if (this.#pipeline !== undefined) {
+      // the pipeline was already compiled
+      return Promise.resolve();
+    }
+
+    if (this.#initAsyncPromise === undefined) {
+      // the pipeline did not start compilation
+      this.#initAsyncPromise = this.core
+        .compileAsync(this.options)
+        .then((pipeline) => {
+          this.#pipeline = pipeline;
+        })
+        .finally(() => {
+          this.#initAsyncPromise = undefined;
+        });
+    }
+    return this.#initAsyncPromise;
+  }
+
+  unwrap(): GPURenderPipeline {
+    if (this.#pipeline === undefined) {
+      if (this.#initAsyncPromise !== undefined) {
+        throw new Error("'pipeline.initAsync()' was called and is not yet resolved.");
+      }
+      this.#pipeline = this.core.compile(this.options);
+    }
+    return this.#pipeline;
   }
 }
 

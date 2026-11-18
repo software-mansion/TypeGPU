@@ -54,6 +54,7 @@ import type {
   ShaderGenerator,
   ConstantDefinitionOptions,
   FunctionDefinitionOptions,
+  OverrideDefinitionOptions,
   VariableDefinitionOptions,
   BinaryOperator,
   ResolvedStatement,
@@ -1201,6 +1202,24 @@ The generated shader will evaluate them in declaration order.`,
     );
 
     return snip(options.id, options.dataType, 'constant-immutable-def');
+  }
+
+  public declareGlobalOverride(options: OverrideDefinitionOptions): ResolvedSnippet {
+    const resolvedDataType = this.ctx.resolve(options.dataType).value;
+
+    this.ctx.addDeclaration(
+      options.init
+        ? `override ${options.id}: ${resolvedDataType} = ${this.ctx.resolveSnippet(options.init).value};`
+        : `override ${options.id}: ${resolvedDataType};`,
+      options.id,
+    );
+
+    return snip(
+      options.id,
+      options.dataType,
+      'runtime-immutable-def',
+      /* possibleSideEffects */ false,
+    );
   }
 
   public declareGlobalVar(options: VariableDefinitionOptions): ResolvedSnippet {
