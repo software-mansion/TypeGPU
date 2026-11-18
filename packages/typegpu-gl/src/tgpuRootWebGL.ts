@@ -38,7 +38,7 @@ import type { WebGLUniformImpl } from './webglUniform.ts';
 
 export class TgpuRootWebGL {
   #gl: WebGL2RenderingContext;
-  #offscreen: OffscreenCanvas;
+  #glCanvas: HTMLCanvasElement | OffscreenCanvas;
   #presenter: CanvasPresenter;
   #renderTargets: RenderTargets;
   readonly #vertexArrays: VertexArrays;
@@ -63,7 +63,7 @@ export class TgpuRootWebGL {
 
   constructor(gl: WebGL2RenderingContext) {
     this.#gl = gl;
-    this.#offscreen = gl.canvas as OffscreenCanvas;
+    this.#glCanvas = gl.canvas;
     this.#presenter = CanvasPresenter.for(gl);
     this.#renderTargets = new RenderTargets(gl);
     this.#vertexArrays = new VertexArrays(gl);
@@ -165,10 +165,22 @@ export class TgpuRootWebGL {
     return new Set();
   }
 
+  /**
+   * NOTE: `alphaMode` isn't applied. Whether the canvas is transparent depends on the
+   * `alpha` attribute of the WebGL context (on by default, unlike WebGPU's 'opaque').
+   */
   configureContext(options: {
     canvas: HTMLCanvasElement | OffscreenCanvas;
     alphaMode?: string;
   }): WebGLRenderContext {
+    const canTransfer =
+      typeof (this.#glCanvas as OffscreenCanvas).transferToImageBitmap === 'function';
+    if (!canTransfer && options.canvas !== this.#glCanvas) {
+      throw new WebGLFallbackUnsupportedError(
+        'rendering into a canvas other than the one of the WebGL context',
+        'pass a context of an OffscreenCanvas to initWithGL() to render into any canvas',
+      );
+    }
     this.#presenter.register(options.canvas);
     return {
       canvas: options.canvas,
@@ -190,7 +202,7 @@ export class TgpuRootWebGL {
     if (this.#destroyed) throw new Error('Cannot create a pipeline on a destroyed WebGL root');
     return createWebGLRenderPipeline({
       gl: this.#gl,
-      offscreen: this.#offscreen,
+      glCanvas: this.#glCanvas,
       presenter: this.#presenter,
       renderTargets: this.#renderTargets,
       vertexArrays: this.#vertexArrays,
