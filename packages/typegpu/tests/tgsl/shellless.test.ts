@@ -9,7 +9,7 @@ import {
   type TgpuTextureView,
   type TgpuUniform,
 } from 'typegpu';
-import { it } from 'typegpu-testing-utility';
+import { CAPTURE, captureSnippets, it, simplifyType } from 'typegpu-testing-utility';
 
 describe('shellless', () => {
   it('is callable from shelled function', () => {
@@ -572,7 +572,7 @@ describe('shellless', () => {
       if (cyclic) {
         return std.fract(t);
       }
-      return std.clamp(t, 0, 1);
+      return std.saturate(t);
     }
 
     function foo() {
@@ -586,14 +586,14 @@ describe('shellless', () => {
         if (cyclic) {
           return fract(t);
         }
-        return clamp(t, 0f, 1f);
+        return saturate(t);
       }
 
       fn interpolate_1(t: f32, cyclic: bool) -> f32 {
         if (cyclic) {
           return fract(t);
         }
-        return clamp(t, 0f, 1f);
+        return saturate(t);
       }
 
       fn foo() -> f32 {
@@ -608,7 +608,7 @@ describe('shellless', () => {
       if (cyclic) {
         return std.fract(t);
       }
-      return std.clamp(t, 0, 1);
+      return std.saturate(t);
     }
 
     function offset(base: number = 10, x: number) {
@@ -627,7 +627,7 @@ describe('shellless', () => {
         if (cyclic) {
           return fract(t);
         }
-        return clamp(t, 0f, 1f);
+        return saturate(t);
       }
 
       fn offset(x: i32) -> i32 {
@@ -1005,5 +1005,77 @@ describe('shellless', () => {
         return ((foo(1i) + foo_1(1i, 3i)) + foo_1(1i, 6i));
       }"
     `);
+  });
+
+  it('carries over `private` origin from default param value', () => {
+    const state = tgpu.privateVar(d.vec2f);
+
+    function f(v = state.$) {
+      'use gpu';
+      CAPTURE(v);
+    }
+
+    const snippets = captureSnippets(f);
+    expect(snippets[0]?.origin).toMatchInlineSnapshot(`"private"`);
+  });
+
+  it('allows default parameters capturing', () => {
+    const fn = (a = 3, b = CAPTURE(a)) => {
+      'use gpu';
+      return a + b;
+    };
+
+    const main = () => {
+      'use gpu';
+      return fn();
+    };
+
+    expect(captureSnippets(main).map(simplifyType)).toMatchInlineSnapshot(`
+      [
+        {
+          "dataType": "i32",
+          "origin": "argument",
+          "possibleSideEffects": false,
+          "value": "a",
+        },
+      ]
+    `);
+  });
+
+  it('carries over `private` origin from default param value', () => {
+    const state = tgpu.privateVar(d.vec2f);
+
+    function f(v = state.$) {
+      'use gpu';
+      CAPTURE(v);
+    }
+
+    const snippets = captureSnippets(f);
+    expect(snippets[0]?.origin).toMatchInlineSnapshot(`"private"`);
+  });
+
+  it('can call function as the default param value', () => {
+    function getFive() {
+      'use gpu';
+      return d.i32(5);
+    }
+
+    function f(v = getFive()) {
+      'use gpu';
+      return CAPTURE(v);
+    }
+
+    const snippets = captureSnippets(f);
+    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+      "fn getFive() -> i32 {
+        return 5i;
+      }
+
+      fn f() -> i32 {
+        let v = getFive();
+        return v;
+      }"
+    `);
+    expect(snippets[0]?.origin).toMatchInlineSnapshot(`"argument"`);
   });
 });
