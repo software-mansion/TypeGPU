@@ -1,0 +1,274 @@
+---
+title: Passing by reference
+description: How TypeGPU infers if a value is a reference and how to pass a value as a reference between functions.
+---
+
+
+## Limitations of WGSL
+In JS, it is pretty straightforward. If a value's type is primitive, it is copied.
+```ts
+const increment = (x: number) => {
+  return x + 1;
+};
+
+let x = 7;
+x = increment(x); // `x` is copied to function scope and then copied back to `x`
+```
+
+Otherwise, only the reference is copied.
+```ts
+type State = {
+  x: number,
+};
+
+const incrementX = (s: State) => {
+  s.x += 1;
+};
+
+const s = { x: 7 };
+incrementX(s); // `s` in outer scope and function scope point to the same object
+```
+
+WGSL does not support reference types (you can find `ref<AS, T, AM>` in the [WGSL spec](https://www.w3.org/TR/WGSL/#ref-ptr-types), but that's another story). The only way to obtain similar behavior is through pointers. Pointers in WGSL are more restricted than in other languages. For example, you cannot return a pointer from a function.
+With this in mind, let's look at some TypeGPU functions.
+
+```ts twoslash
+import { d } from 'typegpu';
+
+// ---cut---
+const scrambleSeed = () => { 
+  'use gpu';
+  const seed = d.vec2u(0xed5ad4bb, 0xac4c1b51);
+  const hi = seed.x;
+  const lo = seed.y;
+  
+  // ...
+};
+```
+
+In this example, we extract `hi` and `lo` from `seed`. The values will be copied, because they are primitives.
+The generated WGSL will look like this:
+
+```wgsl
+fn scrambleSeed() {
+  var seed = vec2u(3982152891, 2890668881);
+  let hi = seed.x; // copy
+  let lo = seed.y; // copy
+  // ...
+}
+```
+
+However, if you copy a reference, WGSL will use pointer-taking (the `&` operator).
+```ts twoslash
+import { d } from 'typegpu';
+
+// ---cut---
+const scrambleSeed = () => { 
+  'use gpu';
+  const seed = d.arrayOf(d.vec2u, 4)([d.vec2u(1 << 32 - 1), d.vec2u(1 << 32 - 1), d.vec2u(1 << 32 - 1), d.vec2u(1 << 32 - 1)]);
+  const s0 = seed[0]
+  
+  // ...
+};
+```
+
+```wgsl
+fn scrambleSeed() {
+  var seed = array<vec2u, 4>(vec2u((1 << 31u)), vec2u((1 << 31u)), vec2u((1 << 31u)), vec2u((1 << 31u)));
+  let s0 = (&seed[0i]);
+}
+```
+
+That's how we mimic JS.
+Unfortunately, we cannot mirror everything.
+Let's say you extract a complex type from a buffer, modify it, and return a reference to it.
+```ts twoslash
+import tgpu, { d } from 'typegpu';
+
+const root = await tgpu.init();
+const Boid = d.struct({ pos: d.vec2f });
+const boidsMutable = root.createMutable(d.arrayOf(Boid, 100));
+
+// ---cut---
+const updateBoid = (idx: number) => { 
+  'use gpu';
+  const boid = boidsMutable.$[idx];
+  boid.pos += 1;
+  return boid; // ❌
+};
+```
+
+You cannot do that, because in WGSL you cannot return pointers from functions. That's why you need to explicitly copy.
+
+:::note
+Consider the following: a function accepts a non-primitive type, you treat it as a reference, it executes and returns that argument. The same rules as for buffers apply — you cannot do that. Essentially, for every external reference in function scope, you are unable to return it from the function.
+:::
+
+```ts twoslash
+import tgpu, { d } from 'typegpu';
+
+const root = await tgpu.init();
+const Boid = d.struct({ pos: d.vec2f });
+const boidsBuffer = root.createMutable(d.arrayOf(Boid, 100));
+
+// ---cut---
+const updateBoid = (idx: number) => { 
+  'use gpu';
+  const boid = boidsBuffer.$[idx];
+  boid.pos += 1;
+  return Boid(boid); // ✅
+};
+```
+
+:::note
+Luckily, you don't have to explicitly copy if the return type is primitive. Moreover, if you return a reference to a local variable, you also don't need to explicitly copy. After returning from the function, the only reference to this value will be the one returned.
+:::
+
+```ts twoslash
+import tgpu, { d } from 'typegpu';
+
+const root = await tgpu.init();
+const Boid = d.struct({ pos: d.vec2f });
+
+// ---cut---
+const updateBoid = (idx: number) => { 
+  'use gpu';
+  const boid = Boid({ pos: d.vec2f(7) });
+  boid.pos += 1;
+  return boid; // ✅
+};
+```
+
+:::note
+You can start to see a pattern: primitive types don't need much attention.
+:::
+
+Another limitation of WGSL is the immutability of arguments passed to a function. That's why we ask you to copy before modification.
+```ts twoslash
+import { d } from 'typegpu';
+
+// ---cut---
+const clearX = (pos: d.v2f | d.v3f | d.v4f) => {
+  'use gpu';
+  const posRef = pos 
+  posRef.x = 0; // ❌ arguments are const in WGSL
+};
+```
+
+Even for types that JS would pass by reference, the function receives a local copy that you can read but not assign into. Mutating it inside the function would not change anything in the caller anyway.
+
+## Passing references with `d.ref`
+To close the gap between caller and callee, we provide the `d.ref` mechanism.
+If you are using a shelled function, you can simply type its argument with `tgpu.ptrFn`.
+
+ ```ts twoslash
+import tgpu, { d } from 'typegpu';
+
+// ---cut---
+const increment = tgpu.fn([d.ptrFn(d.f32)])((val) => {
+  val.$ += 1;
+});
+
+const main = tgpu.fn([])(() => {
+  const value = d.ref(d.f32(0));
+  increment(value);
+});
+ ```
+ 
+Which, as expected, generates a pointer in the signature.
+```wgsl
+fn increment(val: ptr<function, f32>) {
+  (*val) += 1f;
+}
+
+fn main() {
+  var val = 0;
+  increment((&val));
+}
+```
+
+You might be wondering what `d.ref` is.
+You can think of it as an indicator that the value should be passed as a reference (a pointer in WGSL).
+`d.ref(x)` wraps `x` in a handle whose underlying value is read and written through its `.$` accessor. In JS it behaves like a proxy that forwards writes back to `x`; in WGSL it lowers to a pointer with `&` placed at the call-site and `*` at every `.$`.
+
+```ts twoslash
+import { d } from 'typegpu';
+
+// ---cut---
+const clearX = (pos: d.ref<d.v3f>) => {
+  'use gpu';
+  pos.$.x = 0;
+};
+
+const main = () => {
+  'use gpu';
+  const pos = d.ref(d.vec3f(1, 2, 3));
+  clearX(pos);
+  return pos; // vec3f(0, 2, 3)
+};
+```
+
+```wgsl
+fn clearX(pos: ptr<function, vec3f>) {
+  (*pos).x = 0f;
+}
+
+fn main() -> vec3f {
+  var pos = vec3f(1, 2, 3);
+  clearX((&pos));
+  return pos;
+}
+```
+
+You don't have to limit yourself to changing only specific fields, you can overwrite whole struct at once.
+
+```ts twoslash
+import { d } from 'typegpu';
+const Boid = d.struct({ pos: d.vec2f });
+
+// ---cut---
+const clearBoid = (entity: d.ref<d.Infer<typeof Boid>>) => {
+  'use gpu';
+  entity.$ = Boid(); // overwrite the whole struct
+};
+```
+
+### Examples of how you can use `d.ref`
+
+:::note
+Below, treat `d.f32` as any primitive type and `d.vec2f` as any complex type. Behavior will be the same.
+:::
+
+```ts twoslash
+import tgpu, { d } from 'typegpu';
+
+// ---cut---
+const increment = (x: d.ref<number | d.v2f>) => {
+  'use gpu';
+  x.$ += 1;
+};
+
+const main = () => {
+  'use gpu';
+  
+  const numericRef = d.ref(0.6);
+  increment(numericRef); // ✅
+  
+  const complexRef = d.ref(d.vec2f(7));
+  increment(complexRef); // ✅
+  
+  increment(d.ref(numericRef)); // ✅
+  increment(d.ref(complexRef)); // ✅
+
+  const v = d.vec2f(8);
+  increment(d.ref(v)); // ✅ here `v` is already a reference, with `d.ref` we make it explicit
+  
+  const i = 9;
+  const iRef = d.ref(d.f32(i));
+  increment(iRef); // ✅ you cannot create `d.ref(i)` on the fly
+  
+  const u = d.vec2f(10);
+  const w = u; // `u` is already a reference, so is `w`
+  increment(d.ref(w)); // ✅ we mark `w` as explicit reference
+};
+```
