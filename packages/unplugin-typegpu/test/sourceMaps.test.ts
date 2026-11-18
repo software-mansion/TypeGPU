@@ -14,6 +14,8 @@ import {
 } from './transform.ts';
 import { getEmbeddedTypegpuMetadata } from '../src/core/embeddedMetadata.ts';
 import type { MetadatableFunction } from '../src/core/common.ts';
+import { embedSourceMap } from 'tinyest';
+import { transpileBabelFn } from 'tinyest-for-wgsl';
 
 // Both plugins inject a `console.log()` in the first line.
 const babelPlugin: BabelTestPlugin = {
@@ -91,6 +93,47 @@ function countMapped(ast: string | null | undefined) {
     return 0;
   }
   return ast.split('[-1,').length - 1;
+}
+
+/**
+ * @note For simplicity, assumes that the function contains the 'use gpu' directive.
+ */
+function findOriginalFunction(code: string) {
+  const ast = parser.parse(code, { sourceType: 'module', plugins: ['typescript'] });
+  const functions: MetadatableFunction[] = [];
+
+  function collect({ node }: NodePath<MetadatableFunction>) {
+    if (
+      node.body.type === 'BlockStatement' &&
+      node.body.directives.some((directive) => directive.value.value === 'use gpu')
+    ) {
+      functions.push(node);
+    }
+  }
+
+  traverse(ast, {
+    ArrowFunctionExpression: collect,
+    FunctionExpression: collect,
+    FunctionDeclaration: collect,
+  });
+
+  expect(functions).toHaveLength(1);
+  return functions[0]!;
+}
+
+/**
+ * Compares source map of code and the map already present in transformed.
+ * This only makes sense if transformed includes changes from other plugins (in addition to unplugin-typegpu).
+ */
+function expectSourceMapsToMatch(code: string, transformed: string | null | undefined) {
+  const reference = transpileBabelFn(findOriginalFunction(code), {
+    verboseNodes: true,
+    sourceMap: (n) => (n.loc ? [n.loc.start.line, n.loc.start.column] : undefined),
+  });
+  const referenceBody = embedSourceMap(reference.body, reference.sourceMap);
+  const transformedBody = extractEmbeddedBody(transformed);
+
+  expect(transformedBody).toStrictEqual(referenceBody);
 }
 
 describe('source maps', () => {
@@ -237,6 +280,7 @@ describe('source maps', () => {
         expect(JSON.stringify(body)).toMatchInlineSnapshot(
           `"[-1,1,30,[0,[[-1,3,8,[10,[-1,3,15,[5,"1"]]]]]]]"`,
         );
+        expectSourceMapsToMatch(code, transformed);
       });
 
       test('[ROLLUP]', async () => {
@@ -250,6 +294,7 @@ describe('source maps', () => {
         expect(JSON.stringify(body)).toMatchInlineSnapshot(
           `"[-1,1,30,[0,[[-1,3,8,[10,[-1,3,15,[5,"1"]]]]]]]"`,
         );
+        expectSourceMapsToMatch(code, transformed);
       });
     });
 
@@ -329,6 +374,7 @@ describe('source maps', () => {
       expect(JSON.stringify(body)).toMatchInlineSnapshot(
         `"[-1,1,30,[0,[[-1,3,8,[10,[-1,3,15,[5,"1"]]]]]]]"`,
       );
+      expectSourceMapsToMatch(code, transformed);
     });
 
     describe('retains original source maps when multiple plugins run before', () => {
@@ -346,6 +392,7 @@ describe('source maps', () => {
         expect(JSON.stringify(body)).toMatchInlineSnapshot(
           `"[-1,1,30,[0,[[-1,3,8,[10,[-1,3,15,[5,"1"]]]]]]]"`,
         );
+        expectSourceMapsToMatch(code, transformed);
       });
 
       test('[ROLLUP]', async () => {
@@ -362,6 +409,7 @@ describe('source maps', () => {
         expect(JSON.stringify(body)).toMatchInlineSnapshot(
           `"[-1,1,30,[0,[[-1,3,8,[10,[-1,3,15,[5,"1"]]]]]]]"`,
         );
+        expectSourceMapsToMatch(code, transformed);
       });
     });
   });
