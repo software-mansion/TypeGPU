@@ -293,7 +293,6 @@ export const controls = defineControls({
 export function onCleanup() {
   autoResizer.detach();
   root.destroy();
-  root.device.destroy();
   cancelAnimationFrame(frameId);
 }
 

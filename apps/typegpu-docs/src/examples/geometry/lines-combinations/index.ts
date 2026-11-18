@@ -28,51 +28,25 @@ import { TEST_SEGMENT_COUNT } from './constants.ts';
 import { testCases } from './testCases.ts';
 import { defineControls } from '../../common/defineControls.ts';
 
+const root = await tgpu.init({
+  adapter: { powerPreference: 'high-performance' },
+  device: { requiredFeatures: ['timestamp-query'] },
+});
+const canvas = document.querySelector('canvas') as HTMLCanvasElement;
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-const canvas = document.querySelector('canvas');
-const context = canvas?.getContext('webgpu');
 
-if (!canvas) {
-  throw new Error('Could not find canvas');
-}
-if (!context) {
-  throw new Error('Could not create WebGPU context');
-}
-
-const adapter = await navigator.gpu.requestAdapter({
-  powerPreference: 'high-performance',
-});
-const device = await adapter?.requestDevice({
-  requiredFeatures: ['timestamp-query'],
-});
-if (!device) {
-  throw new Error('Could not get WebGPU device');
-}
-const root = tgpu.initFromDevice({ device });
-
-context.configure({
-  device: root.device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
-
-let msaaTexture: GPUTexture;
-let msaaTextureView: GPUTextureView;
-
-const createDepthAndMsaaTextures = () => {
-  if (msaaTexture) {
-    msaaTexture.destroy();
-  }
-  msaaTexture = device.createTexture({
-    size: [canvas.width, canvas.height, 1],
-    format: presentationFormat,
-    sampleCount: 4,
-    usage: GPUTextureUsage.RENDER_ATTACHMENT,
-  });
-  msaaTextureView = msaaTexture.createView();
+const createMsaaTexture = () => {
+  return root
+    .createTexture({
+      size: [canvas.width, canvas.height],
+      format: presentationFormat,
+      sampleCount: 4,
+    })
+    .$usage('render');
 };
 
-createDepthAndMsaaTextures();
+let msaaTexture = createMsaaTexture();
 
 const Uniforms = struct({
   time: f32,
@@ -358,8 +332,8 @@ const draw = (timeMs: number) => {
     time: timeMs * 1e-3,
   });
   const colorAttachment: ColorAttachment = {
-    view: multisample ? msaaTextureView : context.getCurrentTexture().createView(),
-    resolveTarget: multisample ? context.getCurrentTexture().createView() : undefined,
+    view: multisample ? msaaTexture : context,
+    resolveTarget: multisample ? context : undefined,
     clearValue: [1, 1, 1, 1],
     loadOp: 'load',
   };
@@ -416,7 +390,8 @@ const autoResizer = common.attachAutoResizer({
     canvas.width = size;
     canvas.height = size;
 
-    createDepthAndMsaaTextures();
+    msaaTexture.destroy();
+    msaaTexture = createMsaaTexture();
     draw(time);
   },
 });

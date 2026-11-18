@@ -41,25 +41,26 @@ export const vertexFn = tgpu.vertexFn({
     worldPos: d.vec3f,
   },
 })((input) => {
+  'use gpu';
   const cube = cubeLayout.$.cubes[input.instanceIndex];
   const cam = cameraLayout.$.camera;
   const params = terrainLayout.$.terrain;
 
-  const worldPos = std.mul(cube.model, d.vec4f(input.position, 1));
+  const worldPos = cube.model * d.vec4f(input.position, 1);
 
   const cubeCenter = cube.model.columns[3];
-  const noiseCoord = d.vec2f(cubeCenter.x * params.noiseScale, cubeCenter.z * params.noiseScale);
+  const noiseCoord = cubeCenter.xz * params.noiseScale;
   const height = fbm(noiseCoord) * params.terrainHeight;
 
   const displaced = d.vec4f(worldPos.x, worldPos.y + height, worldPos.z, 1);
 
-  const worldNormal = std.normalize(std.mul(cube.model, d.vec4f(input.normal, 0)).xyz);
+  const worldNormal = std.normalize((cube.model * d.vec4f(input.normal, 0)).xyz);
 
   const t = height / params.terrainHeight + 0.5;
   const color = heightColor(t);
 
   return {
-    pos: std.mul(cam.viewProjection, displaced),
+    pos: cam.viewProjection * displaced,
     worldNormal,
     color,
     worldPos: displaced.xyz,
@@ -74,16 +75,17 @@ export const fragmentFn = tgpu.fragmentFn({
   },
   out: d.vec4f,
 })((input) => {
+  'use gpu';
   const cam = cameraLayout.$.camera;
   const lightDir = std.normalize(d.vec3f(0.4, 1.0, 0.3));
 
   const diffuse = std.max(0, std.dot(input.worldNormal, lightDir));
   const ambient = 0.55;
 
-  const viewDir = std.normalize(cam.position.xyz.sub(input.worldPos));
-  const halfDir = std.normalize(lightDir.add(viewDir));
+  const viewDir = std.normalize(cam.position.xyz - input.worldPos);
+  const halfDir = std.normalize(lightDir + viewDir);
   const specular = std.pow(std.max(0, std.dot(input.worldNormal, halfDir)), 32);
 
-  const lit = input.color.mul(ambient + diffuse * 0.85).add(d.vec3f(specular * 0.3));
+  const lit = input.color * (ambient + diffuse * 0.85) + specular * 0.3;
   return d.vec4f(lit, 1);
 });

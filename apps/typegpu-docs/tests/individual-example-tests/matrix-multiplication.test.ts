@@ -6,14 +6,14 @@ import { describe, expect } from 'vitest';
 import { it } from 'typegpu-testing-utility';
 import { runExampleTest, setupCommonMocks } from './utils/baseTest.ts';
 
-describe('matrix(next) example', () => {
+describe('matrix multiplication example', () => {
   setupCommonMocks();
 
   it('should produce valid code', async ({ device }) => {
     const shaderCodes = await runExampleTest(
       {
         category: 'algorithms',
-        name: 'matrix-next',
+        name: 'matrix-multiplication',
         controlTriggers: ['Compute'],
         expectedCalls: 1,
       },
