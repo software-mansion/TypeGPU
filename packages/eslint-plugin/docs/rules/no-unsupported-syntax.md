@@ -32,7 +32,7 @@ const fn = () => {
 }
 ```
 ```ts
-const fn = ({ scale = 1 }) => { // AssignmentPattern inside destructuring
+function fn({ scale = 1 }) { // AssignmentPattern inside destructuring
   'use gpu';
   return scale;
 }
@@ -66,7 +66,7 @@ const fn = () => {
 } 
 ```
 ```ts
-const fn = (a, scale = 1) => { // Default values of identifier parameters are supported
+function fn(a, scale = 1) { // Default values of identifier parameters are supported
   'use gpu';
   return a * scale;
 }
