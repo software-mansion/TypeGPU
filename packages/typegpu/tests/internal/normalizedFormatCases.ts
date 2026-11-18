@@ -178,6 +178,18 @@ export function normalizedFormatCases() {
       );
     });
 
+    it('clamps out-of-range components before packing', () => {
+      const buffer = new ArrayBuffer(4);
+
+      writeToArrayBuffer(buffer, d.snorm10_10_10_2, d.vec4f(1.01, -1.01, 2, 1.5));
+      expect(new DataView(buffer).getUint32(0, true)).toBe(makeRgb10a2Signed([511, -511, 511, 1]));
+
+      writeToArrayBuffer(buffer, d.snorm10_10_10_2, d.vec4f(-2, 0.5, -0.5, -3));
+      expect(new DataView(buffer).getUint32(0, true)).toBe(
+        makeRgb10a2Signed([-511, 256, -255, -1]),
+      );
+    });
+
     it('round-trips every 10-bit value of every channel', () => {
       const buffer = new ArrayBuffer(4);
 

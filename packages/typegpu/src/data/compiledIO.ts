@@ -157,7 +157,7 @@ const specialPackedFormats = {
   'snorm10-10-10-2': {
     writeFunction: 'setUint32',
     generator: (offsetExpr: string, valueExpr: string) =>
-      `output.setUint32(${offsetExpr}, (Math.round(${valueExpr}.x*511)&0x3FF)|((Math.round(${valueExpr}.y*511)&0x3FF)<<10)|((Math.round(${valueExpr}.z*511)&0x3FF)<<20)|((Math.round(${valueExpr}.w)&3)<<30), littleEndian);\n`,
+      `output.setUint32(${offsetExpr}, (Math.round(Math.max(-1, Math.min(1, ${valueExpr}.x))*511)&0x3FF)|((Math.round(Math.max(-1, Math.min(1, ${valueExpr}.y))*511)&0x3FF)<<10)|((Math.round(Math.max(-1, Math.min(1, ${valueExpr}.z))*511)&0x3FF)<<20)|((Math.round(Math.max(-1, Math.min(1, ${valueExpr}.w)))&3)<<30), littleEndian);\n`,
   },
   'unorm8x4-bgra': {
     writeFunction: 'setUint8',

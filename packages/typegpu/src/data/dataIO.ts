@@ -466,10 +466,10 @@ const dataWriters = {
   },
   'snorm10-10-10-2'(output, _, value) {
     let packed = 0;
-    packed |= Math.round(value.x * 511) & 1023; // r (10 bits)
-    packed |= (Math.round(value.y * 511) & 1023) << 10; // g (10 bits)
-    packed |= (Math.round(value.z * 511) & 1023) << 20; // b (10 bits)
-    packed |= (Math.round(value.w) & 3) << 30; // a (2 bits)
+    packed |= Math.round(Math.max(-1, Math.min(1, value.x)) * 511) & 1023; // r (10 bits)
+    packed |= (Math.round(Math.max(-1, Math.min(1, value.y)) * 511) & 1023) << 10; // g (10 bits)
+    packed |= (Math.round(Math.max(-1, Math.min(1, value.z)) * 511) & 1023) << 20; // b (10 bits)
+    packed |= (Math.round(Math.max(-1, Math.min(1, value.w))) & 3) << 30; // a (2 bits)
     output.writeUint32(packed);
   },
 
