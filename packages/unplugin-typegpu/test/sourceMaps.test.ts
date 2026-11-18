@@ -253,28 +253,17 @@ describe('source maps', () => {
       });
     });
 
-    test('[WEBPACK] works when plugin does not expose `getCombinedSourcemap`', async () => {
-      const transformed = await webpackTransform(code, { unstable_sourceMaps: true });
-      const stripped = stripAstBody(stripWebpackResult(transformed));
-
-      expect(countMapped(transformed)).toMatchInlineSnapshot(`3`);
-      expect(stripped).toMatchInlineSnapshot(`"[-1,1,30,[0,[[-1,3,8,[10,[-1,3,15,[5,"1"]]]]]]]"`);
-    });
-
-    test('[WEBPACK] warns and falls back to node position when run second and plugin does not expose `getCombinedSourcemap`', async () => {
+    test('[WEBPACK] works and warns when plugin does not expose `getCombinedSourcemap`', async () => {
       // The warn is module-scoped, so we need to reset the module before testing it.
       vi.resetModules();
       const { webpackTransform } = await import('./transform.ts');
       using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
-      const transformed = await webpackTransform(code, { unstable_sourceMaps: true }, [
-        webpackPlugin,
-      ]);
+      const transformed = await webpackTransform(code, { unstable_sourceMaps: true });
       const stripped = stripAstBody(stripWebpackResult(transformed));
 
-      expect(transformed).toContain('console.log');
       expect(countMapped(transformed)).toMatchInlineSnapshot(`3`);
-      expect(stripped).toMatchInlineSnapshot(`"[-1,2,30,[0,[[-1,4,8,[10,[-1,4,15,[5,"1"]]]]]]]"`);
+      expect(stripped).toMatchInlineSnapshot(`"[-1,1,30,[0,[[-1,3,8,[10,[-1,3,15,[5,"1"]]]]]]]"`);
 
       expect(consoleWarnSpy).toHaveBeenCalledTimes(1);
       expect(consoleWarnSpy.mock.calls[0]).toMatchInlineSnapshot(`
@@ -283,6 +272,17 @@ describe('source maps', () => {
         If another plugin modifies the code, source maps may point to modified locations.",
         ]
       `);
+    });
+
+    test('[WEBPACK] falls back to node position when run second and plugin does not expose `getCombinedSourcemap`', async () => {
+      const transformed = await webpackTransform(code, { unstable_sourceMaps: true }, [
+        webpackPlugin,
+      ]);
+      const stripped = stripAstBody(stripWebpackResult(transformed));
+
+      expect(transformed).toContain('console.log');
+      expect(countMapped(transformed)).toMatchInlineSnapshot(`3`);
+      expect(stripped).toMatchInlineSnapshot(`"[-1,2,30,[0,[[-1,4,8,[10,[-1,4,15,[5,"1"]]]]]]]"`);
     });
 
     test('[WEBPACK] warns only once', async () => {
