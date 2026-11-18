@@ -147,7 +147,7 @@ function processVideoFrame(_: number, metadata: VideoFrameCallbackMetadata) {
   }
   const crop = squareCrop(metadata.width, metadata.height, uvTransform);
   const externalTexture = root.device.importExternalTexture({ source: video });
-  const encoder = root['~unstable'].createCommandEncoder();
+  const encoder = root.createCommandEncoder();
   const pass = encoder.beginComputePass();
   inference.encodeVideoFrame(pass, externalTexture, crop);
   postProcessor.encode(pass, externalTexture, crop, canvas, postProcessProfile);
