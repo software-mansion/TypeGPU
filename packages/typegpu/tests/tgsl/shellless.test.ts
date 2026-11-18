@@ -1078,4 +1078,61 @@ describe('shellless', () => {
     `);
     expect(snippets[0]?.origin).toMatchInlineSnapshot(`"argument"`);
   });
+
+  it('allows d.ref as optional type', () => {
+    function divide(dividend: number, divisor: number, remainder: d.ref<number> = d.ref(0)) {
+      'use gpu';
+      remainder.$ = dividend % divisor;
+      return dividend / divisor;
+    }
+
+    function main() {
+      'use gpu';
+      const d1 = divide(10, 3);
+
+      const r1 = d.ref(0);
+      const d2 = divide(10, 3, r1);
+    }
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn divide(dividend: i32, divisor: i32) -> f32 {
+        var remainder = 0;
+        remainder = (dividend % divisor);
+        return (f32(dividend) / f32(divisor));
+      }
+
+      fn divide_1(dividend: i32, divisor: i32, remainder: ptr<function, i32>) -> f32 {
+        (*remainder) = (dividend % divisor);
+        return (f32(dividend) / f32(divisor));
+      }
+
+      fn main() {
+        let d1 = divide(10i, 3i);
+        var r1 = 0;
+        let d2 = divide_1(10i, 3i, (&r1));
+      }"
+    `);
+  });
+
+  it('errors when a texture is assigned to a default param value', ({ root }) => {
+    const myTexture = root
+      .createTexture({ size: [1, 1], format: 'r8unorm' })
+      .$usage('sampled')
+      .createView();
+
+    const fn = (tex = myTexture) => {
+      'use gpu';
+      return std.textureLoad(myTexture.$, d.vec2i(), 0);
+    };
+
+    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:fn
+      - fn*:fn(): Default value 'myTexture' of parameter 'tex' is invalid, cannot determine WGSL type of 'myTexture'
+      -----
+      - Try using or defining a schema that matches your desired value the most, and wrap the value with it: 'tex = Schema(myTexture)'
+      -----]
+    `);
+  });
 });
