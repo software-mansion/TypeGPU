@@ -290,10 +290,6 @@ export type FuncParameter =
   | {
       type: typeof FuncParameterType.identifier;
       name: string;
-      /**
-       * The parameter's default value expression (`(a, b = 2) => ...`),
-       * used when a call site omits the argument.
-       */
       default?: Expression | undefined;
     }
   | {
