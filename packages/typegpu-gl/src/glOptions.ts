@@ -6,6 +6,14 @@ export function glOptions() {
   };
 }
 
+/**
+ * Resolution options for generating a matching pair of GLSL vertex and fragment shaders.
+ *
+ * The vertex stage has to be resolved before the fragment stage, as the fragment inputs
+ * reuse what the vertex stage decided about the varyings between them (e.g. their
+ * interpolation qualifiers). A fragment stage resolved on its own derives them from its
+ * own input schema instead.
+ */
 export function dualGlOptions() {
   const sharedState = new CrossShaderStageState();
 
