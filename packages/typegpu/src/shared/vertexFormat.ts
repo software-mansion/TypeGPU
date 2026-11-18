@@ -45,15 +45,6 @@ export const vertexFormats = [
 
 export type VertexFormat = (typeof vertexFormats)[number];
 
-/**
- * Some of our formats (e.g. 'snorm10-10-10-2') are missing from the `GPUVertexFormat`
- * union in TypeScript's `lib.dom.d.ts`, which takes precedence over `@webgpu/types`.
- * Every format we support is a valid WebGPU vertex format, so the cast is safe.
- */
-export function toGPUVertexFormat(format: VertexFormat): GPUVertexFormat {
-  return format as GPUVertexFormat;
-}
-
 export const kindToDefaultFormatMap = {
   f32: 'float32',
   vec2f: 'float32x2',
