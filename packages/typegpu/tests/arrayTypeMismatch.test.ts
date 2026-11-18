@@ -98,6 +98,45 @@ describe('array type mismatches', () => {
     `);
   });
 
+  it('throws for an untyped literal with arrays of different element types', () => {
+    const Ints = d.arrayOf(d.i32, 3);
+    const Uints = d.arrayOf(d.u32, 3);
+    const main = () => {
+      'use gpu';
+      return [Ints([1, 2, 3]), Uints([1, 2, 3])];
+    };
+
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:main
+      - fn*:main()
+      - ArrayExpression: Cannot use a value of type 'arrayOf(u32, 3)' where 'arrayOf(i32, 3)' is expected.
+      -----
+      TypeGPU does not convert arrays between different array types automatically. Construct the value with the expected schema instead.]
+    `);
+  });
+
+  it('throws for a nested untyped literal with arrays of different element types', () => {
+    const Ints = d.arrayOf(d.i32, 2);
+    const Uints = d.arrayOf(d.u32, 2);
+    const main = () => {
+      'use gpu';
+      return [[Ints([1, 2]), Uints([3, 4])]];
+    };
+
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:main
+      - fn*:main()
+      - ArrayExpression
+      - ArrayExpression: Cannot use a value of type 'arrayOf(u32, 2)' where 'arrayOf(i32, 2)' is expected.
+      -----
+      TypeGPU does not convert arrays between different array types automatically. Construct the value with the expected schema instead.]
+    `);
+  });
+
   it('throws for an untyped nested literal with mismatched inner array lengths', () => {
     const main = () => {
       'use gpu';

@@ -43,7 +43,7 @@ const INFINITE_RANK: ConversionRankInfo = {
 };
 
 /** Decides whether two array types produce the same WGSL type. */
-function arraysHaveSameType(a: WgslArray, b: WgslArray): boolean {
+export function arraysHaveSameType(a: WgslArray, b: WgslArray): boolean {
   if (a.elementCount !== b.elementCount) {
     return false;
   }
@@ -61,8 +61,8 @@ function arraysHaveSameType(a: WgslArray, b: WgslArray): boolean {
 }
 
 /** A value would need conversion between two different array types. */
-class ArrayConversionError extends WgslTypeError {
-  constructor(src: WgslArray, dest: WgslArray) {
+export class ArrayConversionError extends WgslTypeError {
+  constructor(src: BaseData, dest: BaseData) {
     super(
       `Cannot use a value of type '${src}' where '${dest}' is expected.\n-----\nTypeGPU does not convert arrays between different array types automatically. Construct the value with the expected schema instead.`,
     );
@@ -382,6 +382,18 @@ function applyActionToSnippet(
 ): Snippet {
   if (action.action === 'none') {
     if (targetType === snippet.dataType) {
+      return snippet;
+    }
+
+    // Arrays are deliberately left permissive during multi-value unification
+    // so comptime consumers can read them as JS arrays. Keep the real element
+    // type here: ArrayExpression checks it at WGSL emission, where the lie
+    // would otherwise produce invalid code (e.g. array<u32, 3> labelled i32).
+    if (
+      snippet.dataType !== UnknownData &&
+      isWgslArray(undecorate(snippet.dataType)) &&
+      isWgslArray(undecorate(targetType))
+    ) {
       return snippet;
     }
 
