@@ -26,9 +26,9 @@ const root = await tgpu.init({
 const hasTimestampQuery = root.enabledFeatures.has('timestamp-query');
 
 const buffers = {
-  first: root.createBuffer(createMatrixData(INITIAL_MAX_MATRIX_SIZE)).$usage('storage'),
-  second: root.createBuffer(createMatrixData(INITIAL_MAX_MATRIX_SIZE)).$usage('storage'),
-  result: root.createBuffer(createMatrixData(INITIAL_MAX_MATRIX_SIZE)).$usage('storage'),
+  first: root.createBuffer(createMatrixData(state.bufferCapacity)).$usage('storage'),
+  second: root.createBuffer(createMatrixData(state.bufferCapacity)).$usage('storage'),
+  result: root.createBuffer(createMatrixData(state.bufferCapacity)).$usage('storage'),
   info: root.createBuffer(MatrixInfo, state.dimensions).$usage('uniform'),
 };
 
