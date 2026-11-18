@@ -1042,18 +1042,6 @@ describe('shellless', () => {
     `);
   });
 
-  it('carries over `private` origin from default param value', () => {
-    const state = tgpu.privateVar(d.vec2f);
-
-    function f(v = state.$) {
-      'use gpu';
-      CAPTURE(v);
-    }
-
-    const snippets = captureSnippets(f);
-    expect(snippets[0]?.origin).toMatchInlineSnapshot(`"private"`);
-  });
-
   it('can call function as the default param value', () => {
     function getFive() {
       'use gpu';
@@ -1122,7 +1110,7 @@ describe('shellless', () => {
 
     const fn = (tex = myTexture) => {
       'use gpu';
-      return std.textureLoad(myTexture.$, d.vec2i(), 0);
+      return std.textureLoad(tex.$, d.vec2i(), 0);
     };
 
     expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`

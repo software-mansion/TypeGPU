@@ -57,7 +57,7 @@ export class ShelllessRepository {
 
       if (s.dataType === UnknownData) {
         const snippetStr = stringifySnippet(s);
-        const valueStr = String(s.value as unknown);
+        const valueStr = String(s.value);
         const description =
           snippetStr === valueStr ? `'${snippetStr}'` : `'${snippetStr}' (${valueStr})`;
         throw new Error(
