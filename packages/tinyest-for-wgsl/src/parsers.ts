@@ -4,6 +4,7 @@ import * as tinyest from 'tinyest';
 import type {
   Context,
   JsNode,
+  Scope,
   TranspilationOptions,
   TranspilationResult,
   Transpile,
@@ -122,13 +123,13 @@ function createParser(kind: 'acorn' | 'babel' | 'legacy') {
     transpileFn(rootNode: JsNode, options: TranspilationOptions): TranspilationResult {
       const { params: rawParams, paramDefaults, body } = extractFunctionParts(rootNode);
       const ctx = createContext(options);
-      const paramScope = ctx.stack[0] as (typeof ctx.stack)[number];
+      const paramScope = ctx.stack[0] as Scope;
 
       // Just like in JS, a default value can only reference params declared before it,
       // so a param is declared only after its own default value has been transpiled.
-      const params = rawParams.map((param, i): tinyest.FuncParameter => {
+      const params = rawParams.map((param, i) => {
         const defaultNode = paramDefaults[i];
-        const transpiled: tinyest.FuncParameter =
+        const transpiled =
           defaultNode && param.type === tinyest.FuncParameterType.identifier
             ? { ...param, default: transpile(ctx, defaultNode) as tinyest.Expression }
             : param;

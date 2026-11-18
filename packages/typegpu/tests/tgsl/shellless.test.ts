@@ -297,7 +297,7 @@ describe('shellless', () => {
     expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn*:main: Cannot resolve 'main' directly, because parameter 'a' has no default value. Give it one ('a = undefined' if it's optional), call it from another function, or wrap it in a shell]
+      - fn*:main: Cannot resolve 'main' directly, because parameter 'a' has no default value. Give it one ('a = undefined' if it's optional). Call it from another function, or wrap it in a shell]
     `);
   });
 
@@ -311,7 +311,7 @@ describe('shellless', () => {
     expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
-      - fn*:main: Cannot resolve 'main' directly, because parameter 't' has no default value. Give it one ('t = undefined' if it's optional), call it from another function, or wrap it in a shell]
+      - fn*:main: Cannot resolve 'main' directly, because parameter 't' has no default value. Give it one ('t = undefined' if it's optional). Call it from another function, or wrap it in a shell]
     `);
   });
 

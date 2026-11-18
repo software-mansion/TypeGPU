@@ -30,10 +30,10 @@ export class ShelllessRepository {
       if (required) {
         const reason =
           required.type === FuncParameterType.identifier
-            ? `parameter '${required.name}' has no default value. Give it one ('${required.name} = undefined' if it's optional), call`
-            : `it has a destructured parameter, which cannot be omitted. Call`;
+            ? `parameter '${required.name}' has no default value. Give it one ('${required.name} = undefined' if it's optional)`
+            : `it has a destructured parameter, which cannot be omitted`;
         throw new Error(
-          `Cannot resolve '${getName(fn)}' directly, because ${reason} it from another function, or wrap it in a shell`,
+          `Cannot resolve '${getName(fn)}' directly, because ${reason}. Call it from another function, or wrap it in a shell`,
         );
       }
     }
