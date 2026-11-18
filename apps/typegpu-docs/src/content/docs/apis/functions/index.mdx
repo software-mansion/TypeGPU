@@ -203,6 +203,147 @@ const double = <T extends d.v2f | d.v3f | d.v4f>(a: T): T => {
 
 You can explore the set of standard functions in the [API Reference](/TypeGPU/api/typegpu/std/functions/abs/).
 
+### Default and optional parameters
+
+Parameters can have default values, just like in regular JavaScript. Building on [polymorphism](#polymorphism),
+TypeGPU generates a separate variant of the function for each set of arguments it's called with. When an argument is omitted, that
+variant takes one less parameter, and declares the default value at the top of its body instead.
+
+```ts twoslash
+import { d } from 'typegpu';
+// ---cut---
+const scale = (v: d.v2f, factor = 1.5) => {
+  'use gpu';
+  return v * factor;
+};
+
+const main = () => {
+  'use gpu';
+  return scale(d.vec2f(1, 2)) + scale(d.vec2f(3, 4), 0.5);
+};
+```
+
+```wgsl
+// Generated WGSL
+fn scale(v: vec2f) -> vec2f {
+  const factor = 1.5;
+  return (v * factor);
+}
+
+fn scale_1(v: vec2f, factor: f32) -> vec2f {
+  return (v * factor);
+}
+
+fn main() -> vec2f {
+  return (scale(vec2f(1, 2)) + scale_1(vec2f(3, 4), 0.5f));
+}
+```
+
+A default value can be any expression that's valid inside a TypeGPU function, including calls to other functions
+and references to parameters declared before it.
+
+```ts twoslash
+import { d, std } from 'typegpu';
+// ---cut---
+const toUnit = (v: d.v2f, len = std.length(v)) => {
+  'use gpu';
+  return v / len;
+};
+```
+
+```wgsl
+// Generated WGSL (when called as `toUnit(d.vec2f(3, 4))`)
+fn toUnit(v: vec2f) -> vec2f {
+  let len = length(v);
+  return (v / len);
+}
+```
+
+Passing `undefined` explicitly is the same as omitting the argument, which lets you skip a parameter in the middle.
+
+```ts twoslash
+const sum = (a: number, b = 2, c = 3) => {
+  'use gpu';
+  return a + b + c;
+};
+// ---cut---
+const main = () => {
+  'use gpu';
+  return sum(1, undefined, 4);
+};
+```
+
+```wgsl
+// Generated WGSL
+fn sum(a: i32, c: i32) -> i32 {
+  const b = 2;
+  return ((a + b) + c);
+}
+
+fn main() -> i32 {
+  return sum(1i, 4i);
+}
+```
+
+Optional parameters with no default value (`period?: number`) are also supported. When one is omitted, it's `undefined`
+at shader compilation time, so comparisons against `undefined` are evaluated ahead of time and unused branches are skipped.
+
+```ts twoslash
+import { std } from 'typegpu';
+// ---cut---
+const interpolate = (t: number, period?: number) => {
+  'use gpu';
+  if (period !== undefined) {
+    return std.fract(t / period);
+  }
+  return std.saturate(t);
+};
+
+const main = () => {
+  'use gpu';
+  return interpolate(0.5) + interpolate(1.5, 2);
+};
+```
+
+```wgsl
+// Generated WGSL
+fn interpolate(t: f32) -> f32 {
+  return saturate(t);
+}
+
+fn interpolate_1(t: f32, period: i32) -> f32 {
+  return fract((t / f32(period)));
+}
+
+fn main() -> f32 {
+  return (interpolate(0.5f) + interpolate_1(1.5f, 2i));
+}
+```
+
+:::tip
+A `d.ref` default value is a handy way to make an "out" parameter optional.
+When the caller doesn't pass a reference, the function writes to a local variable instead.
+
+```ts twoslash
+import { d } from 'typegpu';
+// ---cut---
+const divide = (dividend: number, divisor: number, remainder = d.ref(0)) => {
+  'use gpu';
+  remainder.$ = dividend % divisor;
+  return dividend / divisor;
+};
+```
+:::
+
+There are a few rules to keep in mind:
+- Default values are only supported in functions without a [shell](#function-shells), since a shell already defines exactly which arguments the function accepts.
+- The default value needs a WGSL type. If TypeGPU can't infer one (e.g. for a plain JS object), wrap the value in a [schema](/TypeGPU/apis/data-schemas).
+- Parameters that use destructuring (`({ a, b }) => ...`) can't have default values and can't be omitted.
+- Just like regular parameters, parameters that fell back to their default values can't be reassigned or mutated.
+- Arguments that evaluate to `undefined` (like a call to a function that returns nothing) are not allowed, since omitting them would also skip their side effects.
+- To pass a function directly to `tgpu.resolve`, every parameter needs a default value. TypeScript's `?` doesn't exist at runtime,
+  so write `period: number | undefined = undefined` for parameters that should be optional.
+
 ### The outer scope
 
 Things from the outer scope can be referenced inside TypeGPU functions, and they'll be automatically included in the

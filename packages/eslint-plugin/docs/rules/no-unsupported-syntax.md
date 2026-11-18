@@ -31,6 +31,12 @@ const fn = () => {
   throw new Error(); // ThrowStatement
 }
 ```
+```ts
+const fn = ({ scale = 1 }) => { // AssignmentPattern inside destructuring
+  'use gpu';
+  return scale;
+}
+```
 
 Examples of **correct** code for this rule:
 
@@ -58,6 +64,12 @@ const fn = () => {
   }
   return a;
 } 
+```
+```ts
+const fn = (a, scale = 1) => { // Default values of identifier parameters are supported
+  'use gpu';
+  return a * scale;
+}
 ```
 
 > [!NOTE]
