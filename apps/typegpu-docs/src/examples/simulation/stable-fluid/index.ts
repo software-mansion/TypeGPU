@@ -336,7 +336,7 @@ function simulate(pass: TgpuComputePass) {
 let frameId = requestAnimationFrame(frame);
 
 function frame() {
-  const encoder = root['~unstable'].createCommandEncoder();
+  const encoder = root.createCommandEncoder();
   if (!paused) {
     const pass = encoder.beginComputePass();
     simulate(pass);

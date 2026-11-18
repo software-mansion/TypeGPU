@@ -171,7 +171,7 @@ function ShowcaseCard({ example }: { example: Example }) {
             Preview unavailable
           </span>
         )}
-        {example.metadata.tags?.includes('webgl') && (
+        {example.usedApis.includes('@typegpu/gl') && (
           <span className="bg-navy-100 dark:bg-almost-white dark:text-navy-100 absolute top-3 left-3 px-2 py-1 font-mono text-[9px] font-semibold tracking-[0.08em] text-white">
             WebGPU + WebGL
           </span>
