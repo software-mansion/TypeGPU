@@ -452,10 +452,10 @@ const dataWriters = {
   },
   'unorm10-10-10-2'(output, _, value) {
     let packed = 0;
-    packed |= Math.round(value.x * 1023) & 1023; // r (10 bits)
-    packed |= (Math.round(value.y * 1023) & 1023) << 10; // g (10 bits)
-    packed |= (Math.round(value.z * 1023) & 1023) << 20; // b (10 bits)
-    packed |= (Math.round(value.w * 3) & 3) << 30; // a (2 bits)
+    packed |= Math.round(Math.max(0, Math.min(1, value.x)) * 1023) & 1023; // r (10 bits)
+    packed |= (Math.round(Math.max(0, Math.min(1, value.y)) * 1023) & 1023) << 10; // g (10 bits)
+    packed |= (Math.round(Math.max(0, Math.min(1, value.z)) * 1023) & 1023) << 20; // b (10 bits)
+    packed |= (Math.round(Math.max(0, Math.min(1, value.w)) * 3) & 3) << 30; // a (2 bits)
     output.writeUint32(packed);
   },
   'unorm8x4-bgra'(output, _, value) {
