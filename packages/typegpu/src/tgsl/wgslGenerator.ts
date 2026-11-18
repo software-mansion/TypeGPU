@@ -1601,7 +1601,7 @@ Try 'return ${typeStr}(${str});' instead.
     }
 
     if (isHandleData(definitionDataType)) {
-      return this._handleAliasStatement(rawId, eq);
+      return this._aliasHandleStatement(rawId, eq);
     }
 
     if (eq.origin === 'argument') {
@@ -1670,7 +1670,7 @@ Try 'return ${typeStr}(${str});' instead.
    * Instead of emitting a declaration, we treat the variable as a compile-time alias,
    * so every use of it resolves to the original handle expression.
    */
-  protected _handleAliasStatement(rawId: string, eq: Snippet): ResolvedStatement {
+  protected _aliasHandleStatement(rawId: string, eq: Snippet): ResolvedStatement {
     this.ctx.defineVariable(rawId, eq);
     return { code: '', definesInNearestScope: false };
   }
@@ -2079,7 +2079,7 @@ ${this.ctx.pre}else ${alternate}`,
             const testNode = cases[i]?.[0];
             invariant(testNode, `Expected node to be not nullish.`);
             throw new Error(`All of switch tests must be constant.
-Test '${stringifyNode(testNode)}' is not constant, making the following switch statement invalid. 
+Test '${stringifyNode(testNode)}' is not constant, making the following switch statement invalid.
 This error may be caused by an implicit conversion.
 ${stringifyNode(statement)}`);
           }
