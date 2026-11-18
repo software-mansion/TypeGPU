@@ -441,19 +441,17 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
   }
 
   #assertWriteInBounds(startOffset: number, endOffset: number): void {
-    const name = getName(this) ?? '<unnamed>';
-
-    if (startOffset > endOffset) {
+    const bufferSize = physicalSizeOf(this.dataType);
+    if (startOffset < 0 || startOffset > bufferSize || endOffset > bufferSize) {
       throw new Error(
-        `Cannot write to bytes ${startOffset}-${endOffset} of buffer '${name}'. ` +
-          'The start offset cannot be greater than the end offset.',
+        `Cannot write to bytes ${startOffset}-${endOffset} of buffer '${getName(this) ?? '<unnamed>'}', which is ${bufferSize} bytes long.`,
       );
     }
 
-    const bufferSize = physicalSizeOf(this.dataType);
-    if (startOffset < 0 || endOffset > bufferSize) {
+    if (startOffset > endOffset) {
       throw new Error(
-        `Cannot write to bytes ${startOffset}-${endOffset} of buffer '${name}', which is ${bufferSize} bytes long.`,
+        `Cannot write to bytes ${startOffset}-${endOffset} of buffer '${getName(this) ?? '<unnamed>'}'. ` +
+          'The start offset cannot be greater than the end offset.',
       );
     }
   }

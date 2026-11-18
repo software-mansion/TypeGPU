@@ -764,7 +764,7 @@ describe('TgpuBuffer', () => {
       expect(() =>
         buffer.write([1, 2, 3, 4], { startOffset: 32 }),
       ).toThrowErrorMatchingInlineSnapshot(
-        `[Error: Cannot write to bytes 32-16 of buffer 'values'. The start offset cannot be greater than the end offset.]`,
+        `[Error: Cannot write to bytes 32-16 of buffer 'values', which is 16 bytes long.]`,
       );
       expect(device.mock.queue.writeBuffer).not.toHaveBeenCalled();
     });
