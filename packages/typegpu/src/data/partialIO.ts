@@ -121,9 +121,10 @@ export function getPatchInstructions<TData extends wgsl.BaseData>(
         return;
       }
 
-      // Runtime-sized arrays are bounded by how many elements fit in the target buffer
+      // Runtime-sized arrays are bounded by how many elements fit in the target buffer.
+      // Disarrays always occupy exactly `sizeOf` bytes, so an empty one keeps a bound of 0.
       const elementCount =
-        arrSchema.elementCount === 0
+        isWgslArray(node) && arrSchema.elementCount === 0
           ? Math.max(
               0,
               Math.floor((buf.byteLength - offset - sizeOf(arrSchema.elementType)) / elementSize) +

@@ -195,5 +195,16 @@ describe('arrayBufferIO', () => {
         'Index 3 is out of bounds for an array of 3 elements.',
       );
     });
+
+    it('does not bound empty disarrays by the size of the buffer', () => {
+      const Schema = d.unstruct({ a: d.disarrayOf(d.u32, 0), b: d.u32 });
+      const buffer = new ArrayBuffer(d.sizeOf(Schema));
+      new Uint32Array(buffer)[0] = 3;
+
+      expect(() => patchArrayBuffer(buffer, Schema, { a: { 0: 99 } })).toThrow(
+        'Index 0 is out of bounds for an array of 0 elements.',
+      );
+      expect([...new Uint32Array(buffer)]).toStrictEqual([3]);
+    });
   });
 });
