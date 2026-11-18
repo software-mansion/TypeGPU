@@ -44,7 +44,7 @@ function groupResultsByTest(
 }
 
 // Imports everything, so it measures the size of the whole library
-const WHOLE_LIBRARY_TEST = 'STATIC_allImports.ts';
+const WHOLE_LIBRARY_TEST = 'STATIC_allImports.js';
 
 function getWholeLibraryTable(
   prNamespaceResults: typeof BenchmarkResults.infer,
