@@ -1135,4 +1135,30 @@ describe('shellless', () => {
       -----]
     `);
   });
+
+  it('throws an error when a side-effectful call would have been omitted from the parameter list', () => {
+    const counter = tgpu.privateVar(d.i32);
+
+    function bump() {
+      'use gpu';
+      counter.$ += 1;
+    }
+
+    function f(value: void = undefined) {
+      'use gpu';
+      return 7;
+    }
+
+    function main() {
+      'use gpu';
+      return f(bump());
+    }
+
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:main
+      - fn*:main(): Cannot pass 'bump()' as a parameter, it would be omitted, and it might contain side effects.]
+    `);
+  });
 });

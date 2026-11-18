@@ -39,7 +39,13 @@ export class ShelllessRepository {
     }
 
     const argTypes = (argSnippets ?? []).map((s, index) => {
-      if (s.value === undefined) {
+      if (s.dataType === Void) {
+        if (s.possibleSideEffects) {
+          throw new Error(
+            `Cannot pass '${stringifySnippet(s)}' as a parameter, it would be omitted, and it might contain side effects.`,
+          );
+        }
+
         if (params[index]?.type !== FuncParameterType.identifier) {
           throw new Error(
             `Passed undefined as the #${index} argument to ${getName(fn) ?? '<unnamed>'}(...), but only identifier parameters can be omitted.`,
