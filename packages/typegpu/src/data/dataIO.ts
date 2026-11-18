@@ -464,6 +464,14 @@ const dataWriters = {
     output.writeUint8(Math.round(value.x * 255));
     output.writeUint8(Math.round(value.w * 255));
   },
+  'snorm10-10-10-2'(output, _, value) {
+    let packed = 0;
+    packed |= Math.round(Math.max(-1, Math.min(1, value.x)) * 511) & 1023; // r (10 bits)
+    packed |= (Math.round(Math.max(-1, Math.min(1, value.y)) * 511) & 1023) << 10; // g (10 bits)
+    packed |= (Math.round(Math.max(-1, Math.min(1, value.z)) * 511) & 1023) << 20; // b (10 bits)
+    packed |= (Math.round(Math.max(-1, Math.min(1, value.w))) & 3) << 30; // a (2 bits)
+    output.writeUint32(packed);
+  },
 
   disarray: writeArrayLike,
 
@@ -749,6 +757,14 @@ const dataReaders = {
     const g = i.readByte() / 255;
     const r = i.readByte() / 255;
     const a = i.readByte() / 255;
+    return vec4f(r, g, b, a);
+  },
+  'snorm10-10-10-2'(i) {
+    const packed = i.readUint32();
+    const r = Math.max(((packed << 22) >> 22) / 511, -1);
+    const g = Math.max(((packed << 12) >> 22) / 511, -1);
+    const b = Math.max(((packed << 2) >> 22) / 511, -1);
+    const a = Math.max(packed >> 30, -1);
     return vec4f(r, g, b, a);
   },
 

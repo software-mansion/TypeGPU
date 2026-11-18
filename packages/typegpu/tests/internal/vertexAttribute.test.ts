@@ -16,6 +16,12 @@ describe('ArrayToContainedAttribs', () => {
     expectTypeOf<Result>().toEqualTypeOf<TgpuVertexAttrib<'unorm10-10-10-2'>>();
   });
 
+  it('processes a loose array of snorm10-10-10-2', () => {
+    type Result = ArrayToContainedAttribs<d.Disarray<d.snorm10_10_10_2>>;
+
+    expectTypeOf<Result>().toEqualTypeOf<TgpuVertexAttrib<'snorm10-10-10-2'>>();
+  });
+
   it('processes an array of u32s', () => {
     type Result = ArrayToContainedAttribs<d.WgslArray<d.U32>>;
 

@@ -39,7 +39,8 @@ export function connectAttributesToShader(
           stepMode: attributes._layout.stepMode,
           attributes: [
             {
-              format: attributes.format,
+              // Cast needed: 'snorm10-10-10-2' is missing from GPUVertexFormat in TS's lib.dom.d.ts
+              format: attributes.format as GPUVertexFormat,
               offset: attributes.offset,
               shaderLocation: getCustomLocation(shaderInputLayout) ?? 0,
             },
@@ -84,7 +85,8 @@ export function connectAttributesToShader(
     nextShaderLocation = getCustomLocation(member) ?? nextShaderLocation;
 
     attribList.push({
-      format: matchingAttribute.format,
+      // Cast needed: 'snorm10-10-10-2' is missing from GPUVertexFormat in TS's lib.dom.d.ts
+      format: matchingAttribute.format as GPUVertexFormat,
       offset: matchingAttribute.offset,
       shaderLocation: nextShaderLocation++,
     });
