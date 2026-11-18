@@ -74,7 +74,7 @@ describe('array type mismatches', () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:main
-      - fn*:main(): Cannot use a value of type 'arrayOf(struct:<unnamed>, 4)' where 'arrayOf(struct:<unnamed>, 4)' is expected.
+      - fn*:main(): Cannot use a value of type 'arrayOf(struct { p: u32 }, 4)' where 'arrayOf(struct { p: f32 }, 4)' is expected.
       -----
       TypeGPU does not convert arrays between different array types automatically. Construct the value with the expected schema instead.]
     `);

@@ -60,11 +60,27 @@ export function arraysHaveSameType(a: WgslArray, b: WgslArray): boolean {
   return schemasEqual(elementA as AnyData, elementB as AnyData, false);
 }
 
+/** Renders a type for diagnostics, expanding unnamed structs so two distinct
+ * element types never render identically. */
+function describeType(type: BaseData): string {
+  const trueType = undecorate(type);
+  if (isWgslArray(trueType)) {
+    return `arrayOf(${describeType(trueType.elementType)}, ${trueType.elementCount})`;
+  }
+  if (isWgslStruct(trueType) && !getName(trueType)) {
+    const props = Object.entries(trueType.propTypes)
+      .map(([key, propType]) => `${key}: ${describeType(propType)}`)
+      .join(', ');
+    return `struct { ${props} }`;
+  }
+  return String(trueType);
+}
+
 /** A value would need conversion between two different array types. */
 export class ArrayConversionError extends WgslTypeError {
   constructor(src: BaseData, dest: BaseData) {
     super(
-      `Cannot use a value of type '${src}' where '${dest}' is expected.\n-----\nTypeGPU does not convert arrays between different array types automatically. Construct the value with the expected schema instead.`,
+      `Cannot use a value of type '${describeType(src)}' where '${describeType(dest)}' is expected.\n-----\nTypeGPU does not convert arrays between different array types automatically. Construct the value with the expected schema instead.`,
     );
     Object.setPrototypeOf(this, ArrayConversionError.prototype);
   }
