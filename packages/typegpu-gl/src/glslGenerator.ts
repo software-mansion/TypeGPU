@@ -482,6 +482,10 @@ export function getCrossShaderStageState(ctx: ResolutionCtx) {
   return state;
 }
 
+function isTextureSchema(schema: d.BaseData): boolean {
+  return schema.type.startsWith('texture_');
+}
+
 function isF32VecfSchema(
   schema: d.BaseData | UnknownData,
 ): schema is d.F32 | d.Vec2f | d.Vec3f | d.Vec4f {
@@ -613,6 +617,17 @@ export class GlslGenerator extends WgslGenerator {
   #functionType: ShaderStage | 'normal' | undefined;
   #entryFnState: EntryFnState | undefined;
   #vertexOutPropToVarMap: Record<string, string> = {};
+  /**
+   * The function whose body is currently being generated, with the indices of its
+   * texture parameters by identifier.
+   */
+  #currentFn: { readonly name: string; readonly textureParams: Map<string, number> } | undefined;
+  /**
+   * For every helper function that samples one of its texture parameters, the sampler
+   * that parameter is sampled with, keyed by function name and then by parameter index.
+   * Resolved to concrete textures at each call site, see {@link call}.
+   */
+  readonly #textureParamSamplers = new Map<string, Map<number, string>>();
 
   static {
     GlslGenerator.prototype.languageKey = 'glsl';
@@ -805,6 +820,60 @@ export class GlslGenerator extends WgslGenerator {
     return newArgs;
   }
 
+  /**
+   * Records that `textureName` is sampled with `samplerName`. If the texture is a parameter
+   * of the function being generated, the pair is recorded against that parameter instead, and
+   * becomes concrete once the function is called with an actual texture.
+   */
+  #pairTextureWithSampler(textureName: string, samplerName: string) {
+    const currentFn = this.#currentFn;
+    const paramIdx = currentFn?.textureParams.get(textureName);
+    let pairs: Map<string | number, string>;
+    let key: string | number;
+    if (currentFn && paramIdx !== undefined) {
+      let paramPairs = this.#textureParamSamplers.get(currentFn.name);
+      if (!paramPairs) {
+        paramPairs = new Map();
+        this.#textureParamSamplers.set(currentFn.name, paramPairs);
+      }
+      pairs = paramPairs;
+      key = paramIdx;
+    } else {
+      pairs = this.#crossShaderStageState.textureSamplerPairs;
+      key = textureName;
+    }
+
+    const existingSampler = pairs.get(key);
+    if (existingSampler && existingSampler !== samplerName) {
+      throw new Error(
+        `WebGL fallback does not support sampling the same texture with multiple samplers in one pipeline ('${textureName}').`,
+      );
+    }
+    pairs.set(key, samplerName);
+  }
+
+  override call(
+    callee: Parameters<WgslGenerator['call']>[0],
+    args: readonly Snippet[],
+    calleeSnippet?: Snippet,
+  ): Snippet {
+    const result = super.call(callee, args, calleeSnippet);
+
+    // A helper that samples one of its texture parameters passes the pairing on to
+    // whatever texture it's called with (which may itself be a parameter of the caller).
+    if (typeof result.value !== 'string') return result;
+    const fnName = /^([A-Za-z_]\w*)\(/.exec(result.value)?.[1];
+    const paramSamplers = fnName ? this.#textureParamSamplers.get(fnName) : undefined;
+    if (!paramSamplers) return result;
+
+    for (const [paramIdx, samplerName] of paramSamplers) {
+      const arg = args[paramIdx];
+      if (!arg) continue;
+      this.#pairTextureWithSampler(this.ctx.resolveSnippet(arg).value, samplerName);
+    }
+    return result;
+  }
+
   override emitCall(
     name: string,
     templateParams: readonly Snippet[],
@@ -849,13 +918,7 @@ export class GlslGenerator extends WgslGenerator {
       const coordsValue = this.ctx.resolveSnippet(coords).value;
       const flipId = this.#crossShaderStageState.textureFlipIdentifiers.get(textureName);
 
-      const existingSampler = this.#crossShaderStageState.textureSamplerPairs.get(textureName);
-      if (existingSampler && existingSampler !== samplerName) {
-        throw new Error(
-          `WebGL fallback does not support sampling the same texture with multiple samplers in one pipeline ('${textureName}').`,
-        );
-      }
-      this.#crossShaderStageState.textureSamplerPairs.set(textureName, samplerName);
+      this.#pairTextureWithSampler(textureName, samplerName);
 
       if (name === 'textureSampleLevel') {
         const [level, offset] = rest;
@@ -1404,7 +1467,16 @@ The generated shader will omit it, so its runtime side effects will not occur.`)
   override functionDefinition(options: FunctionDefinitionOptions): string {
     const lastFunctionType = this.#functionType;
     const lastEntryFnState = this.#entryFnState;
+    const lastFn = this.#currentFn;
     this.#functionType = options.functionType;
+    this.#currentFn = {
+      name: options.name,
+      textureParams: new Map(
+        options.args.flatMap((arg, idx) =>
+          isTextureSchema(arg.decoratedType) ? [[arg.name, idx] as const] : [],
+        ),
+      ),
+    };
     if (options.functionType !== 'normal') {
       if (this.#entryFnState) {
         throw new Error('Cannot nest entry functions');
@@ -1549,6 +1621,7 @@ The generated shader will omit it, so its runtime side effects will not occur.`)
     } finally {
       this.#functionType = lastFunctionType;
       this.#entryFnState = lastEntryFnState;
+      this.#currentFn = lastFn;
     }
   }
 }
