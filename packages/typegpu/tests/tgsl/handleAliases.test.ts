@@ -2,15 +2,13 @@ import { it } from 'typegpu-testing-utility';
 import { describe, expect } from 'vitest';
 import { tgpu, d, std } from 'typegpu';
 
-const layout = tgpu
-  .bindGroupLayout({
-    uTexture: { texture: d.texture2d(d.f32) },
-    uSampler: { sampler: 'filtering' },
-    uCmpSampler: { sampler: 'comparison' },
-    uDepth: { texture: d.textureDepth2d() },
-    uStorage: { storageTexture: d.textureStorage2d('rgba8unorm', 'write-only') },
-  })
-  .$idx(0);
+const layout = tgpu.bindGroupLayout({
+  uTexture: { texture: d.texture2d(d.f32) },
+  uSampler: { sampler: 'filtering' },
+  uCmpSampler: { sampler: 'comparison' },
+  uDepth: { texture: d.textureDepth2d() },
+  uStorage: { storageTexture: d.textureStorage2d('rgba8unorm', 'write-only') },
+});
 
 describe('handle aliases', () => {
   it('aliases a texture const', () => {
@@ -19,6 +17,7 @@ describe('handle aliases', () => {
       const tex = layout.$.uTexture;
       return std.textureLoad(tex, d.vec2i(0, 0), 0);
     }
+
     expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var uTexture: texture_2d<f32>;
 
@@ -34,6 +33,7 @@ describe('handle aliases', () => {
       const smp = layout.$.uSampler;
       return std.textureSample(layout.$.uTexture, smp, uv);
     }
+
     expect(tgpu.resolve([tgpu.fn([d.vec2f], d.vec4f)(foo)])).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var uTexture: texture_2d<f32>;
 
@@ -52,6 +52,7 @@ describe('handle aliases', () => {
       const smp = layout.$.uSampler;
       return std.textureSample(tex, smp, uv);
     });
+
     expect(tgpu.resolve([frag])).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var uTexture: texture_2d<f32>;
 
@@ -76,6 +77,7 @@ describe('handle aliases', () => {
       const b = std.textureSample(tex, smp, uv.yx);
       return a.add(b).add(d.vec4f(d.f32(std.textureDimensions(tex).x)));
     }
+
     expect(tgpu.resolve([tgpu.fn([d.vec2f], d.vec4f)(foo)])).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var uTexture: texture_2d<f32>;
 
@@ -96,6 +98,7 @@ describe('handle aliases', () => {
       const cmp = layout.$.uCmpSampler;
       return std.textureSampleCompare(depth, cmp, uv, 0.5);
     }
+
     expect(tgpu.resolve([tgpu.fn([d.vec2f], d.f32)(foo)])).toMatchInlineSnapshot(`
       "@group(0) @binding(3) var uDepth: texture_depth_2d;
 
@@ -120,6 +123,7 @@ describe('handle aliases', () => {
       const tex = view.$;
       return std.textureSample(tex, smp, uv);
     }
+
     expect(tgpu.resolve([tgpu.fn([d.vec2f], d.vec4f)(foo)])).toMatchInlineSnapshot(`
       "@group(0) @binding(0) var view: texture_2d<f32>;
 
@@ -137,6 +141,7 @@ describe('handle aliases', () => {
       const out = layout.$.uStorage;
       std.textureStore(out, d.vec2u(0, 0), d.vec4f(1));
     }
+
     expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
       "@group(0) @binding(4) var uStorage: texture_storage_2d<rgba8unorm, write>;
 
@@ -152,6 +157,7 @@ describe('handle aliases', () => {
       let tex = layout.$.uTexture;
       return std.textureLoad(tex, d.vec2i(0, 0), 0);
     }
+
     expect(() => tgpu.resolve([foo])).toThrowErrorMatchingInlineSnapshot(`
       [Error: Resolution of the following tree failed:
       - <root>
@@ -178,6 +184,7 @@ describe('handle aliases', () => {
       const tex = layout.$.uTexture;
       return sample(tex, layout.$.uSampler, uv);
     }
+
     expect(tgpu.resolve([tgpu.fn([d.vec2f], d.vec4f)(foo)])).toMatchInlineSnapshot(`
       "fn sample(t: texture_2d<f32>, s: sampler, uv: vec2f) -> vec4f {
         return textureSample(t, s, uv);
@@ -190,6 +197,25 @@ describe('handle aliases', () => {
       fn foo(uv: vec2f) -> vec4f {
         return sample(uTexture, uSampler, uv);
       }"
+    `);
+  });
+
+  it('disallows textures in ternary', () => {
+    function expensive() {
+      'use gpu';
+      return true;
+    }
+
+    function main() {
+      'use gpu';
+      const tex = expensive() ? layout.$.uTexture : layout.$.uTexture;
+    }
+
+    expect(() => tgpu.resolve([main])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:main
+      - fn*:main(): Ternary operator 'expensive() ? layout.$.uTexture : layout.$.uTexture' is invalid. For more complex branching, please use 'std.select' or if/else statements.]
     `);
   });
 });
