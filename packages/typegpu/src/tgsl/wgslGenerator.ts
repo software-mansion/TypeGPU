@@ -747,16 +747,26 @@ export class WgslGenerator implements ShaderGenerator {
         throw new Error('Please use the !== operator instead of !=');
       }
 
-      if (op === '===' || op === '!==') {
+      const lhsVoid = wgsl.isVoid(lhsExpr.dataType);
+      const rhsVoid = wgsl.isVoid(rhsExpr.dataType);
+      if ((op === '===' || op === '!==') && (lhsVoid || rhsVoid)) {
         // Comparing against `undefined` (e.g. an omitted optional parameter) is known at comptime,
         // since values with a WGSL type are never `undefined`.
-        const isRuntime = (s: Snippet) =>
-          asComptime(s) === undefined && !wgsl.isVoid(s.dataType) && !s.possibleSideEffects;
-        if (
-          (isUndefinedSnippet(lhsExpr) && isRuntime(rhsExpr)) ||
-          (isRuntime(lhsExpr) && isUndefinedSnippet(rhsExpr))
-        ) {
-          return snip(op === '!==', bool, 'constant', false);
+        if (lhsExpr.possibleSideEffects) {
+          const lhsStr = stringifySnippet(lhsExpr);
+          throw new Error(
+            `Cannot compare '${lhsStr}' and '${stringifySnippet(rhsExpr)}', because it would omit '${lhsStr}' side-effects`,
+          );
+        }
+        if (rhsExpr.possibleSideEffects) {
+          const rhsStr = stringifySnippet(rhsExpr);
+          throw new Error(
+            `Cannot compare '${stringifySnippet(lhsExpr)}' and '${rhsStr}', because it would omit '${rhsStr}' side-effects`,
+          );
+        }
+
+        if ((lhsVoid && !rhsVoid) || (!lhsVoid && rhsVoid)) {
+          return snip((lhsVoid === rhsVoid) === (op === '==='), bool, 'constant', false);
         }
       }
 
@@ -2096,7 +2106,7 @@ ${this.ctx.pre}else ${alternate}`,
             const testNode = cases[i]?.[0];
             invariant(testNode, `Expected node to be not nullish.`);
             throw new Error(`All of switch tests must be constant.
-Test '${stringifyNode(testNode)}' is not constant, making the following switch statement invalid. 
+Test '${stringifyNode(testNode)}' is not constant, making the following switch statement invalid.
 This error may be caused by an implicit conversion.
 ${stringifyNode(statement)}`);
           }
@@ -2248,7 +2258,8 @@ ${stringifyNode(statement)}`);
 }
 
 function isUndefinedSnippet(snippet: Snippet): boolean {
-  return snippet.value === undefined && wgsl.isVoid(snippet.dataType);
+  const known = asComptime(snippet);
+  return known !== undefined && known.value === undefined;
 }
 
 const immutabilityReasons: Partial<Record<Origin, string>> = {

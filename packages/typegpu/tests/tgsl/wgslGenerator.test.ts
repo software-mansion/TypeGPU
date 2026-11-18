@@ -2803,4 +2803,25 @@ describe('WgslGenerator', () => {
       `);
     });
   });
+
+  it(`doesn't omit a side-effectful operand in a equality comparison against undefined`, () => {
+    const state = tgpu.privateVar(d.u32, 0);
+
+    function increment() {
+      'use gpu';
+      state.$++;
+    }
+
+    function lhs() {
+      'use gpu';
+      return increment() === undefined;
+    }
+
+    expect(() => tgpu.resolve([lhs])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:lhs
+      - fn*:lhs(): Cannot compare 'increment()' and 'undefined', because it would omit 'increment()' side-effects]
+    `);
+  });
 });
