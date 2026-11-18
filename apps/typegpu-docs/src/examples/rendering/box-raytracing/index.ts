@@ -69,11 +69,7 @@ const uniforms = root.createUniform(Uniforms);
 
 // functions
 
-const getBoxIntersection = tgpu
-  .fn(
-    [AxisAlignedBounds, Ray],
-    IntersectionStruct,
-  )(/* wgsl */ `(bounds, ray) {
+const getBoxIntersection = tgpu.fn([AxisAlignedBounds, Ray], IntersectionStruct)`(bounds, ray) {
   var tMin: f32;
   var tMax: f32;
   var tMinY: f32;
@@ -130,8 +126,7 @@ const getBoxIntersection = tgpu
   }
 
   return IntersectionStruct(tMin > 0 && tMax > 0, tMin, tMax);
-}`)
-  .$uses({ IntersectionStruct });
+}`.$uses({ IntersectionStruct });
 
 const mainVertex = ({ $vertexIndex: vid }: TgpuVertexFn.AutoIn<{}>) => {
   'use gpu';

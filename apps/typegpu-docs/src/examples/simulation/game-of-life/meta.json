@@ -2,6 +2,6 @@
   "title": "Game of Life",
   "description": "Runs Conway's Game of Life in a compute shader with ping-pong state buffers and interactive cell editing.",
   "category": "simulation",
-  "tags": ["cellular automata", "double buffering", "interaction"],
+  "tags": ["cellular automata", "double buffering", "interactive"],
   "coolFactor": 7
 }
