@@ -20,7 +20,7 @@ describe('firstLeadingBit', () => {
   });
 
   it('converts float scalars to i32, like other integer bit functions', () => {
-    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    using warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     const main = () => {
       'use gpu';
       const x = d.f32(1.5);
@@ -32,7 +32,6 @@ describe('firstLeadingBit', () => {
       expect.stringContaining('implicit-conversion'),
       expect.anything(),
     );
-    warn.mockRestore();
   });
 
   it('rejects float vectors', () => {
