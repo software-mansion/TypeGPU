@@ -19,6 +19,7 @@ import {
 
 import { WebGLFallbackUnsupportedError } from './errors.ts';
 import { CanvasPresenter } from './presenter.ts';
+import { RenderTargets } from './renderTargets.ts';
 import {
   createWebGLRenderPipeline,
   linkProgram,
@@ -37,6 +38,7 @@ export class TgpuRootWebGL {
   #gl: WebGL2RenderingContext;
   #offscreen: OffscreenCanvas;
   #presenter: CanvasPresenter;
+  #renderTargets: RenderTargets;
   #buffers: WebGLBuffer[] = [];
   readonly #textures = new Set<WebGLTextureImpl>();
   // Native handles only, so the root doesn't keep sampler wrappers alive.
@@ -64,6 +66,7 @@ export class TgpuRootWebGL {
     if (!vao) throw new Error('Failed to create VAO');
     this.#vao = vao;
     this.#presenter = CanvasPresenter.for(gl);
+    this.#renderTargets = new RenderTargets(gl);
 
     // WGSL's 'flat' interpolation takes the value from the first vertex of a primitive,
     // while GL defaults to the last one. When the extension is missing, integer and
@@ -178,6 +181,7 @@ export class TgpuRootWebGL {
       offscreen: this.#offscreen,
       presenter: this.#presenter,
       vao: this.#vao,
+      renderTargets: this.#renderTargets,
       descriptor,
       onFlatVaryings: () => this.#warnIfLastProvokingVertex(),
       getProgram: (vertexGlsl, fragmentGlsl) => this.#getProgram(vertexGlsl, fragmentGlsl),
@@ -237,6 +241,7 @@ export class TgpuRootWebGL {
       this.#gl.deleteSampler(raw);
     }
     this.#rawSamplers.clear();
+    this.#renderTargets.destroy();
   }
 }
 
