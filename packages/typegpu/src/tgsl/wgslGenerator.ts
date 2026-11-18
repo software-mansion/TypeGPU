@@ -1167,7 +1167,8 @@ The generated shader will evaluate them in declaration order.`,
         }
 
         return snip(
-          stitch`select(${alt}, ${con}, ${convertedTest})`,
+          // Going through `emitCall` lets other generators emit something else than `select`
+          this.emitCall('select', [], [alt, con, convertedTest]),
           con.dataType,
           'runtime',
           // this select has side-effects only if the condition has side-effects

@@ -26,6 +26,8 @@ catalogs:
     tsdown: 0.15.12
     unbuild: ^3.5.0
   example:
+    '@pixi/3d': ^0.1.0
+    pixi.js: ^8.23.0
     three: ^0.181.0
     wgpu-matrix: ^3.4.0
   frontend:

@@ -1,0 +1,869 @@
+---
+title: "@typegpu/pixi"
+---
+
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+import { Image } from 'astro:assets';
+import materialExample from './material-example.png';
+
+`@typegpu/pixi` lets you write shaders for [PixiJS](https://pixijs.com) and [PixiJS 3D](https://pixijs.com/3d) as TypeGPU functions,
+and run TypeGPU code on the same GPU device PixiJS draws with. It has two entry points:
+
+- `@typegpu/pixi`, for PixiJS: uniforms, 2D filters, and a TypeGPU root on PixiJS's device.
+- `@typegpu/pixi/3d`, for PixiJS 3D: shader bits that extend materials, and post effects.
+
+PixiJS can draw with WebGPU or with WebGL 2. The package turns each `'use gpu'` function into WGSL for PixiJS's WebGPU renderer
+and into GLSL for its WebGL renderer, so you write a shader once and it runs on either renderer.
+Your shaders also get what TypeGPU functions get anywhere else: types that flow from your uniforms into the shader code,
+and helper functions and libraries you can import and share.
+
+:::caution[Experimental]
+This package is new, and its API may change. PixiJS 3D is at version 0.1, and the package depends on the names PixiJS 3D gives the values in its shaders,
+so a new PixiJS 3D release can require a new version of `@typegpu/pixi`.
+:::
+
+## Setup
+
+Refer to [TypeGPU's installation guide](/TypeGPU/getting-started/) for setting up TypeGPU if you haven't already.
+Writing shaders in TypeScript with `'use gpu'` also needs the [unplugin-typegpu build plugin](/TypeGPU/tooling/unplugin-typegpu).
+
+After that, install PixiJS (8.23 or newer), `@typegpu/pixi` and `@typegpu/gl`. `@typegpu/gl` is a peer dependency, since the GLSL half of every shader is generated with it.
+
+<Tabs syncKey="package-manager">
+  <TabItem label="npm" icon="seti:npm">
+    ```sh frame=none
+    npm install pixi.js @typegpu/pixi @typegpu/gl
+    ```
+  </TabItem>
+  <TabItem label="pnpm" icon="pnpm">
+    ```sh frame=none
+    pnpm add pixi.js @typegpu/pixi @typegpu/gl
+    ```
+  </TabItem>
+  <TabItem label="yarn" icon="seti:yarn">
+    ```sh frame=none
+    yarn add pixi.js @typegpu/pixi @typegpu/gl
+    ```
+  </TabItem>
+</Tabs>
+
+To use the `@typegpu/pixi/3d` entry point, install PixiJS 3D as well. The main entry point doesn't need it.
+
+<Tabs syncKey="package-manager">
+  <TabItem label="npm" icon="seti:npm">
+    ```sh frame=none
+    npm install @pixi/3d
+    ```
+  </TabItem>
+  <TabItem label="pnpm" icon="pnpm">
+    ```sh frame=none
+    pnpm add @pixi/3d
+    ```
+  </TabItem>
+  <TabItem label="yarn" icon="seti:yarn">
+    ```sh frame=none
+    yarn add @pixi/3d
+    ```
+  </TabItem>
+</Tabs>
+
+## Sharing the device
+
+When PixiJS runs on WebGPU, `getRoot` gives you a [TypeGPU root](/TypeGPU/fundamentals/roots) on the `GPUDevice` that PixiJS draws with.
+Buffers, textures and compute pipelines you create through it live next to PixiJS's own resources, so you can run a simulation or other compute work
+alongside PixiJS's rendering without asking the browser for a second device.
+
+```ts twoslash
+import { d } from 'typegpu';
+// ---cut---
+import { Application } from 'pixi.js';
+import { getRoot, isWebGPURenderer } from '@typegpu/pixi';
+
+const app = new Application();
+await app.init({ preference: 'webgpu', resizeTo: window });
+
+if (isWebGPURenderer(app.renderer)) {
+  const root = getRoot(app.renderer);
+  const particles = root.createMutable(d.arrayOf(d.vec2f, 1000));
+}
+```
+
+`preference: 'webgpu'` makes PixiJS try WebGPU first, but it falls back to WebGL 2 where WebGPU isn't available.
+`getRoot` throws in that case, so check with `isWebGPURenderer` first.
+Calling `getRoot` again with the same renderer returns the same root. Destroying the root leaves the device alone, since PixiJS owns it.
+
+## Uniforms
+
+Shaders written with this package read their changing values through uniforms, declared with TypeGPU schemas:
+
+```ts twoslash
+import * as tp from '@typegpu/pixi';
+import { d } from 'typegpu';
+
+const waveUniforms = tp.uniforms({
+  time: d.f32,
+  strength: d.f32,
+  tint: d.vec3f,
+});
+```
+
+Inside a `'use gpu'` function, `waveUniforms.$.strength` reads a value, typed according to its schema (here a `number`, and a `d.v3f` for `tint`).
+Reading `.$` anywhere else throws, since the values only exist on the GPU.
+
+JavaScript sets the values with `write(target, values)`. The target is whatever holds the values: a filter, a PixiJS 3D material, a post effect,
+or a PixiJS `UniformGroup` made with `createGroup`. You can set some of the fields and leave the others as they are.
+Values can be numbers, TypeGPU vectors and matrices, or plain arrays:
+
+```ts twoslash
+import * as tp from '@typegpu/pixi';
+import { d } from 'typegpu';
+const waveUniforms = tp.uniforms({ time: d.f32, strength: d.f32, tint: d.vec3f });
+declare const target: object;
+// ---cut---
+waveUniforms.write(target, { strength: 0.5, tint: d.vec3f(1, 0.5, 0) });
+waveUniforms.write(target, { tint: [0, 0.5, 1] });
+```
+
+A uniform can be an `f32`, `i32` or `u32`, a 2, 3 or 4 component vector of those, or a `mat2x2f`, `mat3x3f` or `mat4x4f`: the types PixiJS can upload.
+The fields of a [shader bit](#pixijs-3d-materials) live in a material, which narrows them further, to `f32`, `i32`, `u32`, `vec2f`, `vec3f`, `vec4f` and `mat2x2f`.
+
+One declaration serves filters, shader bits and post effects alike, and any number of them. Each target holds values of its own,
+so writing to one filter or material doesn't change another that uses the same uniforms.
+A shader can only read the uniforms it was created with (its `uniforms` option). Reading another set throws when the shader is generated.
+
+## 2D filters
+
+A PixiJS [filter](https://pixijs.com/8.x/guides/components/filters) post-processes a display object, such as a sprite or a container, through a shader.
+`createFilter` makes one from TypeGPU functions. The fragment function receives `uv`, a position in the filter's input texture,
+and returns the colour of the pixel. `sampleInput(uv)` reads the input at that position:
+
+```ts twoslash
+import { Application, Assets, Sprite } from 'pixi.js';
+import * as tp from '@typegpu/pixi';
+import { d, std } from 'typegpu';
+
+const app = new Application();
+await app.init({ preference: 'webgpu', resizeTo: window });
+
+const texture = await Assets.load('https://pixijs.com/assets/bunny.png');
+const sprite = app.stage.addChild(new Sprite(texture));
+
+const wobbleUniforms = tp.uniforms({ time: d.f32, strength: d.f32 });
+
+const wobble = tp.createFilter(app.renderer, {
+  name: 'Wobble',
+  uniforms: wobbleUniforms,
+  padding: 20,
+  fragment: ({ uv }) => {
+    'use gpu';
+    const offset = std.sin(uv.y * 40 + wobbleUniforms.$.time) * wobbleUniforms.$.strength;
+    return tp.sampleInput(uv + d.vec2f(offset, 0));
+  },
+});
+wobbleUniforms.write(wobble, { strength: 0.01 });
+
+sprite.filters = [wobble];
+app.ticker.add(() => {
+  wobbleUniforms.write(wobble, { time: performance.now() / 1000 });
+});
+```
+
+`name` names the shader program in debugging tools, and `uniforms` are the filter's own values. Any other option, such as `padding`, `resolution` or `blendMode`, goes to PixiJS's `Filter` as it is.
+
+`createFilter` generates the code for the renderer you pass it: WGSL for PixiJS's WebGPU renderer, GLSL for its WebGL renderer.
+A filter only works with the renderer it was made for, but the same functions make a filter for either. On WebGL, PixiJS sets each uniform under its own name,
+so a uniform can't have a name that GLSL reserves; `createFilter` throws and asks you to rename it.
+
+### A custom vertex stage
+
+Without a `vertex` function, a filter uses `filterVertex`, which does what the vertex stage of PixiJS's built-in filters does and passes on `uv`.
+Pass a `vertex` function of your own to compute values per vertex instead of per pixel.
+It receives `aPosition`, the position of the vertex in the filter's quad, and returns `$position` along with any values you want passed on.
+Those values reach the fragment function as typed parameters:
+
+```ts twoslash
+import { Application } from 'pixi.js';
+import * as tp from '@typegpu/pixi';
+import { d, std } from 'typegpu';
+
+const app = new Application();
+await app.init({ preference: 'webgpu', resizeTo: window });
+// ---cut---
+const aberration = tp.createFilter(app.renderer, {
+  vertex: ({ aPosition }) => {
+    'use gpu';
+    const uv = tp.filterTextureCoord(aPosition);
+    const offset = d.vec2f(4, 0) * tp.filterGlobals.$.gfu.uInputSize.zw;
+    return {
+      $position: tp.filterVertexPosition(aPosition),
+      uvRed: uv - offset,
+      uv,
+      uvBlue: uv + offset,
+    };
+  },
+  fragment: ({ uvRed, uv, uvBlue }) => {
+    'use gpu';
+    const red = tp.sampleInput(uvRed);
+    const green = tp.sampleInput(uv);
+    const blue = tp.sampleInput(uvBlue);
+    return d.vec4f(red.r, green.g, blue.b, std.max(red.a, green.a, blue.a));
+  },
+});
+```
+
+`filterVertexPosition` and `filterTextureCoord` are the two halves of `filterVertex`, so a vertex function of your own can start from them.
+
+### Filter globals
+
+PixiJS gives every filter the same global uniforms, input texture and sampler. A filter's functions read them through `filterGlobals.$`:
+
+| Field | Type | Contents |
+|-|-|-|
+| `gfu.uInputSize` | `vec4f` | The input's size in pixels in `xy`, and one over it in `zw` |
+| `gfu.uInputPixel` | `vec4f` | The input's size in physical pixels in `xy`, and one over it in `zw` |
+| `gfu.uInputClamp` | `vec4f` | The part of the input texture that holds the picture, in texture coordinates |
+| `gfu.uOutputFrame` | `vec4f` | Where the filter draws: the position (`xy`) and size (`zw`) of its output in pixels |
+| `gfu.uGlobalFrame` | `vec4f` | The position (`xy`) and size (`zw`) of the filtered area on the screen, in pixels |
+| `gfu.uOutputTexture` | `vec4f` | The output texture's size in pixels (`xy`), and -1 or 1 depending on whether it's flipped (`z`) |
+| `uTexture` | `texture2d<f32>` | The filter's input |
+| `uSampler` | `sampler` | The sampler PixiJS uses for the input |
+
+`sampleInput(uv)` is a shorthand for `std.textureSample(tp.filterGlobals.$.uTexture, tp.filterGlobals.$.uSampler, uv)`.
+`filterGlobals` only exists in filters. Reading it in a shader bit or a post effect throws.
+
+The [PixiJS filters example](/TypeGPU/examples#example=pixi--filters) stacks a Perlin noise wobble and a chromatic aberration with its own vertex stage,
+on both of PixiJS's renderers.
+
+## PixiJS 3D materials
+
+PixiJS 3D builds the shader of a material from small pieces of code called shader bits. A material's shader is a template with named slots,
+such as `material`, which runs before lighting, and `end`, which runs after it. Each bit adds code to some of those slots, plus functions and constants
+to a header, written once in WGSL for WebGPU and once in GLSL for WebGL 2. A bit can also declare values of its own, which every material that uses it holds.
+PixiJS 3D's guide to [custom materials](https://3d.pixijs.download/v0.1.0/docs/extras_materials.html) covers shader bits in detail.
+
+`shaderBit` from `@typegpu/pixi/3d` creates a shader bit from TypeGPU functions, one for each slot it fills:
+
+```ts twoslash
+import { Material3D } from '@pixi/3d';
+import * as p3d from '@typegpu/pixi/3d';
+import { d, std } from 'typegpu';
+
+const contourUniforms = p3d.uniforms({
+  lowColor: d.vec3f,
+  highColor: d.vec3f,
+  frequency: d.f32,
+});
+
+const contourBit = p3d.shaderBit({
+  name: 'contour',
+  uniforms: contourUniforms,
+  fragment: {
+    material: () => {
+      'use gpu';
+      const wave = std.sin(
+        p3d.fragment.worldPosition.$.y * contourUniforms.$.frequency - p3d.time.$ * 2,
+      );
+      p3d.fragment.albedo.$ *= std.mix(
+        contourUniforms.$.lowColor,
+        contourUniforms.$.highColor,
+        std.step(0, wave),
+      );
+    },
+  },
+});
+
+const ground = new Material3D({ roughness: 0.6, extraBits: [contourBit] });
+contourUniforms.write(ground, {
+  lowColor: d.vec3f(0.03, 0.2, 0.03),
+  highColor: d.vec3f(1),
+  frequency: 4,
+});
+```
+
+This paints the ground in bands of two colours by height, and the bands slide over time.
+
+### Slots
+
+A slot function takes no arguments and returns nothing. It reads and changes the material's values (`p3d.fragment.albedo` above) through `.$`.
+The `vertex` and `fragment` options take the slots of each stage:
+
+| Slot | Runs |
+|-|-|
+| `vertex.beforeTransform` | Before the mesh's transform, while the vertex is in the mesh's own space |
+| `vertex.afterTransform` | After the transform, once the vertex has a world and clip position |
+| `vertex.end` | Last in the vertex stage |
+| `fragment.material` | Before lighting, while the surface's colour, opacity and normal are being worked out |
+| `fragment.end` | After lighting, before fog and tone mapping |
+
+Other slot names are accepted too, for a template of your own or a slot of PixiJS 3D's template that isn't listed here.
+
+### Values
+
+These are the values a slot function can use. Writable values can be assigned to and changed in place (`*=`, `+=`, ...), the others can only be read.
+
+| Value | Type | Writable | Slots | Contents |
+|-|-|-|-|-|
+| `vertex.position` | `vec4f` | yes | `beforeTransform` | The vertex position in the mesh's own space, with `w` set to 1 |
+| `vertex.normal` | `vec3f` | yes | `beforeTransform` | The vertex normal in the mesh's own space |
+| `vertex.uv` | `vec2f` | yes | `beforeTransform` | The texture coordinates passed on to the fragment stage |
+| `vertex.worldPosition` | `vec4f` | yes | `afterTransform`, `end` | The vertex position in world space. Moving it means setting `clipPosition` again as well. |
+| `vertex.worldNormal` | `vec3f` | yes | `afterTransform`, `end` | The vertex normal in world space |
+| `vertex.clipPosition` | `vec4f` | yes | `afterTransform`, `end` | The vertex position in clip space |
+| `fragment.worldPosition` | `vec3f` | no | any fragment slot | The surface position in world space |
+| `fragment.uv` | `vec2f` | no | any fragment slot | The mesh's texture coordinates |
+| `fragment.normal` | `vec3f` | yes | `material` | The surface normal in world space |
+| `fragment.albedo` | `vec3f` | yes | `material` | The surface colour before lighting. Lit materials work in linear light. |
+| `fragment.alpha` | `f32` | yes | `material`, `end` | The surface opacity. An `'opaque'` material sets it back to 1 afterwards. |
+| `fragment.emissive` | `vec3f` | yes | `material` | The light the surface gives off. Only on `Material3D` and `PhongMaterial`. |
+| `fragment.roughness` | `f32` | yes | `material` | Only on `Material3D` |
+| `fragment.metallic` | `f32` | yes | `material` | Only on `Material3D` |
+| `fragment.occlusion` | `f32` | yes | `material` | Only on `Material3D` |
+| `fragment.finalColor` | `vec3f` | yes | `end` | The lit colour, before fog and tone mapping |
+| `time` | `f32` | no | any slot | Seconds since the page loaded |
+| `cameraPosition` | `vec3f` | no | any slot | The camera's position in world space |
+
+A `vertex` value used in a fragment slot, or the other way around, throws when the bit is created. Within a stage, use each value in the slots the table lists:
+in other slots PixiJS 3D may not have set it yet, or may overwrite it afterwards, and on a material that doesn't declare a value, such as `roughness` on a `PhongMaterial`, the shader fails to compile.
+
+### The bit's own values
+
+The `uniforms` of a bit become values that each material holds for itself. Set them with `write(material, values)`, as above, or through the material's `data`
+(`ground.data.frequency = 4`). A material that gets a bit through `clone` starts with all of the bit's values at zero.
+
+### What a bit generates
+
+`shaderBit` returns a plain PixiJS 3D `ShaderBit` object. This is what the contour bit above generates:
+
+```ts
+contourBit.name; // 'contour'
+contourBit.bindings; // { material: { lowColor: 'vec3<f32>', highColor: 'vec3<f32>', frequency: 'f32' } }
+```
+
+<Tabs>
+  <TabItem label="gpu (WGSL)">
+    ```wgsl title="contourBit.gpu.header"
+    var<private> contour_fragment_worldPosition: vec3f;
+
+    var<private> contour_frequency: f32;
+
+    var<private> contour_time: f32;
+
+    var<private> contour_lowColor: vec3f;
+
+    var<private> contour_highColor: vec3f;
+
+    var<private> contour_fragment_albedo: vec3f;
+
+    fn contour_material() {
+      let wave = sin(((contour_fragment_worldPosition.y * contour_frequency) - (contour_time * 2f)));
+      contour_fragment_albedo *= mix(contour_lowColor, contour_highColor, step(0f, wave));
+    }
+    ```
+
+    ```wgsl title="contourBit.gpu.fragment.material"
+    {
+      contour_fragment_worldPosition = input.vPosition;
+      contour_frequency = material.frequency;
+      contour_time = global.uTime;
+      contour_fragment_albedo = albedo;
+      contour_lowColor = material.lowColor;
+      contour_highColor = material.highColor;
+      contour_material();
+      albedo = contour_fragment_albedo;
+    }
+    ```
+  </TabItem>
+  <TabItem label="gl (GLSL)">
+    ```glsl title="contourBit.gl.fragment.header"
+    vec3 contour_fragment_worldPosition;
+
+    float contour_frequency;
+
+    float contour_time;
+
+    vec3 contour_lowColor;
+
+    vec3 contour_highColor;
+
+    vec3 contour_fragment_albedo;
+
+    void contour_material() {
+      float wave = sin(((contour_fragment_worldPosition.y * contour_frequency) - (contour_time * 2.0)));
+      contour_fragment_albedo *= mix(contour_lowColor, contour_highColor, step(0.0, wave));
+    }
+    ```
+
+    ```glsl title="contourBit.gl.fragment.material"
+    {
+      contour_fragment_worldPosition = vPosition;
+      contour_frequency = material.frequency;
+      contour_time = uTime;
+      contour_fragment_albedo = albedo;
+      contour_lowColor = material.lowColor;
+      contour_highColor = material.highColor;
+      contour_material();
+      albedo = contour_fragment_albedo;
+    }
+    ```
+  </TabItem>
+</Tabs>
+
+- **One function, two languages.** The slot function becomes `contour_material` in the header, once in WGSL under `gpu` and once in GLSL under `gl`.
+  `bindings.material` comes from the bit's uniforms.
+- **Values travel through private variables.** The values a slot works with, such as `albedo` and `material`, are local variables of the material's shader function,
+  so a function in the header can't see them. The code in the slot copies each value the function uses into a variable of its own,
+  calls the function, and copies back the values it can change. It only does this for the values the function, and the functions it calls, actually use.
+- **Every name starts with the bit's name.** PixiJS 3D pastes the code of all of a material's bits into one shader, next to its own,
+  so the bit's name keeps the generated names from clashing. The name also has to be unique, since PixiJS 3D caches shaders by the names of their bits.
+
+### Helper functions and libraries
+
+A slot function can call other `'use gpu'` functions, including the ones TypeGPU libraries export. Their code goes in the bit's header along with the slot's.
+This bit uses Perlin noise from [`@typegpu/noise`](/TypeGPU/ecosystem/typegpu-noise) to give a surface a marble pattern:
+
+```ts twoslash
+import * as p3d from '@typegpu/pixi/3d';
+import { perlin3d } from '@typegpu/noise';
+import { d, std } from 'typegpu';
+
+const veins = (p: d.v3f) => {
+  'use gpu';
+  const n = perlin3d.sample(d.vec3f(p.xy, p.z + p3d.time.$ * 0.2));
+  return 0.6 + 0.4 * std.sin(p.x + n * 4);
+};
+
+const marbleBit = p3d.shaderBit({
+  name: 'marble',
+  fragment: {
+    material: () => {
+      'use gpu';
+      p3d.fragment.albedo.$ *= veins(p3d.fragment.worldPosition.$ * 3);
+    },
+  },
+});
+```
+
+Helper functions can read the material's values and the bit's uniforms too, as `veins` reads `time`. The slot's code copies those values in for them as well.
+In WGSL, a bit's vertex and fragment slots share their helpers. In GLSL, each stage is a shader of its own, so a helper both stages call is generated in each.
+
+### Choosing the renderers
+
+By default a bit has code for both of PixiJS's renderers. `backend: 'gpu'` generates only the WGSL, and `backend: 'gl'` only the GLSL.
+Use `'gpu'` for a function that can't be turned into GLSL, such as one that uses a WGSL feature with no GLSL counterpart. On the other renderer the bit then does nothing.
+When the GLSL can't be generated, the error says so and suggests `backend: 'gpu'`.
+
+### Using a bit
+
+Add a bit to a material when you create it, through `extraBits`:
+
+```ts twoslash
+import { Material3D, PhongMaterial } from '@pixi/3d';
+import type { ShaderBit } from '@pixi/3d';
+declare const contourBit: ShaderBit;
+// ---cut---
+const ground = new Material3D({ roughness: 0.6, extraBits: [contourBit] });
+const plastic = new PhongMaterial({ extraBits: [contourBit] });
+```
+
+A material's bits can't change after it's created. To add a bit to an existing material, such as one that came with a loaded model, clone it:
+
+```ts twoslash
+import type { Model3D, ShaderBit } from '@pixi/3d';
+declare const model: Model3D;
+declare const contourBit: ShaderBit;
+// ---cut---
+model.materials = (material) => material.clone({ extraBits: [contourBit] });
+```
+
+A material built only from bits of your own, without PixiJS 3D's lighting, is a `BaseMaterial3D` with a `descriptor`.
+The same bit goes in the WebGPU and the WebGL list. Without a lighting bit, the material shows its `albedo` unlit:
+
+```ts twoslash
+import { BaseMaterial3D } from '@pixi/3d';
+import * as p3d from '@typegpu/pixi/3d';
+import { d, std } from 'typegpu';
+// ---cut---
+const stripesBit = p3d.shaderBit({
+  name: 'stripes',
+  fragment: {
+    material: () => {
+      'use gpu';
+      const stripe = std.step(0.5, std.fract(p3d.fragment.uv.$.x * 8));
+      p3d.fragment.albedo.$ = std.mix(d.vec3f(0.1), d.vec3f(1, 0.8, 0.2), stripe);
+    },
+  },
+});
+
+const stripes = new BaseMaterial3D({
+  descriptor: { bitsGpu: [stripesBit], bitsGl: [stripesBit] },
+});
+```
+
+The [PixiJS 3D material and post effect example](/TypeGPU/examples#example=pixi--3d-material) displaces and colours a material with shader bits and Perlin noise,
+and adds a post effect, on both of PixiJS's renderers.
+
+<div class="my-4 flex justify-center">
+  <a href="/TypeGPU/examples#example=pixi--3d-material">
+    <Image src={materialExample} alt="A sphere displaced and coloured by Perlin noise, drawn by PixiJS 3D with a material written in TypeGPU" class="w-full max-w-[24rem] rounded-md" />
+  </a>
+</div>
+
+## Post effects
+
+A PixiJS 3D post effect changes the picture a view has drawn by running a function, `effect(uv)`, for every pixel. `postEffect` creates a post effect class from a TypeGPU function.
+`sampleColor(uv)` reads the picture so far:
+
+```ts twoslash
+import type { View3D } from '@pixi/3d';
+import * as p3d from '@typegpu/pixi/3d';
+import { d, std } from 'typegpu';
+declare const view3d: View3D;
+// ---cut---
+const vignetteUniforms = p3d.uniforms({ strength: d.f32 });
+
+const VignetteEffect = p3d.postEffect({
+  stage: 'afterToneMapping',
+  uniforms: vignetteUniforms,
+  effect: (uv) => {
+    'use gpu';
+    const color = p3d.sampleColor(uv);
+    const edge = std.smoothstep(0.3, 0.8, std.distance(uv, d.vec2f(0.5)));
+    return d.vec4f(color.rgb * (1 - edge * vignetteUniforms.$.strength), color.a);
+  },
+});
+
+const vignette = new VignetteEffect({ uniforms: { strength: 0.6 } });
+view3d.passes = [vignette];
+
+// Later
+vignetteUniforms.write(vignette, { strength: 0.3 });
+```
+
+- The class takes PixiJS 3D's `PostEffect` options, plus `uniforms` with the values the instance starts with. The ones left out start at zero.
+- `stage` is where the effect runs: `'beforeToneMapping'` (the default) works on the scene's light, and `'afterToneMapping'` on the picture as the screen shows it.
+  An instance can still pick its own `stage`.
+- `inputMips: true` gives the effect's input mip levels, which `sampleColorLod(uv, level)` reads.
+- `uv` runs from 0 to 1 across the view. Which way `uv.y` points on screen differs between WebGL and WebGPU, so don't make an effect depend on it.
+
+An effect function can also read `time` and `cameraPosition`, and call these functions:
+
+| Function | Returns |
+|-|-|
+| `sampleColor(uv)` | The picture so far at `uv`: the scene, or the result of the step before |
+| `sampleColorLod(uv, level)` | The picture so far at a mip level. Needs `inputMips`. |
+| `sampleColor2(uv)` | The second colour input of a `FullscreenPass`, its `reads.color2` |
+| `sampleDepth(uv)` | The scene's raw depth at `uv` |
+| `linearDepth(depth)` | A raw depth value as a distance from the camera, under a perspective camera |
+| `viewPos(uv)` | The view-space position of the surface at `uv`, under a perspective camera |
+| `texel()` | The size of one pixel of the pass's target, as a step in `uv` |
+| `inputTexel()` | The size of one pixel of the colour input, as a step in `uv` |
+| `viewTexel()` | The size of one physical pixel of the view, as a step in `uv` |
+| `depthTexel()` | The size of one pixel of the scene's depth, as a step in `uv` |
+
+These functions only exist in post effects. Calling one in a filter or a shader bit throws.
+
+### Effects with several steps
+
+`effectFragment` generates only the shader of an effect, as the `EffectFragment` object PixiJS 3D takes. Use it for an effect with several steps,
+each a `FullscreenPass` that `build` adds to the render graph, or for a `PostEffect` subclass of your own.
+A `FullscreenPass` takes its uniforms as a PixiJS `UniformGroup`, which `createGroup` makes. This blur runs one fragment twice, across and then down:
+
+```ts twoslash
+import { FullscreenPass, PostEffect } from '@pixi/3d';
+import type { EffectIO, RenderGraph, View3D } from '@pixi/3d';
+import * as p3d from '@typegpu/pixi/3d';
+import { d } from 'typegpu';
+declare const view3d: View3D;
+// ---cut---
+const blurUniforms = p3d.uniforms({ direction: d.vec2f });
+
+const blurFragment = p3d.effectFragment({
+  uniforms: blurUniforms,
+  effect: (uv) => {
+    'use gpu';
+    const step = blurUniforms.$.direction * p3d.inputTexel();
+    return (p3d.sampleColor(uv - step) + p3d.sampleColor(uv) + p3d.sampleColor(uv + step)) / 3;
+  },
+});
+
+class BlurEffect extends PostEffect {
+  readonly across = blurUniforms.createGroup({ direction: [1, 0] });
+  readonly down = blurUniforms.createGroup({ direction: [0, 1] });
+
+  override build(graph: RenderGraph, io: EffectIO): void {
+    const blurred = graph.createColor();
+
+    graph.addPass(
+      new FullscreenPass({
+        renderer: io.renderer,
+        fragment: blurFragment,
+        uniforms: this.across,
+        reads: { color: io.input },
+        writes: blurred,
+      }),
+    );
+    graph.addPass(
+      new FullscreenPass({
+        renderer: io.renderer,
+        fragment: blurFragment,
+        uniforms: this.down,
+        reads: { color: blurred },
+        writes: io.output,
+      }),
+    );
+  }
+}
+
+const blur = new BlurEffect();
+view3d.passes = [blur];
+
+// Later: a wider blur across
+blurUniforms.write(blur.across, { direction: [2, 0] });
+```
+
+A `FullscreenPass` only declares the functions for the inputs its `reads` lists: `color` for `sampleColor`, `sampleColorLod` and `inputTexel`, `color2` for `sampleColor2`,
+and `depth` for `sampleDepth`, `viewPos` and `depthTexel`. A fragment that calls a function without its input fails to compile.
+PixiJS 3D's guide to [custom render passes](https://3d.pixijs.download/v0.1.0/docs/extras_post-processing-1.html) covers render graphs and passes.
+
+## Limitations
+
+- **No TypeGPU resources in shaders made for PixiJS.** A filter, shader bit or post effect can't read a TypeGPU buffer, texture or bind group layout, because PixiJS wouldn't bind them.
+  Generating one that does throws. Pass values through `uniforms` instead. A root from `getRoot` shares PixiJS's device, but its resources don't reach PixiJS's shaders.
+- **Material values have fewer types.** A shader bit's uniforms can only be `f32`, `i32`, `u32`, `vec2f`, `vec3f`, `vec4f` or `mat2x2f`, the types a PixiJS 3D material can hold.
+- **Helpers are generated per bit.** Each bit carries its own copy of the functions it calls, under its own name. Two bits that call the same library function put two copies of it in a material's shader.
+- **Missing wrappers.** There's nothing yet for a bit's own `textures`, for `createLightingBit`, or for PixiJS 3D's `decodeColor`. A bit that needs them has to be written by hand, as a plain `ShaderBit`.
+- **No fragment-only functions in post effects on WebGL.** PixiJS 3D puts an effect's GLSL in both the vertex and the fragment shader of its pass,
+  so functions that only exist in fragment shaders, such as derivatives (`std.dpdx`, `std.fwidth`, ...) and `std.discard`, break the effect on WebGL.
+  Shader bits don't have this problem, since each stage gets its own code.
+- **Tied to PixiJS 3D's shaders.** PixiJS 3D is at version 0.1. The values in `vertex` and `fragment`, and the helpers of post effects, map to names in its shaders, which may change in a later release.
+
+## API Reference
+
+### `@typegpu/pixi`
+
+#### uniforms
+
+```ts
+function uniforms<T extends UniformRecord>(schema: T): PixiUniforms<T>;
+```
+
+Declares a set of uniforms with TypeGPU schemas. Each field is one of the types in `UniformSchema`.
+
+#### PixiUniforms
+
+```ts
+class PixiUniforms<T extends UniformRecord> {
+  readonly schema: T;
+  get $(): UniformValues<T>;
+  get pixiTypes(): Record<keyof T & string, UNIFORM_TYPES>;
+  createGroup(initial?: UniformInput<T>): UniformGroup;
+  write(target: UniformTarget, values: UniformInput<T>): void;
+}
+```
+
+What `uniforms` returns. `$` gives the values inside a `'use gpu'` function and throws anywhere else.
+`pixiTypes` names each field's type the way PixiJS does, such as `'vec3<f32>'`.
+`createGroup` makes a PixiJS `UniformGroup` with a uniform for each field, for a `FullscreenPass`. Fields that `initial` leaves out start at zero.
+`write` sets some or all of the values on a target: a filter, a PixiJS 3D material, a post effect, or a group from `createGroup`.
+
+#### getRoot
+
+```ts
+function getRoot(renderer: Renderer): TgpuRoot;
+```
+
+Returns a TypeGPU root on the `GPUDevice` of a PixiJS renderer, the same root for the same renderer.
+Throws if PixiJS isn't using its WebGPU renderer.
+
+#### isWebGPURenderer
+
+```ts
+function isWebGPURenderer(renderer: Renderer): renderer is WebGPURenderer;
+```
+
+Whether PixiJS started its WebGPU renderer, rather than WebGL or canvas.
+
+#### createFilter
+
+```ts
+function createFilter<TVertexOut extends FilterVertexOut>(
+  renderer: Renderer,
+  options: TgpuFilterOptions<TVertexOut>,
+): Filter;
+
+interface TgpuFilterOptions<TVertexOut> extends FilterOptions {
+  name?: string | undefined;
+  uniforms?: PixiUniforms<UniformRecord> | undefined;
+  vertex?: ((input: FilterVertexIn) => TVertexOut) | undefined;
+  fragment: (input: FilterFragmentIn<TVertexOut>) => d.v4f;
+}
+```
+
+Creates a PixiJS filter from a `fragment` function, and optionally a `vertex` function, with WGSL or GLSL depending on `renderer`.
+Throws if PixiJS started with a renderer other than WebGPU or WebGL 2. See [2D filters](#2d-filters).
+
+#### sampleInput
+
+```ts
+function sampleInput(uv: d.v2f): d.v4f;
+```
+
+Reads the filter's input texture at `uv`.
+
+#### filterGlobals
+
+```ts
+const filterGlobals: { readonly $: FilterGlobalValues };
+```
+
+What PixiJS gives every filter, readable through `.$` in a filter's functions: `gfu`, a struct of six `vec4f` global uniforms,
+`uTexture`, the input texture, and `uSampler`, its sampler.
+On PixiJS's WebGPU renderer, it matches the bind group PixiJS binds at `@group(0)`. See [Filter globals](#filter-globals).
+
+#### filterVertexPosition, filterTextureCoord
+
+```ts
+function filterVertexPosition(aPosition: d.v2f): d.v4f;
+function filterTextureCoord(aPosition: d.v2f): d.v2f;
+```
+
+The two halves of PixiJS's default filter vertex stage. They turn a corner of the filter's quad (`aPosition`, from 0 to 1) into a clip-space position,
+and into a position in the input texture.
+
+#### filterVertex
+
+```ts
+const filterVertex: TgpuVertexFn<
+  { aPosition: d.Vec2f },
+  { position: d.BuiltinPosition; uv: d.Vec2f }
+>;
+```
+
+The vertex stage a filter has when it doesn't bring its own. It places the filter's quad and passes `uv`, the position in the input texture, to the fragment stage.
+
+#### Types
+
+`UniformSchema`, `UniformRecord`, `UniformValues`, `UniformInput` and `UniformTarget` describe the schemas, values and targets of `uniforms`.
+`FilterVertexIn` is what a filter's vertex function receives (`aPosition`), `FilterVertexOut` what it returns (`$position` and the values to pass on),
+and `FilterFragmentIn` what the fragment function receives: the values the vertex function passes on, or `uv` without one.
+
+### `@typegpu/pixi/3d`
+
+This entry point re-exports `uniforms`, `PixiUniforms`, `getRoot`, `isWebGPURenderer` and the uniform types, so a PixiJS 3D app can import everything from one place.
+
+#### shaderBit
+
+```ts
+function shaderBit(options: ShaderBitOptions): ShaderBit;
+
+interface ShaderBitOptions {
+  name: string;
+  uniforms?: PixiUniforms<UniformRecord> | undefined;
+  vertex?: VertexSlots | undefined;
+  fragment?: FragmentSlots | undefined;
+  backend?: 'both' | 'gpu' | 'gl' | undefined;
+  requires?: ShaderBit[] | undefined;
+}
+```
+
+Creates a PixiJS 3D shader bit from TypeGPU functions. `vertex` and `fragment` map slot names to `SlotFunction`s (`() => void`).
+`requires` lists other bits whose code this one needs, and is passed through as it is. See [PixiJS 3D materials](#pixijs-3d-materials).
+
+#### vertex, fragment
+
+```ts
+const vertex: {
+  position: ShaderVariable<d.Vec4f>;
+  normal: ShaderVariable<d.Vec3f>;
+  uv: ShaderVariable<d.Vec2f>;
+  worldPosition: ShaderVariable<d.Vec4f>;
+  worldNormal: ShaderVariable<d.Vec3f>;
+  clipPosition: ShaderVariable<d.Vec4f>;
+};
+
+const fragment: {
+  worldPosition: ShaderInput<d.Vec3f>;
+  uv: ShaderInput<d.Vec2f>;
+  normal: ShaderVariable<d.Vec3f>;
+  albedo: ShaderVariable<d.Vec3f>;
+  alpha: ShaderVariable<d.F32>;
+  emissive: ShaderVariable<d.Vec3f>;
+  roughness: ShaderVariable<d.F32>;
+  metallic: ShaderVariable<d.F32>;
+  occlusion: ShaderVariable<d.F32>;
+  finalColor: ShaderVariable<d.Vec3f>;
+};
+```
+
+The values of a material's shader that a shader bit's functions can use. A `ShaderVariable` can be read and written through `.$`, a `ShaderInput` only read.
+See [Values](#values).
+
+#### time, cameraPosition
+
+```ts
+const time: ShaderInput<d.F32>;
+const cameraPosition: ShaderInput<d.Vec3f>;
+```
+
+The seconds since the page loaded, and the camera's position in world space. Readable in every shader bit and post effect.
+
+#### postEffect
+
+```ts
+function postEffect<T extends UniformRecord>(
+  definition: PostEffectDefinition<T>,
+): new (options?: TgpuPostEffectOptions<T>) => PostEffect;
+
+interface PostEffectDefinition<T extends UniformRecord> {
+  effect: EffectFunction;
+  uniforms?: PixiUniforms<T> | undefined;
+  stage?: EffectStage;
+  inputMips?: boolean | undefined;
+}
+```
+
+Creates a PixiJS 3D post effect class from a TypeGPU function. `EffectFunction` is `(uv: d.v2f) => d.v4f`.
+`TgpuPostEffectOptions` are PixiJS 3D's `PostEffectOptions` plus `uniforms`, the initial values. See [Post effects](#post-effects).
+
+#### effectFragment
+
+```ts
+function effectFragment(options: EffectFragmentOptions): EffectFragment;
+
+interface EffectFragmentOptions {
+  effect: EffectFunction;
+  uniforms?: PixiUniforms<UniformRecord> | undefined;
+}
+```
+
+Generates the `effect(uv)` function of a post effect, in WGSL under `gpu` and in GLSL under `gl`, for a `FullscreenPass` or a `PostEffect` subclass.
+See [Effects with several steps](#effects-with-several-steps).
+
+#### sampleColor, sampleColorLod, sampleColor2, sampleDepth, viewPos, linearDepth
+
+```ts
+function sampleColor(uv: d.v2f): d.v4f;
+function sampleColorLod(uv: d.v2f, lod: number): d.v4f;
+function sampleColor2(uv: d.v2f): d.v4f;
+function sampleDepth(uv: d.v2f): number;
+function viewPos(uv: d.v2f): d.v3f;
+function linearDepth(depth: number): number;
+```
+
+Calls to the functions PixiJS 3D declares in the shader of a post effect. They read the effect's inputs and the scene's depth. See the [table of post effect functions](#post-effects).
+
+#### texel, inputTexel, viewTexel, depthTexel
+
+```ts
+function texel(): d.v2f;
+function inputTexel(): d.v2f;
+function viewTexel(): d.v2f;
+function depthTexel(): d.v2f;
+```
+
+The size of one pixel of the pass's target, of its colour input, of the view, and of the scene's depth, each as a step in `uv`. Only available in post effects.
+
+#### Types
+
+`ShaderBitOptions`, `VertexSlots`, `FragmentSlots` and `SlotFunction` describe the options of `shaderBit`. `ShaderInput` and `ShaderVariable` are the types of the values in `vertex`, `fragment`, `time` and `cameraPosition`.
+`EffectFragmentOptions`, `EffectFunction`, `PostEffectDefinition` and `TgpuPostEffectOptions` describe the options of `effectFragment` and `postEffect`.

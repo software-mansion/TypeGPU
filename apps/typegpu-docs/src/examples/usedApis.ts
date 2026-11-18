@@ -34,11 +34,13 @@ export const usedApis = comptime(async () => {
     { id: 'unwrap', pattern: /\.unwrap\(/ },
     { id: 'raw shaders', pattern: /rawCodeSnippet/ },
     { id: 'three.js', pattern: /from ['"]three['"/]/ },
+    { id: 'pixi.js', pattern: /from ['"](pixi\.js|@pixi\/3d)['"/]/ },
     { id: '~unstable', pattern: /\['~unstable'\]/ },
     { id: '@typegpu/noise', pattern: /@typegpu\/noise/ },
     { id: '@typegpu/sdf', pattern: /@typegpu\/sdf/ },
     { id: '@typegpu/color', pattern: /@typegpu\/color/ },
     { id: '@typegpu/react', pattern: /@typegpu\/react/ },
+    { id: '@typegpu/pixi', pattern: /@typegpu\/pixi/ },
     { id: 'wgpu-matrix', pattern: /wgpu-matrix/ },
   ];
 

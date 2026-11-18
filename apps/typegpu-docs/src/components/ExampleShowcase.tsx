@@ -29,6 +29,8 @@ export const INTEGRATION_EXAMPLE_KEYS = [
   'threejs--compute-particles-snow',
   'threejs--attractors',
   'threejs--compute-cloth',
+  'pixi--3d-material',
+  'pixi--filters',
 ] as const;
 
 export const FROM_SCRATCH_EXAMPLE_KEYS = [
@@ -121,7 +123,8 @@ const SHOWCASE_SECTIONS = [
   {
     id: 'integrations',
     title: 'Integrations',
-    description: 'TypeGPU working alongside tools like Three.js, React, ONNX Runtime, and more.',
+    description:
+      'TypeGPU working alongside tools like Three.js, PixiJS, React, ONNX Runtime, and more.',
     keys: INTEGRATION_EXAMPLE_KEYS,
   },
   {

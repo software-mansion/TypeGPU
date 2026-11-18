@@ -22,6 +22,8 @@ export const pnpmWorkspaceYaml = comptime(async () => {
       example: {
         'wgpu-matrix': 'string',
         three: 'string',
+        'pixi.js': 'string',
+        '@pixi/3d': 'string',
       },
     },
   });

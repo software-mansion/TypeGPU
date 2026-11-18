@@ -321,6 +321,11 @@ export default defineConfig({
               slug: 'ecosystem/typegpu-three',
             },
             {
+              label: '@typegpu/pixi',
+              slug: 'ecosystem/typegpu-pixi',
+              badge: { text: 'experimental' },
+            },
+            {
               label: '@typegpu/react',
               slug: 'ecosystem/typegpu-react',
             },
