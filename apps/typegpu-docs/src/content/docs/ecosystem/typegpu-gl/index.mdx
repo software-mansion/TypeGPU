@@ -96,6 +96,8 @@ pipeline.withColorAttachment({ view: context }).draw(3);
 
 The fallback renders on an internal `OffscreenCanvas`, then transfers the result to the configured canvas. This requires support for `OffscreenCanvas`, WebGL 2, and the `bitmaprenderer` canvas context.
 
+The transfer happens in a microtask, once the synchronous block of code that drew into the canvas finishes. All passes drawn in one `requestAnimationFrame` callback end up in one image, but awaiting anything between two passes presents the first one on its own. Reading the canvas back in the same task that drew into it (for example with `toDataURL()` or `drawImage()`) gets the previous image.
+
 ### Dynamic values
 
 Uniforms are the supported way to pass values that change without recompiling the shaders. Create them with `root.createUniform`, reference them through `.$` in GPU code, and update them with `.write()`.
