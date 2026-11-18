@@ -1496,8 +1496,14 @@ Try 'return ${typeStr}(${str});' instead.
     }
 
     if (isHandleData(definitionDataType)) {
-      // Reassigning handles is not supported, so we treat `let` the same as `const`
-      return this._handleAliasStatement(rawId, eq);
+      // Handles cannot be reassigned, so only `const` aliases make sense
+      const rhsStr = stringifyNode(eqNode);
+      throw new WgslTypeError(
+        `'let ${rawId} = ${rhsStr}' is invalid, because textures and samplers cannot be assigned to 'let' variable declarations.
+-----
+- Try 'const ${rawId} = ${rhsStr}' instead.
+-----`,
+      );
     }
 
     if (isStoredInMemory(eq) && !wgsl.isNaturallyEphemeral(eq.dataType)) {
