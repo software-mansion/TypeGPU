@@ -58,7 +58,7 @@ describe('TgpuRootWebGL - garbage collection', () => {
 
     expect(await collect(resources.refs)).toBe(2);
     resources.pipeline?.draw(3);
-    expect(gl.uniform1f).toHaveBeenCalledExactlyOnceWith(expect.anything(), 2);
+    expect(gl.uniform1fv).toHaveBeenCalledExactlyOnceWith(expect.anything(), new Float32Array([2]));
 
     resources.pipeline = undefined;
     expect(await collect(resources.refs)).toBe(0);
@@ -103,7 +103,7 @@ describe('TgpuRootWebGL - garbage collection', () => {
     expect(gl.getUniformLocation).toHaveBeenCalledTimes(1);
     expect(await collect(refs)).toBe(0);
     pipeline.draw(3);
-    expect(gl.uniform1f).not.toHaveBeenCalled();
+    expect(gl.uniform1fv).not.toHaveBeenCalled();
     expect(gl.drawArraysInstanced).toHaveBeenCalledTimes(1);
     root.destroy();
   });

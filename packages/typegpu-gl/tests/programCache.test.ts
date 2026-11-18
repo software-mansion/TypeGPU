@@ -137,7 +137,8 @@ describe('TgpuRootWebGL - program cache', () => {
     expect(gl.createVertexArray).toHaveBeenCalledOnce();
     const vao = vi.mocked(gl.createVertexArray).mock.results[0]!.value;
     expect(drawnVertexArrays(gl)).toEqual([vao, vao]);
-    expect(gl.uniform4fv).toHaveBeenCalledTimes(2);
+    // The shared program still holds the unchanged value from the first draw
+    expect(gl.uniform4fv).toHaveBeenCalledOnce();
     expect(gl.createVertexArray).toHaveBeenCalledTimes(1);
     expect(gl.createProgram).toHaveBeenCalledTimes(1);
     root.destroy();

@@ -26,7 +26,7 @@ import {
   WebGLTextureRenderView,
   WebGLTextureView,
 } from './webglTexture.ts';
-import { uniformSetterFor, WebGLUniformImpl, type UniformSetter } from './webglUniform.ts';
+import { planUniformUploads, WebGLUniformImpl, type UniformUpload } from './webglUniform.ts';
 
 // ----------
 // Public API
@@ -182,10 +182,25 @@ export function linkProgram(
 }
 
 interface UniformBinding {
-  uniform: WebGLUniformImpl<d.AnyWgslData>;
-  location: WebGLUniformLocation;
-  setter: UniformSetter;
+  readonly uniform: WebGLUniformImpl<d.AnyWgslData>;
+  /** The uniform's identifier in the program */
+  readonly name: string;
+  readonly uploads: readonly UniformUpload[];
 }
+
+interface UploadedUniform {
+  readonly bufferId: number;
+  readonly version: number;
+}
+
+/**
+ * What was last uploaded into each uniform of a program, keyed by the uniform's name.
+ * Programs keep their uniform values, so uniforms are only uploaded again when they
+ * change. Pipelines with the same shaders share a program (while binding different
+ * buffers), so this is tracked per program instead of per pipeline. Buffers are only
+ * referred to by id, so that uploads don't keep them alive.
+ */
+const uploadedUniforms = new WeakMap<WebGLProgram, Map<string, UploadedUniform>>();
 
 interface TextureBinding {
   view: WebGLTextureView;
@@ -460,16 +475,10 @@ export function createWebGLRenderPipeline(
       continue;
     }
 
-    const location = gl.getUniformLocation(program, name);
-    if (location === null) {
-      continue; // Not used in the shader
+    const uploads = planUniformUploads(gl, program, name, uniform.dataType);
+    if (uploads.length > 0) {
+      uniformBindings.push({ uniform, name, uploads });
     }
-
-    uniformBindings.push({
-      uniform,
-      location,
-      setter: uniformSetterFor(uniform.dataType),
-    });
   }
 
   const resourcesByName = new Map(
@@ -1061,9 +1070,21 @@ class TgpuWebGLRenderPipelineImpl implements TgpuWebGLRenderPipeline {
       gl.uniform1ui(this.#core.baseInstanceLocation, firstInstance);
     }
 
-    // Upload current uniform values
-    for (const b of this.#core.uniformBindings) {
-      b.setter(gl, b.location, b.uniform.buffer.arrayBuffer);
+    // Upload the uniform values that changed since the last draw with this program
+    let uploaded = uploadedUniforms.get(this.#core.program);
+    if (!uploaded) {
+      uploaded = new Map();
+      uploadedUniforms.set(this.#core.program, uploaded);
+    }
+    for (const binding of this.#core.uniformBindings) {
+      const buffer = binding.uniform.buffer;
+      const last = uploaded.get(binding.name);
+      if (last?.bufferId !== buffer.id || last.version !== buffer.version) {
+        uploaded.set(binding.name, { bufferId: buffer.id, version: buffer.version });
+        for (const upload of binding.uploads) {
+          upload(gl, buffer.arrayBuffer);
+        }
+      }
     }
 
     for (let unit = 0; unit < this.#core.textureBindings.length; unit++) {
