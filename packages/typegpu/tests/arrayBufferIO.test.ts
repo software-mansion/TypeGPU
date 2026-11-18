@@ -144,5 +144,56 @@ describe('arrayBufferIO', () => {
       const result = readFromArrayBuffer(buffer, Struct);
       expect(result).toStrictEqual({ a: 1, b: 99 });
     });
+
+    it('throws for sparse indices past the end of an array', () => {
+      const Struct = d.struct({ a: d.arrayOf(d.u32, 2), b: d.u32 });
+      const buffer = new ArrayBuffer(d.sizeOf(Struct));
+      writeToArrayBuffer(buffer, Struct, { a: [1, 2], b: 3 });
+
+      expect(() => patchArrayBuffer(buffer, Struct, { a: { 2: 99 } })).toThrow(
+        'Index 2 is out of bounds for an array of 2 elements.',
+      );
+      expect(readFromArrayBuffer(buffer, Struct)).toStrictEqual({ a: [1, 2], b: 3 });
+    });
+
+    it('throws for negative or fractional sparse indices', () => {
+      const Struct = d.struct({ b: d.u32, a: d.arrayOf(d.u32, 2) });
+      const buffer = new ArrayBuffer(d.sizeOf(Struct));
+      writeToArrayBuffer(buffer, Struct, { b: 3, a: [1, 2] });
+
+      expect(() => patchArrayBuffer(buffer, Struct, { a: { [-1]: 99 } })).toThrow(
+        'Index -1 is out of bounds for an array of 2 elements.',
+      );
+      expect(() => patchArrayBuffer(buffer, Struct, { a: { 0.5: 99 } })).toThrow(
+        'Index 0.5 is out of bounds for an array of 2 elements.',
+      );
+      expect(readFromArrayBuffer(buffer, Struct)).toStrictEqual({ b: 3, a: [1, 2] });
+    });
+
+    it('throws for keys that are not written like an index', () => {
+      const Schema = d.arrayOf(d.u32, 2);
+      const buffer = new ArrayBuffer(d.sizeOf(Schema));
+      writeToArrayBuffer(buffer, Schema, [1, 2]);
+
+      for (const key of ['', '0x1', ' 1', '1e0', '-0', 'foo']) {
+        // A computed key gets past the types
+        expect(() => patchArrayBuffer(buffer, Schema, { 1: 9, [key]: 9 })).toThrow(
+          `'${key}' is not a valid array index.`,
+        );
+      }
+      expect(readFromArrayBuffer(buffer, Schema)).toStrictEqual([1, 2]);
+    });
+
+    it('bounds sparse indices of runtime-sized arrays by the size of the buffer', () => {
+      const Schema = d.arrayOf(d.u32, 0);
+      const buffer = new ArrayBuffer(12);
+
+      patchArrayBuffer(buffer, Schema, { 2: 7 });
+      expect([...new Uint32Array(buffer)]).toStrictEqual([0, 0, 7]);
+
+      expect(() => patchArrayBuffer(buffer, Schema, { 3: 7 })).toThrow(
+        'Index 3 is out of bounds for an array of 3 elements.',
+      );
+    });
   });
 });
