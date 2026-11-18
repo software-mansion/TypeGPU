@@ -138,6 +138,78 @@ describe('TgpuRootWebGL - createRenderPipeline', () => {
 
     expect(gl.drawArrays).toHaveBeenCalledWith(gl.TRIANGLES, 3, 6);
   });
+
+  it('creates a render pipeline without WebGPU globals', ({ gl }) => {
+    const webgpuGlobals = [
+      'GPUBufferUsage',
+      'GPUTextureUsage',
+      'GPUShaderStage',
+      'GPUMapMode',
+    ] as const;
+    const descriptors = new Map(
+      webgpuGlobals.map((name) => [name, Object.getOwnPropertyDescriptor(globalThis, name)]),
+    );
+
+    let testError: unknown;
+    try {
+      for (const name of webgpuGlobals) {
+        if (!Reflect.deleteProperty(globalThis, name)) {
+          throw new Error(`Could not remove WebGPU global '${name}'`);
+        }
+      }
+
+      const root = initWithGL({ gl });
+      const pipeline = root.createRenderPipeline({
+        vertex: () => {
+          'use gpu';
+          return { $position: d.vec4f(0, 0, 0, 1) };
+        },
+        fragment: () => {
+          'use gpu';
+          return d.vec4f(1, 0, 0, 1);
+        },
+      });
+
+      expect(pipeline).toBeDefined();
+    } catch (cause) {
+      testError = cause;
+    } finally {
+      const unrestored: {
+        name: string;
+        descriptor: PropertyDescriptor | undefined;
+        cause: unknown;
+      }[] = [];
+      for (const [name, descriptor] of descriptors) {
+        try {
+          if (descriptor) {
+            Object.defineProperty(globalThis, name, descriptor);
+          } else if (!Reflect.deleteProperty(globalThis, name)) {
+            unrestored.push({
+              name,
+              descriptor,
+              cause: new Error(`Could not delete global '${name}'`),
+            });
+          }
+        } catch (cause) {
+          unrestored.push({ name, descriptor, cause });
+        }
+      }
+      if (unrestored.length > 0) {
+        const names = unrestored.map((failure) => failure.name).join(', ');
+        const restoreError = new AggregateError(
+          unrestored.map((failure) => failure.cause),
+          `Failed to restore WebGPU globals: ${names}`,
+        );
+        Object.assign(restoreError, { unrestored });
+        testError = testError
+          ? new AggregateError([testError, restoreError], restoreError.message)
+          : restoreError;
+      }
+    }
+    if (testError) {
+      throw testError;
+    }
+  });
 });
 
 describe('TgpuRootWebGL - textures', () => {
