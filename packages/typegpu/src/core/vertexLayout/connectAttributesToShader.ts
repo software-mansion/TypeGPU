@@ -1,7 +1,11 @@
 import { isBuiltin } from '../../data/attributes.ts';
 import { getCustomLocation } from '../../data/dataTypes.ts';
 import { isData } from '../../data/dataTypes.ts';
-import type { AnyVertexAttribs, TgpuVertexAttrib } from '../../shared/vertexFormat.ts';
+import {
+  type AnyVertexAttribs,
+  type TgpuVertexAttrib,
+  toGPUVertexFormat,
+} from '../../shared/vertexFormat.ts';
 import type { IOData } from '../function/fnTypes.ts';
 import type { TgpuVertexFn } from '../function/tgpuVertexFn.ts';
 import type { INTERNAL_TgpuVertexAttrib, TgpuVertexLayout } from './vertexLayout.ts';
@@ -39,7 +43,7 @@ export function connectAttributesToShader(
           stepMode: attributes._layout.stepMode,
           attributes: [
             {
-              format: attributes.format as GPUVertexFormat,
+              format: toGPUVertexFormat(attributes.format),
               offset: attributes.offset,
               shaderLocation: getCustomLocation(shaderInputLayout) ?? 0,
             },
@@ -84,7 +88,7 @@ export function connectAttributesToShader(
     nextShaderLocation = getCustomLocation(member) ?? nextShaderLocation;
 
     attribList.push({
-      format: matchingAttribute.format as GPUVertexFormat,
+      format: toGPUVertexFormat(matchingAttribute.format),
       offset: matchingAttribute.offset,
       shaderLocation: nextShaderLocation++,
     });
