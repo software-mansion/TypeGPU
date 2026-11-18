@@ -146,18 +146,20 @@ describe('handle aliases', () => {
     `);
   });
 
-  it('aliases a handle stored with let', () => {
+  it('rejects a handle stored with let', () => {
     function foo() {
       'use gpu';
       let tex = layout.$.uTexture;
       return std.textureLoad(tex, d.vec2i(0, 0), 0);
     }
-    expect(tgpu.resolve([foo])).toMatchInlineSnapshot(`
-      "@group(0) @binding(0) var uTexture: texture_2d<f32>;
-
-      fn foo() -> vec4f {
-        return textureLoad(uTexture, vec2i(), 0);
-      }"
+    expect(() => tgpu.resolve([foo])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:foo
+      - fn*:foo(): 'let tex = layout.$.uTexture' is invalid, because textures and samplers cannot be assigned to 'let' variable declarations.
+      -----
+      - Try 'const tex = layout.$.uTexture' instead.
+      -----]
     `);
   });
 
@@ -188,21 +190,6 @@ describe('handle aliases', () => {
       fn foo(uv: vec2f) -> vec4f {
         return sample(uTexture, uSampler, uv);
       }"
-    `);
-  });
-
-  it('rejects reassigning a handle', () => {
-    function foo() {
-      'use gpu';
-      let tex = layout.$.uTexture;
-      tex = layout.$.uTexture;
-      return std.textureLoad(tex, d.vec2i(0, 0), 0);
-    }
-    expect(() => tgpu.resolve([foo])).toThrowErrorMatchingInlineSnapshot(`
-      [Error: Resolution of the following tree failed:
-      - <root>
-      - fn*:foo
-      - fn*:foo(): 'tex = layout.$.uTexture' is invalid, because textures and samplers cannot be mutated.]
     `);
   });
 });
