@@ -6,3 +6,6 @@ export type { ConstructibleSchema, Geometry, IndexedGeometry, Topology } from '.
 export { parametric } from './parametric.ts';
 export type { Parametric, ParametricOptions } from './parametric.ts';
 export * from './primitives.ts';
+export * from './patchPrimitives.ts';
+export * from './triangles.ts';
+export * as patches from './patches/index.ts';
