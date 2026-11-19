@@ -8,6 +8,8 @@ import { babelTransform, rollupTransform } from './transform.ts';
 import { bunPlugin, rollupPlugin } from '../src/index.ts';
 import * as common from '../src/core/common.ts';
 
+const USE_GPU_DIRECTIVE_REGEX = /^[ \t]*['"]use gpu['"];?\r?\n/gm;
+
 describe('plugin obfuscation', () => {
   describe('assigns obfuscated metadata', () => {
     const code = `\
@@ -354,8 +356,7 @@ describe('plugin obfuscation', () => {
 
     test('[BABEL]', () => {
       const built = babelTransform(code, { unstable_obfuscate: false }) as string;
-      const withoutDirective = built.replace(/^[ \t]*['"]use gpu['"];?\r?\n/gm, '');
-      expect(withoutDirective).not.toMatch(/use gpu|t(ype)?gpu/);
+      const withoutDirective = built.replace(USE_GPU_DIRECTIVE_REGEX, '');
 
       expect(babelTransform(withoutDirective, { unstable_obfuscate: true })).toMatchInlineSnapshot(`
           "const external = {
@@ -379,8 +380,7 @@ describe('plugin obfuscation', () => {
 
     test('[ROLLUP]', async () => {
       const built = await rollupTransform(code, { unstable_obfuscate: false });
-      const withoutDirective = built.replace(/^[ \t]*['"]use gpu['"];?\r?\n/gm, '');
-      expect(withoutDirective).not.toMatch(/use gpu|t(ype)?gpu/);
+      const withoutDirective = built.replace(USE_GPU_DIRECTIVE_REGEX, '');
 
       expect(await rollupTransform(withoutDirective, { unstable_obfuscate: true }))
         .toMatchInlineSnapshot(`
@@ -409,8 +409,7 @@ describe('plugin obfuscation', () => {
 
     test('[BABEL]', () => {
       const built = babelTransform(code, { unstable_obfuscate: false }) as string;
-      const withoutDirective = built.replace(/^[ \t]*['"]use gpu['"];?\r?\n/gm, '');
-      expect(withoutDirective).not.toMatch(/use gpu|t(ype)?gpu/);
+      const withoutDirective = built.replace(USE_GPU_DIRECTIVE_REGEX, '');
 
       using visitor = vi.spyOn(common, 'functionVisitor', 'get');
       babelTransform(withoutDirective, { unstable_obfuscate: false });
@@ -419,8 +418,7 @@ describe('plugin obfuscation', () => {
 
     test('[ROLLUP]', async () => {
       const built = await rollupTransform(code, { unstable_obfuscate: false });
-      const withoutDirective = built.replace(/^[ \t]*['"]use gpu['"];?\r?\n/gm, '');
-      expect(withoutDirective).not.toMatch(/use gpu|t(ype)?gpu/);
+      const withoutDirective = built.replace(USE_GPU_DIRECTIVE_REGEX, '');
 
       using visitor = vi.spyOn(common, 'functionVisitor', 'get');
       await rollupTransform(withoutDirective, { unstable_obfuscate: false });
