@@ -1,7 +1,7 @@
 import { MissingBindGroupsError, MissingVertexBuffersError } from '../../errors.ts';
 import type { BaseData } from '../../data/wgslTypes.ts';
 import { $internal } from '../../shared/symbols.ts';
-import { DEV, TEST } from '../../shared/env.ts';
+import { DEV } from '../../shared/env.ts';
 import { logger } from '../../tgpuLogger.ts';
 import {
   isBindGroup,
@@ -219,7 +219,7 @@ export function requireIndexBuffer(indexBuffer: IndexBufferEntry | undefined): v
 }
 
 function warnAboutUnreachableSubmission(core: object, what: string): void {
-  if (DEV || TEST) {
+  if (DEV) {
     logger.warnOnce(
       'suspicious',
       core,
@@ -284,7 +284,7 @@ function reportIgnoredPriors(
 ): void {
   const wording = PassKindWording[passKind];
 
-  if ((DEV || TEST) && hasAttachments) {
+  if (DEV && hasAttachments) {
     logger.warnOnce(
       'suspicious',
       core,
@@ -293,7 +293,7 @@ function reportIgnoredPriors(
     );
   }
 
-  if ((DEV || TEST) && hasTimestampWrites) {
+  if (DEV && hasTimestampWrites) {
     logger.warnOnce(
       'suspicious',
       core,
@@ -303,7 +303,7 @@ function reportIgnoredPriors(
   }
 
   if (logResources && !queueLogDrain(owner, logResources)) {
-    if (DEV || TEST) {
+    if (DEV) {
       logger.warnOnce(
         'suspicious',
         core,

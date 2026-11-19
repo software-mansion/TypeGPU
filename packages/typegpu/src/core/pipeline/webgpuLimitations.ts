@@ -7,7 +7,7 @@ import { invariant } from '../../errors.ts';
 import { roundUp } from '../../mathUtils.ts';
 import { getName } from '../../shared/meta.ts';
 import { visibilityOf, type TgpuBindGroupLayout } from '../../tgpuBindGroupLayout.ts';
-import { DEV, TEST } from '../../shared/env.ts';
+import { DEV } from '../../shared/env.ts';
 import { logger } from '../../tgpuLogger.ts';
 import type { ShaderStage } from '../../types.ts';
 
@@ -59,7 +59,7 @@ function requiredAlignOf(schema: BaseData) {
  */
 export function warnIfNotUniformAligned(schema: BaseData) {
   // Silenced by default in production, and computing memory layouts isn't free
-  if ((DEV || TEST) && logger.isEnabled('uniform-schema-misaligned')) {
+  if (DEV && logger.isEnabled('uniform-schema-misaligned')) {
     checkUniformAlignment(schema);
   }
 }

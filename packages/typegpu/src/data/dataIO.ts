@@ -29,7 +29,7 @@ import * as wgsl from './wgslTypes.ts';
 import type { BufferWriteOptions } from '../core/buffer/buffer.ts';
 import { getCompiledWriter } from './compiledIO.ts';
 import { getName } from '../shared/meta.ts';
-import { DEV, TEST } from '../shared/env.ts';
+import { DEV } from '../shared/env.ts';
 import { logger } from '../tgpuLogger.ts';
 import { readFloat16, writeFloat16 } from './float16Conversion.ts';
 
@@ -491,7 +491,7 @@ export function writeData<TData extends wgsl.BaseData>(
   if (ArrayBuffer.isView(value)) {
     const src = value as ArrayBufferView;
     const expected = sizeOf(schema);
-    if ((DEV || TEST) && src.byteLength !== expected) {
+    if (DEV && src.byteLength !== expected) {
       logger.warn(
         'suspicious',
         `TypedArray size mismatch: schema expects ${expected} bytes, got ${src.byteLength}. ` +
@@ -822,7 +822,7 @@ export function writeToArrayBuffer<T extends wgsl.BaseData>(
         ? new Uint8Array(data)
         : new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
     const regionSize = endOffset - startOffset;
-    if ((DEV || TEST) && src.byteLength !== regionSize) {
+    if (DEV && src.byteLength !== regionSize) {
       logger.warn(
         'suspicious',
         `Buffer size mismatch: expected ${regionSize} bytes, got ${src.byteLength}. ` +
@@ -844,7 +844,7 @@ export function writeToArrayBuffer<T extends wgsl.BaseData>(
       compiledWriter(dataView, startOffset, data, isLittleEndian, endOffset);
       return;
     } catch (error) {
-      if (DEV || TEST) {
+      if (DEV) {
         logger.warn(
           'fallback',
           `Error when using compiled writer for data type '${

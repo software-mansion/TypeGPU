@@ -1,7 +1,7 @@
 import { isQuerySet, type TgpuQuerySet } from '../querySet/querySet.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import { $internal } from '../../shared/symbols.ts';
-import { DEV, TEST } from '../../shared/env.ts';
+import { DEV } from '../../shared/env.ts';
 import { logger } from '../../tgpuLogger.ts';
 import type { TgpuCommandEncoder } from '../commandEncoder/commandEncoder.ts';
 
@@ -187,7 +187,7 @@ export function queueTimestampResolve(
   }
 
   if (registrations.some((reg) => reg.priors === priors)) {
-    if (DEV || TEST) {
+    if (DEV) {
       logger.warnOnce(
         'suspicious',
         querySet,
