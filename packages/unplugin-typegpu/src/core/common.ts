@@ -143,7 +143,7 @@ export interface PluginState extends TransformMethods {
   /**
    * Used for source mapping during transpilation.
    */
-  sourceTracker?: SourceTracer;
+  sourceTracker?: SourceTracer | undefined;
 }
 
 export type SourceTracer = {
