@@ -33,13 +33,15 @@ export class Renderer {
       .with(timeAccess, this.timeUniform)
       .with(cameraAccess, this.cameraUniform)
       .with(sceneSlot, this.scene);
-    this.geometryPipeline = withedRoot.createRenderPipeline({
-      fragment: geometryFragmentFn,
-      vertex: geometryVertexFn,
-      targets: this.gBuffer.targets,
-      depthStencil: { format: 'depth24plus', depthWriteEnabled: true, depthCompare: 'less' },
-      primitive: { cullMode: 'none' },
-    });
+    this.geometryPipeline = withedRoot
+      .createRenderPipeline({
+        fragment: geometryFragmentFn,
+        vertex: geometryVertexFn,
+        targets: this.gBuffer.targets,
+        depthStencil: { format: 'depth24plus', depthWriteEnabled: true, depthCompare: 'less' },
+        primitive: { cullMode: 'none' },
+      })
+      .pipe(this.scene.inject());
     this.lightingPipeline = withedRoot.createRenderPipeline({
       vertex: fullScreenTriangle,
       fragment: lightingFragmentFn,
@@ -56,7 +58,6 @@ export class Renderer {
     this.timeUniform.write(time);
 
     this.geometryPipeline
-      .pipe(this.scene.inject())
       .withDepthStencilAttachment({ view: this.gBuffer.depthTexture })
       .withColorAttachment(this.gBuffer.colorAttachment)
       .drawIndexed(this.scene.indexCount, 1, this.scene.firstIndex);

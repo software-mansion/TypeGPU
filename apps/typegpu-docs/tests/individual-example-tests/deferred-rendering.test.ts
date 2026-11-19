@@ -26,7 +26,7 @@ describe('deferred-rendering example', () => {
           mockResizeObserver();
           mockCreateImageBitmap({ width: 512, height: 256 });
         },
-        expectedCalls: 3,
+        expectedCalls: 5,
       },
       device,
     );
@@ -379,6 +379,635 @@ describe('deferred-rendering example', () => {
         if ((i < 67146u)) {
           item(i);
         }
+      }
+
+      fn plane(u: f32, v: f32) -> vec3f {
+        return vec3f((u - 0.5f), 0f, (0.5f - v));
+      }
+
+      fn at(u: f32, v: f32) -> vec3f {
+        return (plane(u, v) * vec3f(40, 1, 40));
+      }
+
+      fn normalAt(_arg_0: f32, _arg_1: f32) -> vec3f {
+        return vec3f(0, 1, 0);
+      }
+
+      struct Surface {
+        position: vec3f,
+        normal: vec3f,
+        uv: vec2f,
+      }
+
+      fn item(u: f32, v: f32) -> Surface {
+        return Surface(at(u, v), normalAt(u, v), vec2f(u, v));
+      }
+
+      fn vertexAt_2(i: u32) -> Surface {
+        let col = (i % 2u);
+        let row = (i / 2u);
+        let u = (f32(col) / 1f);
+        let v = (f32(row) / 1f);
+        return item(u, v);
+      }
+
+      struct Material {
+        material: vec4f,
+      }
+
+      fn item_1(_arg_0: Surface) -> Material {
+        return Material(vec4f(0.30000001192092896, 0.30000001192092896, 0.30000001192092896, 0));
+      }
+
+      struct Vertex {
+        position: vec3f,
+        normal: vec3f,
+        uv: vec2f,
+        material: vec4f,
+      }
+
+      fn vertexAt_1(i: u32) -> Vertex {
+        let s = vertexAt_2(i);
+        let e = item_1(s);
+        var out = Vertex();
+        // unrolled iteration #0 / #0
+        out.position = s.position;
+        // unrolled iteration #0 / #1
+        out.normal = s.normal;
+        // unrolled iteration #0 / #2
+        out.uv = s.uv;
+        // ---
+        // unrolled iteration #0 / #0
+        out.material = e.material;
+        // ---
+        return out;
+      }
+
+      fn torus(u: f32, v: f32, radius: f32, tube: f32) -> vec3f {
+        let phi = (u * 6.283185307179586f);
+        let t = (v * 6.283185307179586f);
+        let ring = (radius + (tube * cos(t)));
+        return vec3f((ring * cos(phi)), (-(tube) * sin(t)), (ring * sin(phi)));
+      }
+
+      fn item_2(u: f32, v: f32) -> Surface {
+        return Surface(torus(u, v, 3f, 0.5f), torus(u, v, 0f, 1f), vec2f(u, v));
+      }
+
+      fn vertexAt_5(i: u32) -> Surface {
+        let col = (i % 49u);
+        let row = (i / 49u);
+        let u = (f32(col) / 48f);
+        let v = (f32(row) / 24f);
+        return item_2(u, v);
+      }
+
+      fn vertexAt_4(i: u32) -> Surface {
+        var s = vertexAt_5(i);
+        s.position = (mat4x4f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 7, 3, 7, 1) * vec4f(s.position, 1f)).xyz;
+        let normal = (mat3x3f(1, 0, 0, 0, 1, 0, 0, 0, 1) * s.normal);
+        if ((dot(normal, normal) > 0f)) {
+          s.normal = normalize(normal);
+        }
+        else {
+          s.normal = vec3f();
+        }
+        return s;
+      }
+
+      fn item_3(_arg_0: Surface) -> Material {
+        return Material(vec4f(1, 0.20000000298023224, 0.20000000298023224, 0.5));
+      }
+
+      fn vertexAt_3(i: u32) -> Vertex {
+        let s = vertexAt_4(i);
+        let e = item_3(s);
+        var out = Vertex();
+        // unrolled iteration #1 / #0
+        out.position = s.position;
+        // unrolled iteration #1 / #1
+        out.normal = s.normal;
+        // unrolled iteration #1 / #2
+        out.uv = s.uv;
+        // ---
+        // unrolled iteration #1 / #0
+        out.material = e.material;
+        // ---
+        return out;
+      }
+
+      fn at_1(u: f32, v: f32) -> vec3f {
+        return (plane(u, v) * vec3f(3, 1, 4));
+      }
+
+      fn normalAt_1(_arg_0: f32, _arg_1: f32) -> vec3f {
+        return vec3f(0, 1, 0);
+      }
+
+      fn item_4(u: f32, v: f32) -> Surface {
+        return Surface(at_1(u, v), normalAt_1(u, v), vec2f(u, v));
+      }
+
+      fn vertexAt_11(i: u32) -> Surface {
+        let col = (i % 2u);
+        let row = (i / 2u);
+        let u = (f32(col) / 1f);
+        let v = (f32(row) / 1f);
+        return item_4(u, v);
+      }
+
+      fn vertexAt_10(i: u32) -> Surface {
+        var s = vertexAt_11(i);
+        s.position = (mat4x4f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 2.5, 0, 1) * vec4f(s.position, 1f)).xyz;
+        let normal = (mat3x3f(1, 0, 0, 0, 1, 0, 0, 0, 1) * s.normal);
+        if ((dot(normal, normal) > 0f)) {
+          s.normal = normalize(normal);
+        }
+        else {
+          s.normal = vec3f();
+        }
+        return s;
+      }
+
+      fn vertexAt_12(i: u32) -> Surface {
+        var s = vertexAt_11(i);
+        s.position = (mat4x4f(1, 0, 0, 0, 0, -1, 0, 0, 0, 0, -1, 0, 0, -2.5, 0, 1) * vec4f(s.position, 1f)).xyz;
+        let normal = (mat3x3f(1, 0, 0, 0, -1, 0, 0, 0, -1) * s.normal);
+        if ((dot(normal, normal) > 0f)) {
+          s.normal = normalize(normal);
+        }
+        else {
+          s.normal = vec3f();
+        }
+        return s;
+      }
+
+      fn at_2(u: f32, v: f32) -> vec3f {
+        return (plane(u, v) * vec3f(3, 1, 5));
+      }
+
+      fn normalAt_2(_arg_0: f32, _arg_1: f32) -> vec3f {
+        return vec3f(0, 1, 0);
+      }
+
+      fn item_5(u: f32, v: f32) -> Surface {
+        return Surface(at_2(u, v), normalAt_2(u, v), vec2f(u, v));
+      }
+
+      fn vertexAt_14(i: u32) -> Surface {
+        let col = (i % 2u);
+        let row = (i / 2u);
+        let u = (f32(col) / 1f);
+        let v = (f32(row) / 1f);
+        return item_5(u, v);
+      }
+
+      fn vertexAt_13(i: u32) -> Surface {
+        var s = vertexAt_14(i);
+        s.position = (mat4x4f(1, 0, 0, 0, 0, 0, 1, 0, 0, -1, 0, 0, 0, 0, 2, 1) * vec4f(s.position, 1f)).xyz;
+        let normal = (mat3x3f(1, 0, 0, 0, 0, 1, 0, -1, 0) * s.normal);
+        if ((dot(normal, normal) > 0f)) {
+          s.normal = normalize(normal);
+        }
+        else {
+          s.normal = vec3f();
+        }
+        return s;
+      }
+
+      fn vertexAt_15(i: u32) -> Surface {
+        var s = vertexAt_14(i);
+        s.position = (mat4x4f(-1, 0, 0, 0, 0, 0, -1, 0, 0, -1, 0, 0, 0, 0, -2, 1) * vec4f(s.position, 1f)).xyz;
+        let normal = (mat3x3f(-1, 0, 0, 0, 0, -1, 0, -1, 0) * s.normal);
+        if ((dot(normal, normal) > 0f)) {
+          s.normal = normalize(normal);
+        }
+        else {
+          s.normal = vec3f();
+        }
+        return s;
+      }
+
+      fn at_3(u: f32, v: f32) -> vec3f {
+        return (plane(u, v) * vec3f(4, 1, 5));
+      }
+
+      fn normalAt_3(_arg_0: f32, _arg_1: f32) -> vec3f {
+        return vec3f(0, 1, 0);
+      }
+
+      fn item_6(u: f32, v: f32) -> Surface {
+        return Surface(at_3(u, v), normalAt_3(u, v), vec2f(u, v));
+      }
+
+      fn vertexAt_17(i: u32) -> Surface {
+        let col = (i % 2u);
+        let row = (i / 2u);
+        let u = (f32(col) / 1f);
+        let v = (f32(row) / 1f);
+        return item_6(u, v);
+      }
+
+      fn vertexAt_16(i: u32) -> Surface {
+        var s = vertexAt_17(i);
+        s.position = (mat4x4f(0, 0, -1, 0, 1, 0, 0, 0, 0, -1, 0, 0, 1.5, 0, 0, 1) * vec4f(s.position, 1f)).xyz;
+        let normal = (mat3x3f(0, 0, -1, 1, 0, 0, 0, -1, 0) * s.normal);
+        if ((dot(normal, normal) > 0f)) {
+          s.normal = normalize(normal);
+        }
+        else {
+          s.normal = vec3f();
+        }
+        return s;
+      }
+
+      fn vertexAt_18(i: u32) -> Surface {
+        var s = vertexAt_17(i);
+        s.position = (mat4x4f(0, 0, 1, 0, -1, 0, 0, 0, 0, -1, 0, 0, -1.5, 0, 0, 1) * vec4f(s.position, 1f)).xyz;
+        let normal = (mat3x3f(0, 0, 1, -1, 0, 0, 0, -1, 0) * s.normal);
+        if ((dot(normal, normal) > 0f)) {
+          s.normal = normalize(normal);
+        }
+        else {
+          s.normal = vec3f();
+        }
+        return s;
+      }
+
+      fn vertexAt_9(i: u32) -> Surface {
+        var local = i;
+        // unrolled iteration #2 / #0
+        if ((local < 4u)) {
+          return vertexAt_10(local);
+        }
+        local -= 4u;
+        // unrolled iteration #2 / #1
+        if ((local < 4u)) {
+          return vertexAt_12(local);
+        }
+        local -= 4u;
+        // unrolled iteration #2 / #2
+        if ((local < 4u)) {
+          return vertexAt_13(local);
+        }
+        local -= 4u;
+        // unrolled iteration #2 / #3
+        if ((local < 4u)) {
+          return vertexAt_15(local);
+        }
+        local -= 4u;
+        // unrolled iteration #2 / #4
+        if ((local < 4u)) {
+          return vertexAt_16(local);
+        }
+        local -= 4u;
+        // unrolled iteration #2 / #5
+        if ((local < 4u)) {
+          return vertexAt_18(local);
+        }
+        local -= 4u;
+        // ---
+        return Surface();
+      }
+
+      @group(0) @binding(0) var<uniform> timeUniform: u32;
+
+      fn item_7(vertex: Surface) -> Surface {
+        var vertexCopy = vertex;
+        let time = (f32(timeUniform) / 1000f);
+        let transformation = mat4x4f(cos(time), 0, -sin(time), 0, 0, 1, 0, 0, sin(time), 0, cos(time), 0, 0, 0, 0, 1);
+        vertexCopy.position = (vec4f(vertexCopy.position, 1f) * transformation).xyz;
+        vertexCopy.normal = (vec4f(vertexCopy.normal, 0f) * transformation).xyz;
+        return vertexCopy;
+      }
+
+      fn vertexAt_8(i: u32) -> Surface {
+        return item_7(vertexAt_9(i));
+      }
+
+      fn vertexAt_7(i: u32) -> Surface {
+        var s = vertexAt_8(i);
+        s.position = (mat4x4f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, -7, 3, 7, 1) * vec4f(s.position, 1f)).xyz;
+        let normal = (mat3x3f(1, 0, 0, 0, 1, 0, 0, 0, 1) * s.normal);
+        if ((dot(normal, normal) > 0f)) {
+          s.normal = normalize(normal);
+        }
+        else {
+          s.normal = vec3f();
+        }
+        return s;
+      }
+
+      fn item_8(_arg_0: Surface) -> Material {
+        return Material(vec4f(0.20000000298023224, 0.5, 0.8999999761581421, 0.20000000298023224));
+      }
+
+      fn vertexAt_6(i: u32) -> Vertex {
+        let s = vertexAt_7(i);
+        let e = item_8(s);
+        var out = Vertex();
+        // unrolled iteration #2 / #0
+        out.position = s.position;
+        // unrolled iteration #2 / #1
+        out.normal = s.normal;
+        // unrolled iteration #2 / #2
+        out.uv = s.uv;
+        // ---
+        // unrolled iteration #2 / #0
+        out.material = e.material;
+        // ---
+        return out;
+      }
+
+      fn disc(u: f32, v: f32) -> vec3f {
+        let phi = (u * 6.283185307179586f);
+        return vec3f((v * cos(phi)), 0f, (v * sin(phi)));
+      }
+
+      fn item_9(u: f32, v: f32) -> Surface {
+        let p = disc(u, v);
+        let dir = disc(u, 1f);
+        return Surface(vec3f((p.x * 3f), ((0.5f - v) * 8f), (p.z * 3f)), normalize(((dir * 8f) + vec3f(0, 3, 0))), vec2f(u, v));
+      }
+
+      fn vertexAt_23(i: u32) -> Surface {
+        let col = (i % 33u);
+        let row = (i / 33u);
+        let u = (f32(col) / 32f);
+        let v = (f32(row) / 1f);
+        return item_9(u, v);
+      }
+
+      fn vertexAt_25(i: u32) -> Surface {
+        var direction = vec3f();
+        if ((i > 0u)) {
+          direction = disc((f32((i - 1u)) / 32f), 1f);
+        }
+        return Surface((direction * 3f), vec3f(0, 1, 0), ((direction.xz * 0.5f) + 0.5f));
+      }
+
+      fn vertexAt_24(i: u32) -> Surface {
+        var s = vertexAt_25(i);
+        s.position = (mat4x4f(1, 0, 0, 0, 0, -1, 0, 0, 0, 0, -1, 0, 0, -4, 0, 1) * vec4f(s.position, 1f)).xyz;
+        let normal = (mat3x3f(1, 0, 0, 0, -1, 0, 0, 0, -1) * s.normal);
+        if ((dot(normal, normal) > 0f)) {
+          s.normal = normalize(normal);
+        }
+        else {
+          s.normal = vec3f();
+        }
+        return s;
+      }
+
+      fn vertexAt_22(i: u32) -> Surface {
+        var local = i;
+        // unrolled iteration #3 / #0
+        if ((local < 66u)) {
+          return vertexAt_23(local);
+        }
+        local -= 66u;
+        // unrolled iteration #3 / #1
+        if ((local < 33u)) {
+          return vertexAt_24(local);
+        }
+        local -= 33u;
+        // ---
+        return Surface();
+      }
+
+      fn item_10(vertex: Surface) -> Surface {
+        var vertexCopy = vertex;
+        let time = (f32(timeUniform) / 1000f);
+        vertexCopy.position.y += sin(time);
+        return vertexCopy;
+      }
+
+      fn vertexAt_21(i: u32) -> Surface {
+        return item_10(vertexAt_22(i));
+      }
+
+      fn vertexAt_20(i: u32) -> Surface {
+        var s = vertexAt_21(i);
+        s.position = (mat4x4f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, -7, 6, -7, 1) * vec4f(s.position, 1f)).xyz;
+        let normal = (mat3x3f(1, 0, 0, 0, 1, 0, 0, 0, 1) * s.normal);
+        if ((dot(normal, normal) > 0f)) {
+          s.normal = normalize(normal);
+        }
+        else {
+          s.normal = vec3f();
+        }
+        return s;
+      }
+
+      fn item_11(_arg_0: Surface) -> Material {
+        return Material(vec4f(0.30000001192092896, 0.699999988079071, 0.30000001192092896, 0.20000000298023224));
+      }
+
+      fn vertexAt_19(i: u32) -> Vertex {
+        let s = vertexAt_20(i);
+        let e = item_11(s);
+        var out = Vertex();
+        // unrolled iteration #3 / #0
+        out.position = s.position;
+        // unrolled iteration #3 / #1
+        out.normal = s.normal;
+        // unrolled iteration #3 / #2
+        out.uv = s.uv;
+        // ---
+        // unrolled iteration #3 / #0
+        out.material = e.material;
+        // ---
+        return out;
+      }
+
+      @group(0) @binding(1) var<storage, read> output: array<Surface, 10201>;
+
+      fn vertexAt_30(i: u32) -> Surface {
+        return output[i];
+      }
+
+      fn item_12(vertex: Surface) -> Surface {
+        var vertexCopy = vertex;
+        let time = (f32(timeUniform) / 1000f);
+        vertexCopy.position.y += sin(time);
+        return vertexCopy;
+      }
+
+      fn vertexAt_29(i: u32) -> Surface {
+        return item_12(vertexAt_30(i));
+      }
+
+      fn item_13(vertex: Surface) -> Surface {
+        var vertexCopy = vertex;
+        let time = (f32(timeUniform) / 1000f);
+        let transformation = mat4x4f(cos(time), 0, -sin(time), 0, 0, 1, 0, 0, sin(time), 0, cos(time), 0, 0, 0, 0, 1);
+        vertexCopy.position = (vec4f(vertexCopy.position, 1f) * transformation).xyz;
+        vertexCopy.normal = (vec4f(vertexCopy.normal, 0f) * transformation).xyz;
+        return vertexCopy;
+      }
+
+      fn vertexAt_28(i: u32) -> Surface {
+        return item_13(vertexAt_29(i));
+      }
+
+      fn vertexAt_27(i: u32) -> Surface {
+        var s = vertexAt_28(i);
+        s.position = (mat4x4f(1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 7, 5, -7, 1) * vec4f(s.position, 1f)).xyz;
+        let normal = (mat3x3f(1, 0, 0, 0, 1, 0, 0, 0, 1) * s.normal);
+        if ((dot(normal, normal) > 0f)) {
+          s.normal = normalize(normal);
+        }
+        else {
+          s.normal = vec3f();
+        }
+        return s;
+      }
+
+      fn item_14(_arg_0: Surface) -> Material {
+        return Material(vec4f(0.5));
+      }
+
+      fn vertexAt_26(i: u32) -> Vertex {
+        let s = vertexAt_27(i);
+        let e = item_14(s);
+        var out = Vertex();
+        // unrolled iteration #4 / #0
+        out.position = s.position;
+        // unrolled iteration #4 / #1
+        out.normal = s.normal;
+        // unrolled iteration #4 / #2
+        out.uv = s.uv;
+        // ---
+        // unrolled iteration #4 / #0
+        out.material = e.material;
+        // ---
+        return out;
+      }
+
+      fn vertexAt(i: u32) -> Vertex {
+        var local = i;
+        // unrolled iteration #0
+        if ((local < 4u)) {
+          return vertexAt_1(local);
+        }
+        local -= 4u;
+        // unrolled iteration #1
+        if ((local < 1225u)) {
+          return vertexAt_3(local);
+        }
+        local -= 1225u;
+        // unrolled iteration #2
+        if ((local < 24u)) {
+          return vertexAt_6(local);
+        }
+        local -= 24u;
+        // unrolled iteration #3
+        if ((local < 99u)) {
+          return vertexAt_19(local);
+        }
+        local -= 99u;
+        // unrolled iteration #4
+        if ((local < 10201u)) {
+          return vertexAt_26(local);
+        }
+        local -= 10201u;
+        // ---
+        return Vertex();
+      }
+
+      struct Camera {
+        pos: vec4f,
+        targetPos: vec4f,
+        view: mat4x4f,
+        projection: mat4x4f,
+        viewInverse: mat4x4f,
+        projectionInverse: mat4x4f,
+      }
+
+      @group(0) @binding(2) var<uniform> cameraUniform: Camera;
+
+      struct geometryVertexFn_Output {
+        @builtin(position) pos: vec4f,
+        @location(0) scenePosition: vec3f,
+        @location(1) material: vec4f,
+        @location(2) normal: vec3f,
+      }
+
+      @vertex fn geometryVertexFn(@builtin(vertex_index) vId: u32) -> geometryVertexFn_Output {
+        let info = vertexAt(vId);
+        let pos = ((cameraUniform.projection * cameraUniform.view) * vec4f(info.position, 1f));
+        return geometryVertexFn_Output(pos, info.position, info.material, info.normal);
+      }
+
+      struct geometryFragmentFn_Output {
+        @location(0) position: vec4f,
+        @location(1) normal: vec4f,
+        @location(2) material: vec4f,
+      }
+
+      struct geometryFragmentFn_Input {
+        @location(0) scenePosition: vec3f,
+        @location(1) material: vec4f,
+        @location(2) normal: vec3f,
+      }
+
+      @fragment fn geometryFragmentFn(_arg_0: geometryFragmentFn_Input) -> geometryFragmentFn_Output {
+        return geometryFragmentFn_Output(vec4f(_arg_0.scenePosition, 0f), vec4f(_arg_0.normal, 0f), _arg_0.material);
+      }
+
+      struct fullScreenTriangle_Output {
+        @builtin(position) pos: vec4f,
+        @location(0) uv: vec2f,
+      }
+
+      @vertex fn fullScreenTriangle(@builtin(vertex_index) vertexIndex: u32) -> fullScreenTriangle_Output {
+        const pos = array<vec2f, 3>(vec2f(-1, -1), vec2f(3, -1), vec2f(-1, 3));
+        const uv = array<vec2f, 3>(vec2f(0, 1), vec2f(2, 1), vec2f(0, -1));
+
+        return fullScreenTriangle_Output(vec4f(pos[vertexIndex], 0, 1), uv[vertexIndex]);
+      }
+
+      @group(1) @binding(2) var material: texture_2d<f32>;
+
+      @group(1) @binding(0) var position_1: texture_2d<f32>;
+
+      @group(1) @binding(1) var normal: texture_2d<f32>;
+
+      struct Camera {
+        pos: vec4f,
+        targetPos: vec4f,
+        view: mat4x4f,
+        projection: mat4x4f,
+        viewInverse: mat4x4f,
+        projectionInverse: mat4x4f,
+      }
+
+      @group(0) @binding(0) var<uniform> cameraUniform: Camera;
+
+      fn phong(albedo: vec3f, specular: f32, position: vec3f, normal_1: vec3f) -> vec4f {
+        let lightColor = vec3f(1, 0.8999999761581421, 0.699999988079071);
+        let lightDirection = vec3f(0.5773502588272095);
+        let ambient = (albedo * 0.5f);
+        let cosTheta = dot(normal_1, lightDirection);
+        let diffuse = ((albedo * lightColor) * max(0f, cosTheta));
+        let reflectionDirection = reflect((-1f * lightDirection), normal_1);
+        let viewDirection = normalize((cameraUniform.pos.xyz - position));
+        let specularLight = ((lightColor * pow(max(0f, dot(reflectionDirection, viewDirection)), 64f)) * specular);
+        let color = ((ambient + diffuse) + specularLight);
+        return vec4f(color, 1f);
+      }
+
+      @fragment fn lightingFragmentFn(@builtin(position) position: vec4f) -> @location(0) vec4f {
+        let pixel = vec2i(position.xy);
+        let material_1 = textureLoad(material, pixel, 0);
+        let albedo = material_1.xyz;
+        let specular = material_1.w;
+        let scenePosition = textureLoad(position_1, pixel, 0).xyz;
+        let normal_1 = textureLoad(normal, pixel, 0).xyz;
+        if (all((normal_1 == vec3f()))) {
+          return vec4f(0.5, 0.5, 0.800000011920929, 1);
+        }
+        return phong(albedo, specular, scenePosition, normalize(normal_1));
       }"
     `);
   });
