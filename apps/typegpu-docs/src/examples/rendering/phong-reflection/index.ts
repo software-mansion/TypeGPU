@@ -96,11 +96,12 @@ const renderPipeline = root.createRenderPipeline({
   },
 });
 
-let depthTexture = root.device.createTexture({
-  size: [canvas.width, canvas.height, 1],
-  format: 'depth24plus',
-  usage: GPUTextureUsage.RENDER_ATTACHMENT,
-});
+let depthTexture = root
+  .createTexture({
+    size: [canvas.width, canvas.height, 1],
+    format: 'depth24plus',
+  })
+  .$usage('render');
 
 function render() {
   renderPipeline
@@ -109,7 +110,7 @@ function render() {
       clearValue: [p.backgroundColor.x, p.backgroundColor.y, p.backgroundColor.z, 1],
     })
     .withDepthStencilAttachment({
-      view: depthTexture.createView(),
+      view: depthTexture,
       depthClearValue: 1,
       depthLoadOp: 'clear',
       depthStoreOp: 'store',
@@ -131,11 +132,12 @@ const autoResizer = common.attachAutoResizer({
   canvas,
   onResize() {
     depthTexture.destroy();
-    depthTexture = root.device.createTexture({
-      size: [canvas.width, canvas.height, 1],
-      format: 'depth24plus',
-      usage: GPUTextureUsage.RENDER_ATTACHMENT,
-    });
+    depthTexture = root
+      .createTexture({
+        size: [canvas.width, canvas.height, 1],
+        format: 'depth24plus',
+      })
+      .$usage('render');
     render();
   },
 });

@@ -1,5 +1,5 @@
 import { perlin2d } from '@typegpu/noise';
-import { tgpu, common, d } from 'typegpu';
+import { tgpu, common, d, type TgpuRenderCommands } from 'typegpu';
 import * as m from 'wgpu-matrix';
 import { defineControls } from '../../common/defineControls.ts';
 import { setupOrbitCamera } from '../../common/setup-orbit-camera.ts';
@@ -75,11 +75,12 @@ const pipeline = root.pipe(perlinCache.inject()).createRenderPipeline({
   },
 });
 
-let depthTexture = root.device.createTexture({
-  size: [canvas.width, canvas.height],
-  format: 'depth24plus',
-  usage: GPUTextureUsage.RENDER_ATTACHMENT,
-});
+let depthTexture = root
+  .createTexture({
+    size: [canvas.width, canvas.height],
+    format: 'depth24plus',
+  })
+  .$usage('render');
 
 let cubeCount = INITIAL_CUBE_COUNT;
 let cubeData: d.Infer<typeof Cube>[] = [];
@@ -108,21 +109,44 @@ function generateCubes(count: number) {
   }
 }
 
+let useWithApi = false;
+
+// Records the same draws into either a render pass or a render bundle encoder.
+function recordDraws(target: TgpuRenderCommands) {
+  if (useWithApi) {
+    // Fluent API: bind everything on the pipeline, then attach the target.
+    const prepared = pipeline
+      .with(cameraBindGroup)
+      .with(cubeBindGroup)
+      .with(terrainBindGroup)
+      .with(vertexLayout, vertexBuffer)
+      .with(target);
+
+    for (let i = 0; i < cubeCount; i++) {
+      prepared.draw(VERTS_PER_CUBE, 1, 0, i);
+    }
+    return;
+  }
+
+  // Imperative API: set state directly on the target.
+  target.setPipeline(pipeline);
+  target.setBindGroup(cameraLayout, cameraBindGroup);
+  target.setBindGroup(cubeLayout, cubeBindGroup);
+  target.setBindGroup(terrainLayout, terrainBindGroup);
+  target.setVertexBuffer(vertexLayout, vertexBuffer);
+
+  for (let i = 0; i < cubeCount; i++) {
+    target.draw(VERTS_PER_CUBE, 1, 0, i);
+  }
+}
+
 function buildBundle(): GPURenderBundle {
   const bundleEncoder = root.createRenderBundleEncoder({
     colorFormats: [presentationFormat],
     depthStencilFormat: 'depth24plus',
   });
 
-  bundleEncoder.setPipeline(pipeline);
-  bundleEncoder.setBindGroup(cameraLayout, cameraBindGroup);
-  bundleEncoder.setBindGroup(cubeLayout, cubeBindGroup);
-  bundleEncoder.setBindGroup(terrainLayout, terrainBindGroup);
-  bundleEncoder.setVertexBuffer(vertexLayout, vertexBuffer);
-
-  for (let i = 0; i < cubeCount; i++) {
-    bundleEncoder.draw(VERTS_PER_CUBE, 1, 0, i);
-  }
+  recordDraws(bundleEncoder);
 
   return bundleEncoder.finish();
 }
@@ -147,13 +171,14 @@ let useBundles = true;
 let disposed = false;
 
 function render() {
-  if (depthTexture.width !== canvas.width || depthTexture.height !== canvas.height) {
+  if (depthTexture.props.size[0] !== canvas.width || depthTexture.props.size[1] !== canvas.height) {
     depthTexture.destroy();
-    depthTexture = root.device.createTexture({
-      size: [canvas.width, canvas.height],
-      format: 'depth24plus',
-      usage: GPUTextureUsage.RENDER_ATTACHMENT,
-    });
+    depthTexture = root
+      .createTexture({
+        size: [canvas.width, canvas.height],
+        format: 'depth24plus',
+      })
+      .$usage('render');
   }
 
   const encoder = root.createCommandEncoder();
@@ -165,22 +190,14 @@ function render() {
       },
     ],
     depthStencilAttachment: {
-      view: depthTexture.createView(),
+      view: depthTexture,
     },
   });
 
   if (useBundles) {
     pass.executeBundles([renderBundle]);
   } else {
-    pass.setPipeline(pipeline);
-    pass.setBindGroup(cameraLayout, cameraBindGroup);
-    pass.setBindGroup(cubeLayout, cubeBindGroup);
-    pass.setBindGroup(terrainLayout, terrainBindGroup);
-    pass.setVertexBuffer(vertexLayout, vertexBuffer);
-
-    for (let i = 0; i < cubeCount; i++) {
-      pass.draw(VERTS_PER_CUBE, 1, 0, i);
-    }
+    recordDraws(pass);
   }
 
   pass.end();
@@ -219,6 +236,13 @@ export const controls = defineControls({
     initial: true,
     onToggleChange: (value: boolean) => {
       useBundles = value;
+    },
+  },
+  'use .with API': {
+    initial: false,
+    onToggleChange: (value: boolean) => {
+      useWithApi = value;
+      renderBundle = buildBundle();
     },
   },
 });
