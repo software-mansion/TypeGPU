@@ -54,7 +54,7 @@ export default function install(rawOptions?: Options): ModuleHooks {
   const filter = createFilterForId(plugin.transform.filter.id);
   const earlyPruneRegex = getEarlyPruneRegex(rawOptions?.unstable_obfuscate ?? false);
   const transformContext = {
-    warn: (message: string) => console.warn(`[unplugin-typegpu] ${message}`),
+    warn: (message: string) => console.warn(message),
   } as UnpluginBuildContext & UnpluginContext;
 
   return registerHooks({
@@ -90,7 +90,9 @@ export default function install(rawOptions?: Options): ModuleHooks {
             () => null,
           ).toString();
         } catch {
-          transformContext.warn(`Failed to compose the inline source map for ${id}`);
+          transformContext.warn(
+            `[unplugin-typegpu] Failed to compose the inline source map for ${id}`,
+          );
         }
       }
 
