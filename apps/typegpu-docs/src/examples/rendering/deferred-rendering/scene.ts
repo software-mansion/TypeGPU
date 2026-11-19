@@ -1,5 +1,5 @@
 import { meshes } from '@typegpu/geometry';
-import { d, std } from 'typegpu';
+import { d, std, type TgpuRoot } from 'typegpu';
 import { timeAccess } from './slots.ts';
 import { perlin3d } from '@typegpu/noise';
 
@@ -57,67 +57,77 @@ class EnhancedGeometry<T extends meshes.Placed = meshes.Placed> {
   }
 }
 
-const plane = new EnhancedGeometry(meshes.plane({ width: 40, depth: 40 }), [0.3, 0.3, 0.3], 0);
+export function createScene(root: TgpuRoot) {
+  const plane = new EnhancedGeometry(meshes.plane({ width: 40, depth: 40 }), [0.3, 0.3, 0.3], 0);
 
-const torus = new EnhancedGeometry(meshes.torus({ radius: 3, tube: 0.5 }), [1, 0.2, 0.2], 0.5).move(
-  [7, 3, 7],
-);
+  const torus = new EnhancedGeometry(
+    meshes.torus({ radius: 3, tube: 0.5 }),
+    [1, 0.2, 0.2],
+    0.5,
+  ).move([7, 3, 7]);
 
-const revolvingCube = new EnhancedGeometry(
-  meshes.box({ width: 3, depth: 4, height: 5 }),
-  [0.2, 0.5, 0.9],
-  0.2,
-)
-  .revolve()
-  .move([-7, 3, 7]);
+  const revolvingCube = new EnhancedGeometry(
+    meshes.box({ width: 3, depth: 4, height: 5 }),
+    [0.2, 0.5, 0.9],
+    0.2,
+  )
+    .revolve()
+    .move([-7, 3, 7]);
 
-const bobbingCone = new EnhancedGeometry(
-  (() => {
-    const radius = 3;
-    const height = 8;
-    const cylinder = meshes.cylinder({ radius, height, radialSegments: 100 });
-    return meshes.map(cylinder, cylinder.schema, (vertex) => {
-      'use gpu';
-      const vertexCopy = std.copy(vertex);
-
-      const p = vertexCopy.position;
-      const factor = (0.5 * height - p.y) / height; // 1 at the bottom, 0 at the top
-      vertexCopy.position = d.vec3f(p.x * factor, p.y, p.z * factor);
-
-      if (vertex.normal.y === 0) {
-        // Side normals need adjusting.
-        const newNormal = vertexCopy.normal;
-        newNormal.y += radius / height;
-        vertexCopy.normal = std.normalize(newNormal);
-      }
-
-      return vertexCopy;
-    });
-  })(),
-  [0.3, 0.7, 0.3],
-  0.2,
-)
-  .bob()
-  .move([-7, 6, -7]);
-
-const porousBall = new EnhancedGeometry(
-  meshes.parametric(
-    {
-      at: (u, v) => {
+  const bobbingCone = new EnhancedGeometry(
+    (() => {
+      const radius = 3;
+      const height = 8;
+      const cylinder = meshes.cylinder({ radius, height, radialSegments: 100 });
+      return meshes.map(cylinder, cylinder.schema, (vertex) => {
         'use gpu';
-        const p = meshes.surfaces.sphere(u, v) * 3;
-        return p * (1 + perlin3d.sample(p) / 10);
+        const vertexCopy = std.copy(vertex);
+
+        const p = vertexCopy.position;
+        const factor = (0.5 * height - p.y) / height; // 1 at the bottom, 0 at the top
+        vertexCopy.position = d.vec3f(p.x * factor, p.y, p.z * factor);
+
+        if (vertex.normal.y === 0) {
+          // Side normals need adjusting.
+          const newNormal = vertexCopy.normal;
+          newNormal.y += radius / height;
+          vertexCopy.normal = std.normalize(newNormal);
+        }
+
+        return vertexCopy;
+      });
+    })(),
+    [0.3, 0.7, 0.3],
+    0.2,
+  )
+    .bob()
+    .move([-7, 6, -7]);
+
+  const porousBall = new EnhancedGeometry(
+    meshes.parametric(
+      {
+        at: (u, v) => {
+          'use gpu';
+          const p = meshes.surfaces.sphere(u, v) * 3;
+          return p * (1 + perlin3d.sample(p) / 10);
+        },
       },
-    },
-    { rows: 100, cols: 100 },
-  ),
-  [0.5, 0.5, 0.5],
-  0.5,
-)
-  .bob()
-  .revolve()
-  .move([7, 5, -7]);
+      { rows: 100, cols: 100 },
+    ),
+    [0.5, 0.5, 0.5],
+    0.5,
+  )
+    .bob()
+    .revolve()
+    .move([7, 5, -7]);
 
-const shapes = [plane, torus, revolvingCube, bobbingCone, porousBall] satisfies EnhancedGeometry[];
+  const shapes = [
+    plane,
+    torus,
+    revolvingCube,
+    bobbingCone,
+    porousBall,
+  ] satisfies EnhancedGeometry[];
 
-export const scene = meshes.unindexed(meshes.concat(...shapes.map((shape) => shape.finish())));
+  return meshes.unindexed(meshes.concat(...shapes.map((shape) => shape.finish())));
+}

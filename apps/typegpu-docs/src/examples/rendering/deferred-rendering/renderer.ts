@@ -1,16 +1,18 @@
 import { d, type TgpuRoot } from 'typegpu';
 import { lightingFragmentFn } from './lighting.ts';
-import { geometryFragmentFn, geometryVertexFn } from './geometry.ts';
 import { fullScreenTriangle } from 'typegpu/common';
 import { GBuffer } from './gBuffer.ts';
-import { scene } from './scene.ts';
 import { Camera } from '../../common/setup-first-person-camera.ts';
-import { cameraAccess, timeAccess } from './slots.ts';
+import { createScene } from './scene.ts';
+import { cameraAccess, sceneSlot, timeAccess } from './slots.ts';
+import { geometryFragmentFn, geometryVertexFn } from './geometry.ts';
 
 export class Renderer {
   root: TgpuRoot;
   context: GPUCanvasContext;
   gBuffer: GBuffer;
+
+  scene;
 
   geometryPipeline;
   lightingPipeline;
@@ -22,12 +24,15 @@ export class Renderer {
     this.context = context;
     this.gBuffer = new GBuffer(root, 100, 100);
 
+    this.scene = createScene(root);
+
     this.cameraUniform = root.createUniform(Camera);
     this.timeUniform = root.createUniform(d.u32);
 
     const withedRoot = root
       .with(timeAccess, this.timeUniform)
-      .with(cameraAccess, this.cameraUniform);
+      .with(cameraAccess, this.cameraUniform)
+      .with(sceneSlot, this.scene);
     this.geometryPipeline = withedRoot.createRenderPipeline({
       fragment: geometryFragmentFn,
       vertex: geometryVertexFn,
@@ -53,7 +58,7 @@ export class Renderer {
     this.geometryPipeline
       .withDepthStencilAttachment({ view: this.gBuffer.depthTexture })
       .withColorAttachment(this.gBuffer.colorAttachment)
-      .draw(scene.vertexCount);
+      .draw(this.scene.vertexCount);
     this.lightingPipeline
       .with(this.gBuffer.bindGroup)
       .withColorAttachment({ view: this.context })
