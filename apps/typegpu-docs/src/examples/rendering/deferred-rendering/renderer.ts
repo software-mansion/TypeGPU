@@ -56,9 +56,10 @@ export class Renderer {
     this.timeUniform.write(time);
 
     this.geometryPipeline
+      .pipe(this.scene.inject())
       .withDepthStencilAttachment({ view: this.gBuffer.depthTexture })
       .withColorAttachment(this.gBuffer.colorAttachment)
-      .draw(this.scene.vertexCount);
+      .drawIndexed(this.scene.indexCount, 1, this.scene.firstIndex);
     this.lightingPipeline
       .with(this.gBuffer.bindGroup)
       .withColorAttachment({ view: this.context })

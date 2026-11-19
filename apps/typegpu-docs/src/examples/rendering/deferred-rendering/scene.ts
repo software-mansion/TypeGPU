@@ -111,5 +111,5 @@ export function createScene(root: TgpuRoot) {
     porousBall,
   ] satisfies EnhancedGeometry[];
 
-  return meshes.unindexed(meshes.concat(...shapes.map((shape) => shape.finish())));
+  return meshes.bakeIndices(root, meshes.concat(...shapes.map((shape) => shape.finish())));
 }
