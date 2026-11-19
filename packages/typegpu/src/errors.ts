@@ -226,6 +226,10 @@ export class WgslForbiddenStatementError extends Error {
   }
 }
 
+function typeList(types: BaseData[]): string {
+  return types.map((t) => t.type).join(', ');
+}
+
 export class SignatureNotSupportedError extends Error {
   /**
    * @param actual The argument types that were passed in.
@@ -235,8 +239,6 @@ export class SignatureNotSupportedError extends Error {
    *   arguments can't be used together if all of them are supported on their own.
    */
   constructor(actual: BaseData[], candidates: BaseData[], unsupported?: BaseData[]) {
-    const typeList = (types: BaseData[]) => types.map((t) => t.type).join(', ');
-
     let message: string;
     if (unsupported && unsupported.length === 0 && actual.length > 1) {
       message = `Data types ${typeList(actual)} cannot be used together, because they have no common type. Convert them explicitly to the same type.`;
