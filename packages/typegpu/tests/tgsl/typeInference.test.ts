@@ -239,6 +239,7 @@ describe('wgsl generator type inference', () => {
           "Implicit conversions from [
         1.1: abstractFloat
       ] to u32 are supported, but not recommended.
+      In 'return 1.1', inside function 'myFn'.
       Consider using explicit conversions instead.",
         ],
       ]

@@ -237,6 +237,7 @@ export function createFnCore(
       const { code, returnType: actualReturnType } = ctx.resolveFunction({
         functionType,
         name: id,
+        sourceName: getName(this),
         workgroupSize,
         argTypes,
         entryInput,

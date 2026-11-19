@@ -610,9 +610,30 @@ export class WgslGenerator implements ShaderGenerator {
     );
   }
 
+  /**
+   * Runs `callback` with `node` marked as the JS source currently being generated
+   * in the enclosing function, so that warnings can point at where they originated.
+   */
+  #withSourceNode<T>(node: tinyest.Statement, callback: () => T): T {
+    const sourceNodes = this.ctx.topFunctionScope?.sourceNodes;
+    if (!sourceNodes) {
+      return callback();
+    }
+
+    sourceNodes.push(node);
+    try {
+      return callback();
+    } finally {
+      sourceNodes.pop();
+    }
+  }
+
   protected _expression(expression: tinyest.Expression): Snippet {
     // Remembering which JS expression produced the snippet, for more descriptive errors
-    return setSourceNode(this._expressionImpl(expression), expression);
+    return setSourceNode(
+      this.#withSourceNode(expression, () => this._expressionImpl(expression)),
+      expression,
+    );
   }
 
   private _expressionImpl(expression: tinyest.Expression): Snippet {
@@ -1676,6 +1697,18 @@ Try 'return ${typeStr}(${str});' instead.
   }
 
   protected _statement(statement: tinyest.Statement): ResolvedStatement {
+    // Declarations and returns are short enough to point at in warnings. Compound
+    // statements (if, for, ...) are not, their parts are pointed at instead.
+    if (
+      Array.isArray(statement) &&
+      (statement[0] === NODE.return || statement[0] === NODE.let || statement[0] === NODE.const)
+    ) {
+      return this.#withSourceNode(statement, () => this._statementImpl(statement));
+    }
+    return this._statementImpl(statement);
+  }
+
+  private _statementImpl(statement: tinyest.Statement): ResolvedStatement {
     // TODO(#3078): Remove this check.
     if (isId(statement)) {
       const item = this.ctx.getById(extractId(statement));

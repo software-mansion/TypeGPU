@@ -1,4 +1,4 @@
-import type { Block, FuncParameter } from 'tinyest';
+import type { Block, FuncParameter, Statement } from 'tinyest';
 import type { IndexFlag, TgpuBuffer, UniformFlag, VertexFlag } from './core/buffer/buffer.ts';
 import type { TgpuConst } from './core/constant/tgpuConstant.ts';
 import type { TgpuDeclare } from './core/declare/tgpuDeclare.ts';
@@ -86,6 +86,11 @@ export interface ResolveFunctionOptions {
   functionType: 'normal' | ShaderStage;
   workgroupSize?: readonly number[] | undefined;
   name: string;
+  /**
+   * The name of the function in JS (as opposed to its unique WGSL identifier).
+   * Used to give warnings more context.
+   */
+  sourceName?: string | undefined;
   argTypes: BaseData[];
   /**
    * The return type of the function. If undefined, the type should be inferred
@@ -140,6 +145,15 @@ export type FunctionScopeLayer = {
    * Local variables that need `var` modifier.
    */
   modifiedVariables: Set<Snippet>;
+  /**
+   * The name of the function in JS, if known. Used to give warnings more context.
+   */
+  sourceName: string | undefined;
+  /**
+   * The JS expressions and simple statements currently being generated in this function,
+   * innermost last. Used to point at where a warning originated.
+   */
+  sourceNodes: Statement[];
 };
 
 export type SlotBindingLayer = {
@@ -173,6 +187,10 @@ export interface ItemStateStack {
      */
     returnType: BaseData | undefined,
     externalMap: Record<string, unknown>,
+    /**
+     * The name of the function in JS, if known. Used to give warnings more context.
+     */
+    sourceName?: string,
   ): FunctionScopeLayer;
   pushBlockScope(): void;
   setBlockExternals(externals: Record<string, Snippet>): void;

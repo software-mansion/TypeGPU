@@ -43,6 +43,7 @@ describe('convertToCommonType', () => {
         d.i32(1): i32,
         d.f32(2): f32
       ] to f32 are supported, but not recommended.
+      In '[d.i32(1), d.f32(2)]', inside function 'fn'.
       Consider using explicit conversions instead.",
         ],
       ]
@@ -175,6 +176,7 @@ describe('convertToCommonType', () => {
           "Implicit conversions from [
         d.i32(1): i32
       ] to f32 are supported, but not recommended.
+      In '{ a: d.i32(1), b: d.u32(2), c: d.vec2f(1), d: true }', inside function 'fn'.
       Consider using explicit conversions instead.",
         ],
         [
@@ -182,6 +184,7 @@ describe('convertToCommonType', () => {
           "Implicit conversions from [
         d.u32(2): u32
       ] to i32 are supported, but not recommended.
+      In '{ a: d.i32(1), b: d.u32(2), c: d.vec2f(1), d: true }', inside function 'fn'.
       Consider using explicit conversions instead.",
         ],
       ]
@@ -261,6 +264,136 @@ describe('convertToCommonType', () => {
         a += 3u;
         a += 4u;
       }"
+    `);
+  });
+});
+
+describe('implicit conversion warnings', () => {
+  it('point at the expression and the function in which the conversion happens', () => {
+    using consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    function main() {
+      'use gpu';
+      const int = d.i32(1);
+      const result = int * 0.5;
+    }
+
+    tgpu.resolve([main]);
+
+    expect(consoleSpy.mock.calls).toMatchInlineSnapshot(`
+      [
+        [
+          "⚠️ [implicit-conversion] ",
+          "Implicit conversions from [
+        int: i32
+      ] to f32 are supported, but not recommended.
+      In 'int * 0.5', inside function 'main'.
+      Consider using explicit conversions instead.",
+        ],
+      ]
+    `);
+  });
+
+  it('point at the statement when the converted value is the whole expression', () => {
+    using consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const getOne = tgpu.fn(
+      [],
+      d.f32,
+    )(() => {
+      const int = d.i32(1);
+      return int;
+    });
+
+    tgpu.resolve([getOne]);
+
+    expect(consoleSpy.mock.calls).toMatchInlineSnapshot(`
+      [
+        [
+          "⚠️ [implicit-conversion] ",
+          "Implicit conversions from [
+        int: i32
+      ] to f32 are supported, but not recommended.
+      In 'return int', inside function 'getOne'.
+      Consider using explicit conversions instead.",
+        ],
+      ]
+    `);
+  });
+
+  it('name the function being generated, not the function calling it', () => {
+    using consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    function helper() {
+      'use gpu';
+      const uint = d.u32(2);
+      return uint * 0.5;
+    }
+
+    function main() {
+      'use gpu';
+      const half = helper();
+      // The context of `main` should be restored after `helper` is generated
+      const int = d.i32(1);
+      const quarter = int * 0.25;
+    }
+
+    tgpu.resolve([main]);
+
+    expect(consoleSpy.mock.calls).toMatchInlineSnapshot(`
+      [
+        [
+          "⚠️ [implicit-conversion] ",
+          "Implicit conversions from [
+        uint: u32
+      ] to f32 are supported, but not recommended.
+      In 'uint * 0.5', inside function 'helper'.
+      Consider using explicit conversions instead.",
+        ],
+        [
+          "⚠️ [implicit-conversion] ",
+          "Implicit conversions from [
+        int: i32
+      ] to f32 are supported, but not recommended.
+      In 'int * 0.25', inside function 'main'.
+      Consider using explicit conversions instead.",
+        ],
+      ]
+    `);
+  });
+
+  it('shorten long expressions', () => {
+    using consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    function main() {
+      'use gpu';
+      const firstValueWithAVeryLongName = d.i32(1);
+      const secondValueWithAVeryLongName = d.i32(2);
+      const thirdValueWithAVeryLongName = d.i32(3);
+      const values = [
+        firstValueWithAVeryLongName,
+        secondValueWithAVeryLongName,
+        thirdValueWithAVeryLongName,
+        d.f32(4),
+      ];
+    }
+
+    tgpu.resolve([main]);
+
+    expect(consoleSpy.mock.calls).toMatchInlineSnapshot(`
+      [
+        [
+          "⚠️ [implicit-conversion] ",
+          "Implicit conversions from [
+        firstValueWithAVeryLongName: i32,
+        secondValueWithAVeryLongName: i32,
+        thirdValueWithAVeryLongName: i32,
+        d.f32(4): f32
+      ] to i32 are supported, but not recommended.
+      In '[firstValueWithAVeryLongName, secondValueWithAVeryLongName, thirdValueWithAVe...', inside function 'main'.
+      Consider using explicit conversions instead.",
+        ],
+      ]
     `);
   });
 });
