@@ -765,9 +765,7 @@ export class WgslGenerator implements ShaderGenerator {
           );
         }
 
-        if ((lhsVoid && !rhsVoid) || (!lhsVoid && rhsVoid)) {
-          return snip((lhsVoid === rhsVoid) === (op === '==='), bool, 'constant', false);
-        }
+        return snip((lhsVoid === rhsVoid) === (op === '==='), bool, 'constant', false);
       }
 
       const stdBinaryRelationalOp = binaryRelationalOpToStdMap[op];
