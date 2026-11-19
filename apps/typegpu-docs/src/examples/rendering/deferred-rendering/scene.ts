@@ -75,28 +75,7 @@ export function createScene(root: TgpuRoot) {
     .move([-7, 3, 7]);
 
   const bobbingCone = new EnhancedGeometry(
-    (() => {
-      const radius = 3;
-      const height = 8;
-      const cylinder = meshes.cylinder({ radius, height, radialSegments: 100 });
-      return meshes.map(cylinder, cylinder.schema, (vertex) => {
-        'use gpu';
-        const vertexCopy = std.copy(vertex);
-
-        const p = vertexCopy.position;
-        const factor = (0.5 * height - p.y) / height; // 1 at the bottom, 0 at the top
-        vertexCopy.position = d.vec3f(p.x * factor, p.y, p.z * factor);
-
-        if (vertex.normal.y === 0) {
-          // Side normals need adjusting.
-          const newNormal = vertexCopy.normal;
-          newNormal.y += radius / height;
-          vertexCopy.normal = std.normalize(newNormal);
-        }
-
-        return vertexCopy;
-      });
-    })(),
+    meshes.cone({ radius: 3, height: 8 }),
     [0.3, 0.7, 0.3],
     0.2,
   )

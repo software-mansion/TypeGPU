@@ -164,6 +164,38 @@ export function box({
   );
 }
 
+function createCap(radialSegments: number, radius: number): IndexedGeometry {
+  return {
+    schema: Surface,
+    topology: 'triangle-list',
+    vertexCount: radialSegments + 1,
+    indexCount: radialSegments * 3,
+    vertexAt: (i: number) => {
+      'use gpu';
+      let direction = d.vec3f();
+      if (i > 0) {
+        direction = surfaces.disc((i - 1) / radialSegments, 1);
+      }
+      return Surface({
+        position: direction * radius,
+        normal: d.vec3f(0, 1, 0),
+        uv: direction.xz * 0.5 + 0.5,
+      });
+    },
+    indexAt: (i: number) => {
+      'use gpu';
+      const triangle = std.intdiv(i, 3);
+      if (i % 3 === 0) {
+        return 0;
+      }
+      if (i % 3 === 1) {
+        return ((triangle + 1) % radialSegments) + 1;
+      }
+      return triangle + 1;
+    },
+  };
+}
+
 export interface CylinderOptions {
   radius?: number;
   height?: number;
@@ -196,41 +228,66 @@ export function cylinder({
     return side;
   }
 
-  const cap: IndexedGeometry = {
-    schema: Surface,
-    topology: 'triangle-list',
-    vertexCount: radialSegments + 1,
-    indexCount: radialSegments * 3,
-    vertexAt: (i: number) => {
-      'use gpu';
-      let direction = d.vec3f();
-      if (i > 0) {
-        direction = surfaces.disc((i - 1) / radialSegments, 1);
-      }
-      return Surface({
-        position: direction * radius,
-        normal: d.vec3f(0, 1, 0),
-        uv: direction.xz * 0.5 + 0.5,
-      });
-    },
-    indexAt: (i: number) => {
-      'use gpu';
-      const triangle = std.intdiv(i, 3);
-      if (i % 3 === 0) {
-        return 0;
-      }
-      if (i % 3 === 1) {
-        return ((triangle + 1) % radialSegments) + 1;
-      }
-      return triangle + 1;
-    },
-  };
+  const cap = createCap(radialSegments, radius);
 
   return concat(
     side,
     transform(cap, frame(X, Y, Z, d.vec3f(0, height / 2, 0))),
     transform(cap, frame(X, NY, NZ, d.vec3f(0, -height / 2, 0))),
   );
+}
+
+export interface ConeOptions {
+  radius?: number;
+  height?: number;
+  radialSegments?: number;
+  heightSegments?: number;
+  caps?: boolean;
+}
+
+export function cone({
+  radius = 0.5,
+  height = 1,
+  radialSegments = 32,
+  heightSegments = 1,
+  caps = true,
+}: ConeOptions = {}): IndexedGeometry {
+  const grid = sampleGrid(
+    (u, v) => {
+      'use gpu';
+      const p = surfaces.disc(u, v);
+      const dir = surfaces.disc(u, 1); // std.normalize(p) does not work for the tip
+
+      return Surface({
+        position: d.vec3f(p.x * radius, (0.5 - v) * height, p.z * radius),
+        normal: std.normalize(dir * height + d.vec3f(0, radius, 0)),
+        uv: d.vec2f(u, v),
+      });
+    },
+    { cols: radialSegments, rows: heightSegments },
+  );
+  const fan = radialSegments * 3;
+
+  // Skip zero area triangles.
+  const side: IndexedGeometry = {
+    ...grid,
+    indexCount: grid.indexCount - fan,
+    indexAt: (i: number) => {
+      'use gpu';
+      if (i < fan) {
+        return grid.indexAt(std.intdiv(i, 3) * 6 + (i % 3) + 3);
+      }
+      return grid.indexAt(i + fan);
+    },
+  };
+
+  if (!caps) {
+    return side;
+  }
+
+  const cap = createCap(radialSegments, radius);
+
+  return concat(side, transform(cap, frame(X, NY, NZ, d.vec3f(0, -height / 2, 0))));
 }
 
 export interface TorusOptions {

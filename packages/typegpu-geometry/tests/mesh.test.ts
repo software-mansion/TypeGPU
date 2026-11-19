@@ -29,6 +29,7 @@ describe('meshes on the CPU', () => {
     ['sphere', meshes.sphere({ radialSegments: 8, heightSegments: 4 })],
     ['box', meshes.box()],
     ['cylinder', meshes.cylinder({ radialSegments: 6 })],
+    ['cone', meshes.cone({ radialSegments: 6 })],
     ['torus', meshes.torus({ ringSegments: 6, tubeSegments: 4 })],
   ])('%s fits a unit cube with outward unit normals', (_, shape) => {
     expect(windingAgreesWithNormals(shape)).toBe(true);
@@ -197,7 +198,7 @@ describe('meshes on the CPU', () => {
     expect(vertex.position.y).toBe(0);
   });
 
-  it.each([meshes.sphere(), meshes.cylinder()])(
+  it.each([meshes.sphere(), meshes.cylinder(), meshes.cone(), meshes.cone({ height: 2 })])(
     'omits collapsed pole and cap triangles',
     (shape) => {
       for (let i = 0; i < shape.indexCount; i += 3) {
