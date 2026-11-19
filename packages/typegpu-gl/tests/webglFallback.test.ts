@@ -1,6 +1,7 @@
 import { describe, expect, vi } from 'vitest';
 import { tgpu, d, std } from 'typegpu';
 import { glOptions, initWithGL } from '@typegpu/gl';
+import { isTestingBuiltTypegpu } from 'typegpu-testing-utility/config';
 import * as env from '../src/env.ts';
 import { it } from './utils/extendedTest.ts';
 
@@ -170,7 +171,11 @@ describe('TgpuRootWebGL - createRenderPipeline', () => {
       expect(sources.some((source) => source.includes('/* console.log() */'))).toBe(true);
     });
 
-    it('warns once in development', () => {
+    // Built packages read their own copy of `DEV` (from `dist/`), which spying on the source
+    // module doesn't reach.
+    const skipInBuilt = isTestingBuiltTypegpu();
+
+    it.skipIf(skipInBuilt)('warns once in development', () => {
       using warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
       using _ = vi.spyOn(env, 'DEV', 'get').mockReturnValue(true);
       const twoLogs = () => {
@@ -185,7 +190,7 @@ describe('TgpuRootWebGL - createRenderPipeline', () => {
       expect(warn).toHaveBeenCalledWith(expect.stringContaining("'console.log' isn't supported"));
     });
 
-    it("doesn't warn outside of development", () => {
+    it.skipIf(skipInBuilt)("doesn't warn outside of development", () => {
       using warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
       using _ = vi.spyOn(env, 'DEV', 'get').mockReturnValue(false);
       tgpu.resolve([fragment], glOptions());
