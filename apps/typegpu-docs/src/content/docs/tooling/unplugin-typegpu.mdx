@@ -168,9 +168,18 @@ patterns, and `exclude` are unsupported. By default, it skips files without `typ
 
 ## Plugin options
 
-```ts
+```ts twoslash
+import type { Options as RealOptions } from 'unplugin-typegpu';
+
+type FilterPattern = NonNullable<RealOptions['include']>;
+
+type Equals<A, B> =
+  (<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false;
+const _optionsInSync: Equals<Options, RealOptions> = true;
+
+// ---cut---
 interface Options {
-  /** @default [/\.m?[jt]sx?$/] */
+  /** @default /\.m?[jt]sx?(?:\?.*)?$/ */
   include?: FilterPattern;
   /** @default undefined */
   exclude?: FilterPattern;
@@ -180,6 +189,15 @@ interface Options {
   forceTgpuAlias?: string;
   /** @default true */
   autoNamingEnabled?: boolean;
+
+  /**
+   * Obfuscate the generated AST.
+   * This results in obfuscation of the generated WGSL, and in smaller bundle sizes.
+   * Cannot be combined with `autoNamingEnabled`.
+   *
+   * @default false
+   */
+  unstable_obfuscate?: boolean;
 
   /**
    * Skipping files that don't contain "typegpu", "tgpu" or "use gpu".

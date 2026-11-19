@@ -56,9 +56,12 @@ Obfuscation does not affect raw-WGSL implemented functions.
 :::caution[Experimental]
 `unplugin-typegpu` also supports obfuscating sources that have already been built with the plugin.
 
-Process those files again with `{ unstable_obfuscate: true, autoNamingEnabled: false }` to obfuscate their embedded shader metadata.
+Process those files again with `unstable_obfuscate` enabled and `autoNamingEnabled` disabled to obfuscate their embedded shader metadata.
 
-Names added during the original build are preserved, including those added with `{ autoNamingEnabled: true }`.
+Names added during the original build are preserved, including those added by `autoNamingEnabled`.
+
+By default, the plugin does not exclude `node_modules`, so prebuilt TypeGPU libraries among
+your dependencies are obfuscated as well. Use the `exclude` option to opt out.
 :::
 
 

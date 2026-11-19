@@ -13,7 +13,7 @@ import { obfuscate, obfuscateAst } from './obfuscate.ts';
 import { METADATA_FORMAT_VERSION } from './version.ts';
 
 export interface Options {
-  /** @default [/\.m?[jt]sx?$/] */
+  /** @default /\.m?[jt]sx?(?:\?.*)?$/ */
   include?: FilterPattern;
 
   /** @default undefined */

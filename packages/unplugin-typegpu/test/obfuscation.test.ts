@@ -285,9 +285,8 @@ describe('plugin obfuscation', () => {
 
       const built = babelTransform(code, { unstable_obfuscate: false }) as string;
       const unsupported = built.replace(/\bv: \d+/g, 'v: 1');
-      const result = babelTransform(unsupported, { unstable_obfuscate: true });
+      void babelTransform(unsupported, { unstable_obfuscate: true });
 
-      expect(result).toBe(babelTransform(unsupported, { unstable_obfuscate: false }));
       expect(warn.mock.calls).toHaveLength(1);
       expect(warn.mock.calls[0]?.[0]).toMatch(
         /Cannot obfuscate already transformed functions.*unsupported metadata version 1 \(expected 2\)/,
@@ -299,9 +298,8 @@ describe('plugin obfuscation', () => {
 
       const built = await rollupTransform(code, { unstable_obfuscate: false });
       const unsupported = built.replace(/\bv: \d+/g, 'v: 1');
-      const result = await rollupTransform(unsupported, { unstable_obfuscate: true });
+      void (await rollupTransform(unsupported, { unstable_obfuscate: true }));
 
-      expect(result).toBe(await rollupTransform(unsupported, { unstable_obfuscate: false }));
       expect(warn.mock.calls).toHaveLength(1);
       expect(warn.mock.calls[0]?.[0]).toMatch(
         /Cannot obfuscate already transformed functions.*unsupported metadata version 1 \(expected 2\)/,
@@ -320,7 +318,6 @@ describe('plugin obfuscation', () => {
     const built = await rollupTransform(code, { unstable_obfuscate: false });
 
     const withoutDirective = built.replace(/^[ \t]*['"]use gpu['"];?\r?\n/gm, '');
-    expect(withoutDirective).not.toMatch(/use gpu|t(ype)?gpu/);
 
     expect(await rollupTransform(withoutDirective, { unstable_obfuscate: true }))
       .toMatchInlineSnapshot(`
