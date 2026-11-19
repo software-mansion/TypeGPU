@@ -1,6 +1,7 @@
 import { describe, expect, vi } from 'vitest';
 import { tgpu, d, std } from 'typegpu';
 import { glOptions, initWithGL } from '@typegpu/gl';
+import * as env from '../src/env.ts';
 import { it } from './utils/extendedTest.ts';
 
 // ----------
@@ -171,32 +172,24 @@ describe('TgpuRootWebGL - createRenderPipeline', () => {
 
     it('warns once in development', () => {
       using warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-      vi.stubEnv('NODE_ENV', 'development');
-      try {
-        const twoLogs = () => {
-          'use gpu';
-          console.log(d.u32(1));
-          console.log(d.u32(2));
-          return d.vec4f();
-        };
-        tgpu.resolve([twoLogs], glOptions());
-        tgpu.resolve([fragment], glOptions());
-        expect(warn).toHaveBeenCalledOnce();
-        expect(warn).toHaveBeenCalledWith(expect.stringContaining("'console.log' isn't supported"));
-      } finally {
-        vi.unstubAllEnvs();
-      }
+      using _ = vi.spyOn(env, 'DEV', 'get').mockReturnValue(true);
+      const twoLogs = () => {
+        'use gpu';
+        console.log(d.u32(1));
+        console.log(d.u32(2));
+        return d.vec4f();
+      };
+      tgpu.resolve([twoLogs], glOptions());
+      tgpu.resolve([fragment], glOptions());
+      expect(warn).toHaveBeenCalledOnce();
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining("'console.log' isn't supported"));
     });
 
     it("doesn't warn outside of development", () => {
       using warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-      vi.stubEnv('NODE_ENV', 'production');
-      try {
-        tgpu.resolve([fragment], glOptions());
-        expect(warn).not.toHaveBeenCalled();
-      } finally {
-        vi.unstubAllEnvs();
-      }
+      using _ = vi.spyOn(env, 'DEV', 'get').mockReturnValue(false);
+      tgpu.resolve([fragment], glOptions());
+      expect(warn).not.toHaveBeenCalled();
     });
   });
 
