@@ -2,6 +2,6 @@
   "title": "Selfie Segmentation",
   "description": "Segments a person from live camera footage with custom GPU kernel inference and visualizes the resulting foreground mask.",
   "category": "image-processing",
-  "tags": ["ai", "camera", "inference", "segmentation"],
+  "tags": ["ai", "webcam"],
   "coolFactor": 10
 }

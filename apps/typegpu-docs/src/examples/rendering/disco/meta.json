@@ -2,6 +2,6 @@
   "title": "Disco",
   "description": "Renders an interactive, music-video-like field of animated lights and geometry driven by time.",
   "category": "rendering",
-  "tags": ["interaction"],
+  "tags": ["procedural"],
   "coolFactor": 6
 }

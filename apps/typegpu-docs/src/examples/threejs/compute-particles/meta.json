@@ -2,6 +2,6 @@
   "title": "Three.js - compute / particles",
   "description": "Drives an interactive particle system with TypeGPU compute buffers while Three.js handles scene rendering and controls.",
   "category": "threejs",
-  "tags": ["3d", "ecosystem", "interaction", "particles", "physics"],
+  "tags": ["3d", "interactive", "particles"],
   "coolFactor": 5
 }

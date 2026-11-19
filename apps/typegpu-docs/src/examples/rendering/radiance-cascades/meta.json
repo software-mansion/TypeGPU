@@ -2,6 +2,6 @@
   "title": "Radiance Cascades",
   "description": "Demonstrates real-time 2D global illumination by tracing and merging progressively larger radiance cascades.",
   "category": "rendering",
-  "tags": ["ecosystem", "interaction", "lighting", "ray marching", "sdf"],
+  "tags": ["double buffering", "interactive", "lighting", "ray marching"],
   "coolFactor": 8
 }
