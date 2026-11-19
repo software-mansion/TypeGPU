@@ -83,15 +83,18 @@ export function createScene(root: TgpuRoot) {
     .move([-7, 6, -7]);
 
   const porousBall = new EnhancedGeometry(
-    meshes.parametric(
-      {
-        at: (u, v) => {
-          'use gpu';
-          const p = meshes.surfaces.sphere(u, v) * 3;
-          return p * (1 + perlin3d.sample(p) / 10);
+    meshes.bake(
+      root,
+      meshes.parametric(
+        {
+          at: (u, v) => {
+            'use gpu';
+            const p = meshes.surfaces.sphere(u, v) * 3;
+            return p * (1 + perlin3d.sample(p) / 10);
+          },
         },
-      },
-      { rows: 100, cols: 100 },
+        { rows: 100, cols: 100 },
+      ),
     ),
     [0.5, 0.5, 0.5],
     0.5,
