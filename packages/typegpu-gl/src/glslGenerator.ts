@@ -2,7 +2,7 @@ import { NodeTypeCatalog as NODE } from 'tinyest';
 import type { Expression, Return, ObjectExpression, ObjectProperty } from 'tinyest';
 import { tgpu, d, type ShaderStage, std } from 'typegpu';
 import { WebGLFallbackUnsupportedError } from './errors.ts';
-import { isDev } from './env.ts';
+import { DEV } from './env.ts';
 import {
   abstractInt,
   concretize,
@@ -356,7 +356,6 @@ const integerDataTypes = new Set([
 ]);
 
 let warnedAboutSampleInterpolation = false;
-let warnedAboutConsoleLog = false;
 
 /**
  * Picks the GLSL interpolation qualifier (including a trailing space, or an empty string)
@@ -582,6 +581,9 @@ const HELPERS = {
  * and overrides variable declaration emission to use `type name = rhs` syntax.
  */
 export class GlslGenerator extends WgslGenerator {
+  /** Shared by all GLSL generators, so the warning is printed once per process. */
+  static #warnedAboutConsoleLog = false;
+
   readonly #shaderStageToEmit: 'neutral' | 'vertex' | 'fragment';
   readonly #crossShaderStageState: CrossShaderStageState;
 
@@ -625,8 +627,8 @@ export class GlslGenerator extends WgslGenerator {
   protected override _generateLog(): Snippet {
     // Logs are read back from storage buffers, which WebGL 2 doesn't have, so the call
     // becomes a no-op. Same as in WGSL when logging outside of a pipeline.
-    if (isDev() && !warnedAboutConsoleLog) {
-      warnedAboutConsoleLog = true;
+    if (DEV && !GlslGenerator.#warnedAboutConsoleLog) {
+      GlslGenerator.#warnedAboutConsoleLog = true;
       console.warn(
         "WebGL fallback: 'console.log' isn't supported by WebGL 2, the call will be omitted.",
       );
