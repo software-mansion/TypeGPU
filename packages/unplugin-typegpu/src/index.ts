@@ -1,7 +1,8 @@
 import { createUnplugin } from 'unplugin';
-import { unpluginFactory } from './core/factory.ts';
+import { createUnpluginFactory } from './core/factory.ts';
+import { getTypegpuSubpaths } from './core/typegpuSubpaths.ts';
 
-const typegpu = /*#__PURE__*/ createUnplugin(unpluginFactory);
+const typegpu = /*#__PURE__*/ createUnplugin(createUnpluginFactory({ getTypegpuSubpaths }));
 
 export type { Options } from './core/common.ts';
 
