@@ -1,6 +1,6 @@
 import type { Disarray } from '../../data/dataTypes.ts';
 import type { PrimitiveOffsetInfo } from '../../data/offsetUtils.ts';
-import type { AnyWgslData, BaseData, WgslArray } from '../../data/wgslTypes.ts';
+import type { AnyWgslData, WgslArray } from '../../data/wgslTypes.ts';
 import type { InferInput } from '../../shared/repr.ts';
 import { $internal } from '../../shared/symbols.ts';
 import type {
@@ -8,13 +8,12 @@ import type {
   TgpuBindGroupLayout,
   TgpuLayoutEntry,
 } from '../../tgpuBindGroupLayout.ts';
-import { isGPUBuffer } from '../../types.ts';
-import type { IndexFlag, IndirectFlag, TgpuBuffer, VertexFlag } from '../buffer/buffer.ts';
 import type { TgpuImmediateVar } from '../immediate/immediateVar.ts';
 import {
   DRAW_INDEXED_INDIRECT_SIZE,
   DRAW_INDIRECT_SIZE,
-  resolveIndirectOffset,
+  resolveIndirect,
+  type IndirectBuffer,
 } from '../pipeline/pipelineUtils.ts';
 import { isTexture, isTextureView } from '../texture/texture.ts';
 import {
@@ -22,6 +21,8 @@ import {
   recordBindGroup,
   RenderDrawState,
   selectPipeline,
+  type IndexBufferSource,
+  type VertexBufferSource,
 } from '../pipeline/drawState.ts';
 import type { TgpuRenderPipeline } from '../pipeline/renderPipeline.ts';
 import { isQuerySet, type TgpuQuerySet } from '../querySet/querySet.ts';
@@ -100,14 +101,14 @@ export interface TgpuRenderCommands {
   /** Binds a vertex buffer to the given vertex layout */
   setVertexBuffer<TData extends WgslArray | Disarray>(
     vertexLayout: TgpuVertexLayout<TData>,
-    buffer: (TgpuBuffer<TData> & VertexFlag) | GPUBuffer,
+    buffer: VertexBufferSource<TData>,
     offset?: number,
     size?: number,
   ): void;
 
   /** Sets the current index buffer */
   setIndexBuffer<TData extends WgslArray | Disarray>(
-    buffer: (TgpuBuffer<TData> & IndexFlag) | GPUBuffer,
+    buffer: IndexBufferSource<TData>,
     indexFormat: GPUIndexFormat,
     offset?: number,
     size?: number,
@@ -149,10 +150,7 @@ export interface TgpuRenderCommands {
    * @param indirectBuffer - Buffer marked with 'indirect' usage containing draw parameters or raw GPUBuffer
    * @param indirectOffset - PrimitiveOffsetInfo pointing to the first draw parameter. If not provided, starts at offset 0. To obtain safe offsets, use `d.memoryLayoutOf(...)`.
    */
-  drawIndirect(
-    indirectBuffer: (TgpuBuffer<BaseData> & IndirectFlag) | GPUBuffer,
-    indirectOffset?: PrimitiveOffsetInfo | number,
-  ): void;
+  drawIndirect(indirectBuffer: IndirectBuffer, indirectOffset?: PrimitiveOffsetInfo | number): void;
 
   /**
    * Draws indexed primitives using parameters read from a buffer.
@@ -163,7 +161,7 @@ export interface TgpuRenderCommands {
    * @param indirectOffset - PrimitiveOffsetInfo pointing to the first draw parameter. If not provided, starts at offset 0. To obtain safe offsets, use `d.memoryLayoutOf(...)`.
    */
   drawIndexedIndirect(
-    indirectBuffer: (TgpuBuffer<BaseData> & IndirectFlag) | GPUBuffer,
+    indirectBuffer: IndirectBuffer,
     indirectOffset?: PrimitiveOffsetInfo | number,
   ): void;
 }
@@ -410,7 +408,7 @@ class TgpuRenderCommandsImpl<
 
   setVertexBuffer<TData extends WgslArray | Disarray>(
     vertexLayout: TgpuVertexLayout<TData>,
-    buffer: (TgpuBuffer<TData> & VertexFlag) | GPUBuffer,
+    buffer: VertexBufferSource<TData>,
     offset?: number,
     size?: number,
   ): void {
@@ -420,7 +418,7 @@ class TgpuRenderCommandsImpl<
   }
 
   setIndexBuffer<TData extends WgslArray | Disarray>(
-    buffer: (TgpuBuffer<TData> & IndexFlag) | GPUBuffer,
+    buffer: IndexBufferSource<TData>,
     indexFormat: GPUIndexFormat,
     offset?: number,
     size?: number,
@@ -461,11 +459,10 @@ class TgpuRenderCommandsImpl<
   }
 
   drawIndirect(
-    indirectBuffer: (TgpuBuffer<BaseData> & IndirectFlag) | GPUBuffer,
+    indirectBuffer: IndirectBuffer,
     indirectOffset?: PrimitiveOffsetInfo | number,
   ): void {
-    const rawBuffer = isGPUBuffer(indirectBuffer) ? indirectBuffer : indirectBuffer.buffer;
-    const offset = resolveIndirectOffset(
+    const { buffer: rawBuffer, offset } = resolveIndirect(
       indirectBuffer,
       indirectOffset,
       DRAW_INDIRECT_SIZE,
@@ -476,11 +473,10 @@ class TgpuRenderCommandsImpl<
   }
 
   drawIndexedIndirect(
-    indirectBuffer: (TgpuBuffer<BaseData> & IndirectFlag) | GPUBuffer,
+    indirectBuffer: IndirectBuffer,
     indirectOffset?: PrimitiveOffsetInfo | number,
   ): void {
-    const rawBuffer = isGPUBuffer(indirectBuffer) ? indirectBuffer : indirectBuffer.buffer;
-    const offset = resolveIndirectOffset(
+    const { buffer: rawBuffer, offset } = resolveIndirect(
       indirectBuffer,
       indirectOffset,
       DRAW_INDEXED_INDIRECT_SIZE,

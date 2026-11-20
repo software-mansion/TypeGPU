@@ -1,5 +1,5 @@
 import type { AnyBuiltin, OmitBuiltins } from '../../builtin.ts';
-import type { IndexFlag, IndirectFlag, TgpuBuffer, VertexFlag } from '../buffer/buffer.ts';
+import type { IndexFlag, TgpuBuffer, VertexFlag } from '../buffer/buffer.ts';
 import type { TgpuQuerySet } from '../querySet/querySet.ts';
 import { isBuiltin } from '../../data/attributes.ts';
 import { type Disarray, getCustomLocation, type UndecorateRecord } from '../../data/dataTypes.ts';
@@ -73,7 +73,14 @@ import {
   type TgpuRenderCommands,
   type TgpuRenderPassDescriptor,
 } from '../commandEncoder/renderPass.ts';
-import { emitRenderDraw, finalizeOwnEncoder, requireIndexBuffer } from './drawState.ts';
+import {
+  emitRenderDraw,
+  finalizeOwnEncoder,
+  requireIndexBuffer,
+  type IndexBufferSource,
+  type VertexBufferSource,
+} from './drawState.ts';
+import type { TgpuBufferRegion } from '../buffer/bufferRegion.ts';
 import {
   isGPUCommandEncoder,
   isGPURenderBundleEncoder,
@@ -95,8 +102,9 @@ import {
   collectVertexBufferPairs,
   DRAW_INDEXED_INDIRECT_SIZE,
   DRAW_INDIRECT_SIZE,
-  resolveIndirectOffset,
+  resolveIndirect,
   restoreTimestampPriors,
+  type IndirectBuffer,
 } from './pipelineUtils.ts';
 import {
   NullPerformanceTracker,
@@ -123,10 +131,10 @@ export interface TgpuRenderPipelineSoul extends TgpuDeviceOwningSoul<
   bindGroups?: [TgpuBindGroupLayout, TgpuBindGroup | GPUBindGroup][] | undefined;
   usedImmediate?: TgpuImmediateVar | undefined;
   immediates?: [TgpuImmediateVar, ImmediateSnapshot][] | undefined;
-  vertexBuffers?: [TgpuVertexLayout, (TgpuBuffer<BaseData> & VertexFlag) | GPUBuffer][] | undefined;
+  vertexBuffers?: [TgpuVertexLayout, VertexBufferSource][] | undefined;
   indexBuffer?:
     | {
-        buffer: (TgpuBuffer<BaseData> & IndexFlag) | GPUBuffer;
+        buffer: IndexBufferSource;
         indexFormat: GPUIndexFormat;
         offsetBytes?: number | undefined;
         sizeBytes?: number | undefined;
@@ -183,7 +191,7 @@ export interface TgpuRenderPipeline<in Targets = never>
 
   with<TData extends WgslArray | Disarray>(
     vertexLayout: TgpuVertexLayout<TData>,
-    buffer: (TgpuBuffer<TData> & VertexFlag) | GPUBuffer,
+    buffer: VertexBufferSource<TData>,
   ): this;
   /**
    * @deprecated This overload is outdated.
@@ -245,8 +253,12 @@ export interface TgpuRenderPipeline<in Targets = never>
 
   withStencilReference(reference: GPUStencilValue): this;
 
+  /**
+   * Sets the index buffer, reading the index format from the buffer's schema.
+   * For a region, `offsetElements` and `sizeElements` count from the start of the region.
+   */
   withIndexBuffer(
-    buffer: TgpuBuffer<BaseData> & IndexFlag,
+    buffer: (TgpuBuffer<BaseData> & IndexFlag) | (TgpuBufferRegion<BaseData> & IndexFlag),
     offsetElements?: number,
     sizeElements?: number,
   ): this & HasIndexBuffer;
@@ -284,10 +296,7 @@ export interface TgpuRenderPipeline<in Targets = never>
    * @param indirectBuffer - Buffer marked with 'indirect' usage containing draw parameters or raw GPUBuffer
    * @param indirectOffset - PrimitiveOffsetInfo pointing to the first draw parameter. If not provided, starts at offset 0. To obtain safe offsets, use `d.memoryLayoutOf(...)`.
    */
-  drawIndirect(
-    indirectBuffer: (TgpuBuffer<BaseData> & IndirectFlag) | GPUBuffer,
-    indirectOffset?: PrimitiveOffsetInfo | number,
-  ): void;
+  drawIndirect(indirectBuffer: IndirectBuffer, indirectOffset?: PrimitiveOffsetInfo | number): void;
 
   /**
    * Draws indexed primitives using parameters read from a buffer.
@@ -298,7 +307,7 @@ export interface TgpuRenderPipeline<in Targets = never>
    * @param indirectOffset - PrimitiveOffsetInfo pointing to the first draw parameter. If not provided, starts at offset 0. To obtain safe offsets, use `d.memoryLayoutOf(...)`.
    */
   drawIndexedIndirect(
-    indirectBuffer: (TgpuBuffer<BaseData> & IndirectFlag) | GPUBuffer,
+    indirectBuffer: IndirectBuffer,
     indirectOffset?: PrimitiveOffsetInfo | number,
   ): void;
 }
@@ -417,16 +426,14 @@ export function INTERNAL_restoreRenderPipeline(
 // --------------
 
 type TgpuRenderPipelinePriors = {
-  readonly vertexLayoutMap?:
-    | Map<TgpuVertexLayout, (TgpuBuffer<BaseData> & VertexFlag) | GPUBuffer>
-    | undefined;
+  readonly vertexLayoutMap?: Map<TgpuVertexLayout, VertexBufferSource> | undefined;
   readonly bindGroupLayoutMap?: Map<TgpuBindGroupLayout, TgpuBindGroup | GPUBindGroup> | undefined;
   readonly colorAttachment?: AnyFragmentColorAttachment | undefined;
   readonly depthStencilAttachment?: DepthStencilAttachment | undefined;
   readonly stencilReference?: GPUStencilValue | undefined;
   readonly indexBuffer?:
     | {
-        buffer: (TgpuBuffer<BaseData> & IndexFlag) | GPUBuffer;
+        buffer: IndexBufferSource;
         indexFormat: GPUIndexFormat;
         offsetBytes?: number | undefined;
         sizeBytes?: number | undefined;
@@ -519,7 +526,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
 
   with<TData extends WgslArray>(
     vertexLayout: TgpuVertexLayout<TData>,
-    buffer: TgpuBuffer<TData> & VertexFlag,
+    buffer: (TgpuBuffer<TData> & VertexFlag) | (TgpuBufferRegion<TData> & VertexFlag),
   ): this;
   with(bindGroupLayout: TgpuBindGroupLayout, bindGroup: TgpuBindGroup): this;
   with(bindGroupLayout: TgpuBindGroupLayout, bindGroup: GPUBindGroup): this;
@@ -593,7 +600,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
       return this.#withPriors({
         vertexLayoutMap: new Map([
           ...(internals.priors.vertexLayoutMap ?? []),
-          [first, resource as (TgpuBuffer<BaseData> & VertexFlag) | GPUBuffer],
+          [first, resource as VertexBufferSource],
         ]),
       });
     }
@@ -655,7 +662,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
   }
 
   withIndexBuffer(
-    buffer: TgpuBuffer<BaseData> & IndexFlag,
+    buffer: (TgpuBuffer<BaseData> & IndexFlag) | (TgpuBufferRegion<BaseData> & IndexFlag),
     offsetElements?: number,
     sizeElements?: number,
   ): this & HasIndexBuffer;
@@ -666,7 +673,7 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
     sizeBytes?: number,
   ): this & HasIndexBuffer;
   withIndexBuffer(
-    buffer: (TgpuBuffer<BaseData> & IndexFlag) | GPUBuffer,
+    buffer: IndexBufferSource,
     indexFormatOrOffset?: GPUIndexFormat | number,
     offsetBytesOrSizeElements?: number,
     sizeBytesOrUndefined?: number,
@@ -781,11 +788,10 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
   }
 
   drawIndirect(
-    indirectBuffer: (TgpuBuffer<BaseData> & IndirectFlag) | GPUBuffer,
+    indirectBuffer: IndirectBuffer,
     indirectOffset?: PrimitiveOffsetInfo | number,
   ): void {
-    const rawBuffer = isGPUBuffer(indirectBuffer) ? indirectBuffer : indirectBuffer.buffer;
-    const offset = resolveIndirectOffset(
+    const { buffer: rawBuffer, offset } = resolveIndirect(
       indirectBuffer,
       indirectOffset,
       DRAW_INDIRECT_SIZE,
@@ -796,11 +802,10 @@ class TgpuRenderPipelineImpl implements TgpuRenderPipeline {
   }
 
   drawIndexedIndirect(
-    indirectBuffer: (TgpuBuffer<BaseData> & IndirectFlag) | GPUBuffer,
+    indirectBuffer: IndirectBuffer,
     indirectOffset?: PrimitiveOffsetInfo | number,
   ): void {
-    const rawBuffer = isGPUBuffer(indirectBuffer) ? indirectBuffer : indirectBuffer.buffer;
-    const offset = resolveIndirectOffset(
+    const { buffer: rawBuffer, offset } = resolveIndirect(
       indirectBuffer,
       indirectOffset,
       DRAW_INDEXED_INDIRECT_SIZE,

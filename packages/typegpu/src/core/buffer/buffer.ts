@@ -3,7 +3,7 @@ import type { AnyData } from '../../data/dataTypes.ts';
 import { convertPartialToPatch, getPatchInstructions } from '../../data/partialIO.ts';
 import { sizeOf } from '../../data/sizeOf.ts';
 import { roundUp } from '../../mathUtils.ts';
-import type { BaseData } from '../../data/wgslTypes.ts';
+import type { AnyWgslData, BaseData } from '../../data/wgslTypes.ts';
 import { isWgslData } from '../../data/wgslTypes.ts';
 import type { StorageFlag } from '../../extension.ts';
 import type { TgpuNamable } from '../../shared/meta.ts';
@@ -31,11 +31,20 @@ import {
   mutable,
   readonly,
   uniform,
+  type BindableBuffer,
   type TgpuMutable,
   type TgpuReadonly,
   type TgpuUniform,
 } from './bufferBinding.ts';
 import { warnIfNotUniformAligned } from '../pipeline/webgpuLimitations.ts';
+import {
+  INTERNAL_createBufferRegion,
+  isBufferRegion,
+  type BufferRegionOptions,
+  type InheritedUsageFlags,
+  type RegionAccessorResult,
+  type TgpuBufferRegion,
+} from './bufferRegion.ts';
 
 // ----------
 // Public API
@@ -95,14 +104,19 @@ type LiteralToUsageType<T extends UsageLiteral> = T extends 'uniform'
           ? IndirectFlag
           : never;
 
-type ViewUsages<TBuffer extends TgpuBuffer<BaseData>> =
+export type ViewUsages<
+  TBuffer extends { readonly usableAsUniform: boolean; readonly usableAsStorage: boolean },
+> =
   | (boolean extends TBuffer['usableAsUniform'] ? never : 'uniform')
   | (boolean extends TBuffer['usableAsStorage'] ? never : 'readonly' | 'mutable');
 
-type UsageTypeToBufferBinding<TData extends BaseData> = {
-  uniform: TgpuUniform<TData>;
-  mutable: TgpuMutable<TData>;
-  readonly: TgpuReadonly<TData>;
+export type UsageTypeToBufferBinding<
+  TData extends BaseData,
+  TBuffer extends BindableBuffer<TData> = TgpuBuffer<TData>,
+> = {
+  uniform: TgpuUniform<TData, TBuffer & UniformFlag>;
+  mutable: TgpuMutable<TData, TBuffer & StorageFlag>;
+  readonly: TgpuReadonly<TData, TBuffer & StorageFlag>;
 };
 
 const usageToUsageConstructor = { uniform, mutable, readonly };
@@ -132,10 +146,23 @@ export type BufferInitialData<TData extends BaseData> =
   | InferInput<TData>
   | BufferInitCallback<TData>;
 
+export interface BufferRegionIO {
+  patch(offset: number, schema: BaseData, data: unknown): void;
+  clear(offset: number, size: number, encoder?: TgpuCommandEncoder): void;
+  copy(
+    offset: number,
+    size: number,
+    source: TgpuBuffer<BaseData> | TgpuBufferRegion<BaseData>,
+    encoder?: TgpuCommandEncoder,
+  ): void;
+  read(offset: number, schema: BaseData): Promise<unknown>;
+}
+
 export interface TgpuBuffer<TData extends BaseData> extends TgpuNamable {
   readonly [$internal]: {
     readonly root: ExperimentalTgpuRoot;
     readonly materialize: () => GPUBuffer;
+    readonly region: BufferRegionIO;
   };
   readonly [$soul]: TgpuBufferSoul<TData>;
   readonly resourceType: 'buffer';
@@ -164,14 +191,52 @@ export interface TgpuBuffer<TData extends BaseData> extends TgpuNamable {
 
   as<T extends ViewUsages<this>>(usage: T): UsageTypeToBufferBinding<TData>[T];
 
+  /**
+   * Creates a typed region of the element the accessor navigates to. The region reads,
+   * writes and binds only that element's bytes, and takes its usage flags from this buffer.
+   *
+   * The schema has to match the element. An array schema can also cover a prefix of an
+   * array element, or run over the elements of an array starting at the element.
+   *
+   * @example
+   * ```ts
+   * const Scene = d.struct({ boids: d.arrayOf(Boid, 100) });
+   * const sceneBuffer = root.createBuffer(Scene).$usage('storage');
+   * const thirdBoid = sceneBuffer.region(Boid, (scene) => scene.boids[2]);
+   * const lastTen = sceneBuffer.region(d.arrayOf(Boid, 10), (scene) => scene.boids[90]);
+   * ```
+   */
+  region<TRegion extends AnyWgslData>(
+    schema: TRegion,
+    accessor: (data: Infer<TData>) => NoInfer<RegionAccessorResult<TRegion>>,
+  ): TgpuBufferRegion<TRegion> & InheritedUsageFlags<this>;
+  /**
+   * Creates a typed region that starts `offsetBytes` into this buffer (0 by default).
+   * The caller is responsible for the bytes there holding data laid out as the schema.
+   *
+   * @example
+   * ```ts
+   * const pool = root.createBuffer(d.arrayOf(d.u32, 1024)).$usage('vertex', 'index');
+   * const vertices = pool.region(d.arrayOf(Vertex, 24), { offsetBytes: 256 });
+   * ```
+   */
+  region<TRegion extends AnyData>(
+    schema: TRegion,
+    options?: BufferRegionOptions,
+  ): TgpuBufferRegion<TRegion> & InheritedUsageFlags<this>;
+
   compileWriter(): void;
   write(data: InferInput<TData>, options?: BufferWriteOptions): void;
-  write(data: ArrayBuffer, options?: BufferWriteOptions): void;
+  /** Copies bytes laid out as the schema, from `startOffset` (0 by default) */
+  write(data: ArrayBuffer | ArrayBufferView, options?: BufferWriteOptions): void;
   /** @deprecated Use {@link patch} instead. */
   writePartial(data: InferPartial<TData>): void;
   patch(data: InferPatch<TData>): void;
   clear(encoder?: TgpuCommandEncoder): void;
-  copyFrom(srcBuffer: TgpuBuffer<MemIdentity<TData>>, encoder?: TgpuCommandEncoder): void;
+  copyFrom(
+    srcBuffer: TgpuBuffer<MemIdentity<TData>> | TgpuBufferRegion<MemIdentity<TData>>,
+    encoder?: TgpuCommandEncoder,
+  ): void;
   read(): Promise<Infer<TData>>;
   destroy(): void;
   toString(): string;
@@ -211,10 +276,7 @@ export function INTERNAL_applyBufferUsages(
 // Implementation
 // --------------
 class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
-  readonly [$internal]: {
-    readonly root: ExperimentalTgpuRoot;
-    readonly materialize: () => GPUBuffer;
-  };
+  readonly [$internal]: TgpuBuffer<TData>[typeof $internal];
   readonly [$soul]: TgpuBufferSoul<TData>;
   readonly resourceType = 'buffer';
 
@@ -291,6 +353,12 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
         }
 
         return soul.raw;
+      },
+      region: {
+        patch: (offset, schema, data) => this.#patch(offset, schema, data),
+        clear: (offset, size, encoder) => this.#clear(encoder, offset, size),
+        copy: (offset, size, source, encoder) => this.#copy(offset, size, source, encoder),
+        read: (offset, schema) => this.#read(offset, schema),
       },
     };
   }
@@ -406,8 +474,11 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
   }
 
   write(data: InferInput<TData>, options?: BufferWriteOptions): void;
-  write(data: ArrayBuffer, options?: BufferWriteOptions): void;
-  write(data: InferInput<TData> | ArrayBuffer, options?: BufferWriteOptions): void {
+  write(data: ArrayBuffer | ArrayBufferView, options?: BufferWriteOptions): void;
+  write(
+    data: InferInput<TData> | ArrayBuffer | ArrayBufferView,
+    options?: BufferWriteOptions,
+  ): void {
     const gpuBuffer = this.buffer;
 
     if (gpuBuffer.mapState === 'mapped') {
@@ -467,18 +538,23 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
   }
 
   public patch(data: InferPatch<TData>): void {
+    this.#patch(0, this.dataType, data);
+  }
+
+  #patch(offset: number, schema: BaseData, data: unknown): void {
     const gpuBuffer = this.buffer;
 
     if (gpuBuffer.mapState === 'mapped') {
-      patchArrayBuffer(this.#getMappedRange(), this.dataType, data);
+      patchArrayBuffer(this.#getMappedRange(), schema, data, offset);
     } else {
       // Every range is validated before the patch touches #hostBuffer, so a failing patch
       // is neither uploaded halfway nor left behind in `arrayBuffer`
       const instructions = getPatchInstructions(
-        this.dataType,
+        schema,
         data,
         this.#hostBuffer,
         (start, end) => this.#alignedWriteSize(start, end),
+        offset,
       );
       for (const { data, gpuOffset, uploadSize } of instructions) {
         if (uploadSize === data.byteLength) {
@@ -494,67 +570,103 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
   }
 
   public clear(encoder?: TgpuCommandEncoder): void {
-    const gpuBuffer = this.buffer;
-
-    if (encoder) {
-      encoder[$internal].rawEncoder.clearBuffer(gpuBuffer);
-      return;
-    }
-
-    if (gpuBuffer.mapState === 'mapped') {
-      new Uint8Array(this.#getMappedRange()).fill(0);
-      return;
-    }
-
-    const rawEncoder = this[$soul].device.createCommandEncoder();
-    rawEncoder.clearBuffer(gpuBuffer);
-    this[$soul].device.queue.submit([rawEncoder.finish()]);
+    this.#clear(encoder);
   }
 
-  copyFrom(srcBuffer: TgpuBuffer<MemIdentity<TData>>, encoder?: TgpuCommandEncoder): void {
-    if (this.buffer.mapState === 'mapped') {
+  #clear(encoder: TgpuCommandEncoder | undefined, offset = 0, size?: number): void {
+    const gpuBuffer = this.buffer;
+
+    if (!encoder && gpuBuffer.mapState === 'mapped') {
+      new Uint8Array(this.#getMappedRange(), offset, size).fill(0);
+      return;
+    }
+
+    const range = size === undefined ? [] : [offset, this.#alignedWriteSize(offset, offset + size)];
+    const rawEncoder = encoder?.[$internal].rawEncoder ?? this[$soul].device.createCommandEncoder();
+    rawEncoder.clearBuffer(gpuBuffer, ...range);
+    if (!encoder) {
+      this[$soul].device.queue.submit([rawEncoder.finish()]);
+    }
+  }
+
+  copyFrom(
+    srcBuffer: TgpuBuffer<MemIdentity<TData>> | TgpuBufferRegion<MemIdentity<TData>>,
+    encoder?: TgpuCommandEncoder,
+  ): void {
+    this.#copy(0, sizeOf(this.dataType), srcBuffer, encoder);
+  }
+
+  #copy(
+    offset: number,
+    size: number,
+    source: TgpuBuffer<BaseData> | TgpuBufferRegion<BaseData>,
+    encoder: TgpuCommandEncoder | undefined,
+  ): void {
+    const gpuBuffer = this.buffer;
+    if (gpuBuffer.mapState === 'mapped') {
       throw new Error('Cannot copy to a mapped buffer.');
     }
 
-    const size = physicalSizeOf(this.dataType);
-
-    if (encoder) {
-      encoder[$internal].rawEncoder.copyBufferToBuffer(srcBuffer.buffer, 0, this.buffer, 0, size);
-      return;
+    const [sourceBuffer, sourceOffset] = isBufferRegion(source)
+      ? [source.buffer.buffer, source.offset]
+      : [source.buffer, 0];
+    if (isBufferRegion(source) && source.size < size) {
+      throw new Error(
+        `Cannot copy ${size} bytes into buffer '${getName(this) ?? '<unnamed>'}' from a region of ${source.size} bytes.`,
+      );
+    }
+    if (sourceOffset % 4 !== 0) {
+      throw new Error(
+        `Cannot copy from byte ${sourceOffset} of a buffer. WebGPU requires copies to start at a multiple of 4 bytes.`,
+      );
+    }
+    if (sourceBuffer === gpuBuffer) {
+      throw new Error(
+        `Cannot copy between two regions of buffer '${getName(this) ?? '<unnamed>'}'. WebGPU does not allow a buffer to be both the source and the destination of a copy; copy through a second buffer or a compute shader instead.`,
+      );
     }
 
-    const rawEncoder = this[$soul].device.createCommandEncoder();
-    rawEncoder.copyBufferToBuffer(srcBuffer.buffer, 0, this.buffer, 0, size);
-    this[$soul].device.queue.submit([rawEncoder.finish()]);
+    const copySize = this.#alignedWriteSize(offset, offset + size);
+    const rawEncoder = encoder?.[$internal].rawEncoder ?? this[$soul].device.createCommandEncoder();
+    rawEncoder.copyBufferToBuffer(sourceBuffer, sourceOffset, gpuBuffer, offset, copySize);
+    if (!encoder) {
+      this[$soul].device.queue.submit([rawEncoder.finish()]);
+    }
   }
 
-  async read(): Promise<Infer<TData>> {
+  read(): Promise<Infer<TData>> {
+    return this.#read(0, this.dataType) as Promise<Infer<TData>>;
+  }
+
+  async #read(offset: number, schema: BaseData): Promise<unknown> {
     const gpuBuffer = this.buffer;
 
     if (gpuBuffer.mapState === 'mapped') {
-      return readFromArrayBuffer(this.#getMappedRange(), this.dataType);
+      return readFromArrayBuffer(this.#getMappedRange(), schema, offset);
     }
 
     if (gpuBuffer.usage & GPUBufferUsage.MAP_READ) {
       await gpuBuffer.mapAsync(GPUMapMode.READ);
-      const res = readFromArrayBuffer(this.#getMappedRange(), this.dataType);
+      const res = readFromArrayBuffer(this.#getMappedRange(), schema, offset);
       this.#unmapBuffer();
       return res;
     }
 
-    const size = physicalSizeOf(this.dataType);
+    const start = offset - (offset % 4);
+    const size =
+      Math.min(roundUp(offset + sizeOf(schema), 4), physicalSizeOf(this.dataType)) - start;
     const stagingBuffer = this[$soul].device.createBuffer({
       size,
       usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
     });
 
     const commandEncoder = this[$soul].device.createCommandEncoder();
-    commandEncoder.copyBufferToBuffer(gpuBuffer, 0, stagingBuffer, 0, size);
+    commandEncoder.copyBufferToBuffer(gpuBuffer, start, stagingBuffer, 0, size);
 
     this[$soul].device.queue.submit([commandEncoder.finish()]);
     await stagingBuffer.mapAsync(GPUMapMode.READ, 0, size);
 
-    const res = readFromArrayBuffer(stagingBuffer.getMappedRange(), this.dataType);
+    const res = readFromArrayBuffer(stagingBuffer.getMappedRange(), schema, offset - start);
 
     stagingBuffer.unmap();
     stagingBuffer.destroy();
@@ -564,6 +676,17 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
 
   as<T extends ViewUsages<this>>(usage: T): UsageTypeToBufferBinding<TData>[T] {
     return usageToUsageConstructor[usage](this as never) as UsageTypeToBufferBinding<TData>[T];
+  }
+
+  region<TRegion extends AnyData>(
+    schema: TRegion,
+    accessorOrOptions?: ((data: Infer<TData>) => unknown) | BufferRegionOptions,
+  ): TgpuBufferRegion<TRegion> & InheritedUsageFlags<this> {
+    return INTERNAL_createBufferRegion(
+      this,
+      schema,
+      accessorOrOptions as ((data: never) => unknown) | BufferRegionOptions | undefined,
+    ) as TgpuBufferRegion<TRegion> & InheritedUsageFlags<this>;
   }
 
   destroy() {
