@@ -1,6 +1,6 @@
 {
   "title": "Fire Text",
-  "description": "A stable-fluids playground. By default it simulates fire from typed text and brush strokes.",
+  "description": "A stable-fluids playground. By default it simulates fire from typed text and brush strokes. Click and drag to paint with fire. To write, click the canvas and type, or use the text input in the control panel.",
   "category": "simulation",
   "tags": ["double buffering", "fluid", "interactive", "particles"],
   "coolFactor": 9

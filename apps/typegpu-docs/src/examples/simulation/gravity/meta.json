@@ -1,6 +1,6 @@
 {
   "title": "Gravity",
-  "description": "Simulates a three-dimensional particle system under mutual gravitational forces and renders it with an orbitable camera.",
+  "description": "Simulates a three-dimensional particle system under mutual gravitational forces and renders it with an orbitable camera. Drag to look around and scroll to zoom. Uses textures by Solar System Scope under CC BY 4.0.",
   "category": "simulation",
   "tags": ["3d", "double buffering", "particles"],
   "coolFactor": 8

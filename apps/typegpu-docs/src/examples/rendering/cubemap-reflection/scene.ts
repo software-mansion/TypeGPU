@@ -6,13 +6,6 @@ import { IcosphereGenerator } from './icosphere.ts';
 
 // Initialization
 
-function hideHelp() {
-  const helpElem = document.getElementById('help');
-  if (helpElem) {
-    helpElem.style.opacity = '0';
-  }
-}
-
 export async function setupScene(root: TgpuRoot, context: GPUCanvasContext) {
   const maxBufferSize = root.device.limits.maxStorageBufferBindingSize;
   const maxStorageBufferBindingSize = root.device.limits.maxStorageBufferBindingSize;
@@ -385,10 +378,6 @@ export async function setupScene(root: TgpuRoot, context: GPUCanvasContext) {
     },
     { passive: false },
   );
-
-  for (const eventName of ['click', 'keydown', 'wheel', 'touchstart']) {
-    canvas.addEventListener(eventName, hideHelp, { once: true, passive: true });
-  }
 
   return {
     set subdivisions(value: number) {

@@ -1,6 +1,6 @@
 {
   "title": "Mesh Skinning",
-  "description": "Animates a skinned mesh on the GPU by applying a hierarchy of bone transforms to its vertices.",
+  "description": "Animates a skinned mesh on the GPU by applying a hierarchy of bone transforms to its vertices. Mesh by Quaternius.",
   "category": "simple",
   "tags": ["3d"],
   "coolFactor": 7

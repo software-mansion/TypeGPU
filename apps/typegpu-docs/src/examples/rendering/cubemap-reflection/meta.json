@@ -1,6 +1,6 @@
 {
   "title": "Cubemap Reflection",
-  "description": "Maps a cubemap environment onto reflective 3D geometry using camera-relative reflection vectors.",
+  "description": "Maps a cubemap environment onto reflective 3D geometry using camera-relative reflection vectors. Drag to look around and scroll to zoom. Uses textures by Emil \"Humus\" Persson under CC BY 4.0, modified from the original.",
   "category": "rendering",
   "tags": ["3d", "lighting"],
   "coolFactor": 9

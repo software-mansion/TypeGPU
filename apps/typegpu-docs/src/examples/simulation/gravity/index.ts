@@ -268,16 +268,6 @@ const autoResizer = common.attachAutoResizer({
   },
 });
 
-function hideHelp() {
-  const helpElem = document.getElementById('help');
-  if (helpElem) {
-    helpElem.style.opacity = '0';
-  }
-}
-for (const eventName of ['click', 'keydown', 'wheel', 'touchstart']) {
-  canvas.addEventListener(eventName, hideHelp, { once: true, passive: true });
-}
-
 export function onCleanup() {
   destroyed = true;
   cleanupCamera();
