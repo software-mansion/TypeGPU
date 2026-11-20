@@ -3,7 +3,7 @@ import { fn, type TgpuFn } from '../../core/function/tgpuFn.ts';
 import { slot } from '../../core/slot/slot.ts';
 import { privateVar } from '../../core/variable/tgpuVariable.ts';
 import type { AnyData } from '../../data/dataTypes.ts';
-import { mat2x2f, mat3x3f, mat4x4f } from '../../data/matrix.ts';
+import { mat2x2f, mat2x2h, mat3x3f, mat3x3h, mat4x4f, mat4x4h } from '../../data/matrix.ts';
 import { bool, f16, f32, i32, u32 } from '../../data/numeric.ts';
 import { sizeOf } from '../../data/sizeOf.ts';
 import {
@@ -186,6 +186,28 @@ function createSerializerState() {
   ${nextU32} = bitcast<u32>(m[3][1]);
   ${nextU32} = bitcast<u32>(m[3][2]);
   ${nextU32} = bitcast<u32>(m[3][3]);
+}`,
+    mat2x2h: fn([mat2x2h])`(m) {
+  ${nextU32} = pack2x16float(vec2f(m[0]));
+  ${nextU32} = pack2x16float(vec2f(m[1]));
+}`,
+    mat3x3h: fn([mat3x3h])`(m) {
+  ${nextU32} = pack2x16float(vec2f(m[0].xy));
+  ${nextU32} = pack2x16float(vec2f(f32(m[0].z), 0.0));
+  ${nextU32} = pack2x16float(vec2f(m[1].xy));
+  ${nextU32} = pack2x16float(vec2f(f32(m[1].z), 0.0));
+  ${nextU32} = pack2x16float(vec2f(m[2].xy));
+  ${nextU32} = pack2x16float(vec2f(f32(m[2].z), 0.0));
+}`,
+    mat4x4h: fn([mat4x4h])`(m) {
+  ${nextU32} = pack2x16float(vec2f(m[0].xy));
+  ${nextU32} = pack2x16float(vec2f(m[0].zw));
+  ${nextU32} = pack2x16float(vec2f(m[1].xy));
+  ${nextU32} = pack2x16float(vec2f(m[1].zw));
+  ${nextU32} = pack2x16float(vec2f(m[2].xy));
+  ${nextU32} = pack2x16float(vec2f(m[2].zw));
+  ${nextU32} = pack2x16float(vec2f(m[3].xy));
+  ${nextU32} = pack2x16float(vec2f(m[3].zw));
 }`,
   };
 

@@ -91,6 +91,9 @@ struct Data {
   a4: mat2x2<f32>,
   a5: mat3x3<f32>,
   a6: mat4x4<f32>,
+  a7: mat2x2<f16>,
+  a8: mat3x3<f16>,
+  a9: mat4x4<f16>,
 };`;
 
     const expected = `\
@@ -101,6 +104,9 @@ export const Data = d.struct({
   a4: d.mat2x2f,
   a5: d.mat3x3f,
   a6: d.mat4x4f,
+  a7: d.mat2x2h,
+  a8: d.mat3x3h,
+  a9: d.mat4x4h,
 });`;
 
     expect(generate(wgsl)).toContain(expected);

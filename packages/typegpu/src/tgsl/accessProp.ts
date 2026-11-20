@@ -37,6 +37,9 @@ const infixKinds = [
   'mat2x2f',
   'mat3x3f',
   'mat4x4f',
+  'mat2x2h',
+  'mat3x3h',
+  'mat4x4h',
 ];
 
 export function accessProp(target: Snippet, propName: string): Snippet | undefined {

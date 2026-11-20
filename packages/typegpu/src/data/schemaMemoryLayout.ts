@@ -36,6 +36,9 @@ const knownSizesMap: Record<string, number> = {
   mat2x2f: 16,
   mat3x3f: 48,
   mat4x4f: 64,
+  mat2x2h: 8,
+  mat3x3h: 24,
+  mat4x4h: 32,
   uint8: 1,
   uint8x2: 2,
   uint8x4: 4,
@@ -216,6 +219,15 @@ function computeMLOfDisarray(data: Disarray): SchemaMemoryLayout {
   return { size, isContiguous, longestContiguousPrefix };
 }
 
+/**
+ * Known-size types that have padding inside of them (between matrix columns),
+ * mapped to the size of their first column.
+ */
+const paddedTypesContiguousPrefix: Record<string, number> = {
+  mat3x3f: 12,
+  mat3x3h: 6,
+};
+
 function getMemoryLayout(data: BaseData): SchemaMemoryLayout {
   let layout = cachedLayouts.get(data);
 
@@ -231,10 +243,11 @@ function computeMemoryLayout(data: BaseData): SchemaMemoryLayout {
   const knownSize = knownSizesMap[data.type];
 
   if (knownSize !== undefined) {
+    const paddedPrefix = paddedTypesContiguousPrefix[data.type];
     return {
-      isContiguous: data.type !== 'mat3x3f',
+      isContiguous: paddedPrefix === undefined,
       size: knownSize,
-      longestContiguousPrefix: data.type === 'mat3x3f' ? 12 : knownSize,
+      longestContiguousPrefix: paddedPrefix ?? knownSize,
     };
   }
 

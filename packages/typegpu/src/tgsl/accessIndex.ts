@@ -4,7 +4,7 @@ import { MatrixColumnsAccess } from '../data/matrixColumnsAccess.ts';
 import { derefSnippet } from '../data/ref.ts';
 import { snip } from '../data/snippet.ts';
 import type { Origin, Snippet } from '../data/snippet.ts';
-import { vec2f, vec3f, vec4f } from '../data/vector.ts';
+import { vec2f, vec2h, vec3f, vec3h, vec4f, vec4h } from '../data/vector.ts';
 import { type BaseData, isPtr, isVec, isWgslArray } from '../data/wgslTypes.ts';
 import { asComptime } from '../types.ts';
 import { accessProp } from './accessProp.ts';
@@ -15,6 +15,9 @@ const indexableTypeToResult = {
   mat2x2f: vec2f,
   mat3x3f: vec3f,
   mat4x4f: vec4f,
+  mat2x2h: vec2h,
+  mat3x3h: vec3h,
+  mat4x4h: vec4h,
 } as const;
 
 function deriveIndexAccessOrigin(targetOrigin: Origin, indexOrigin: Origin): Origin {

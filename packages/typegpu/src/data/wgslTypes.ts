@@ -60,7 +60,7 @@ export interface NumberArrayView {
  */
 export type TypedArrayFor<T> = T extends F32 | Vec2f | Vec3f | Vec4f | Mat2x2f | Mat3x3f | Mat4x4f
   ? Float32Array
-  : T extends F16 | Vec2h | Vec3h | Vec4h
+  : T extends F16 | Vec2h | Vec3h | Vec4h | Mat2x2h | Mat3x3h | Mat4x4h
     ? Float16Array
     : T extends I32 | Vec2i | Vec3i | Vec4i | Atomic<I32>
       ? Int32Array
@@ -535,7 +535,7 @@ export type VecKind = AnyVecInstance['kind'];
  */
 export interface matBase extends matInfixNotation<matBase> {
   readonly [$internal]: true;
-  readonly kind: 'mat2x2f' | 'mat3x3f' | 'mat4x4f';
+  readonly kind: MatKind;
 }
 
 /**
@@ -560,6 +560,14 @@ export interface m2x2f extends mat2x2<v2f>, matInfixNotation<m2x2f> {
 }
 
 /**
+ * Interface representing its WGSL matrix type counterpart: mat2x2h or mat2x2<f16>
+ * A matrix with 2 rows and 2 columns, with elements of type d.f16
+ */
+export interface m2x2h extends mat2x2<v2h>, matInfixNotation<m2x2h> {
+  readonly kind: 'mat2x2h';
+}
+
+/**
  * Interface representing its WGSL matrix type counterpart: mat3x3
  * A matrix with 3 rows and 3 columns, with elements of type `TColumn`
  */
@@ -578,6 +586,14 @@ export interface mat3x3<TColumn> extends NumberArrayView {
  */
 export interface m3x3f extends mat3x3<v3f>, matInfixNotation<m3x3f> {
   readonly kind: 'mat3x3f';
+}
+
+/**
+ * Interface representing its WGSL matrix type counterpart: mat3x3h or mat3x3<f16>
+ * A matrix with 3 rows and 3 columns, with elements of type d.f16
+ */
+export interface m3x3h extends mat3x3<v3h>, matInfixNotation<m3x3h> {
+  readonly kind: 'mat3x3h';
 }
 
 /**
@@ -601,7 +617,21 @@ export interface m4x4f extends mat4x4<v4f>, matInfixNotation<m4x4f> {
   readonly kind: 'mat4x4f';
 }
 
-export type AnyMatInstance = m2x2f | m3x3f | m4x4f;
+/**
+ * Interface representing its WGSL matrix type counterpart: mat4x4h or mat4x4<f16>
+ * A matrix with 4 rows and 4 columns, with elements of type d.f16
+ */
+export interface m4x4h extends mat4x4<v4h>, matInfixNotation<m4x4h> {
+  readonly kind: 'mat4x4h';
+}
+
+export type AnyMat2x2Instance = m2x2f | m2x2h;
+export type AnyMat3x3Instance = m3x3f | m3x3h;
+export type AnyMat4x4Instance = m4x4f | m4x4h;
+
+export type AnyMatInstance = AnyMat2x2Instance | AnyMat3x3Instance | AnyMat4x4Instance;
+
+export type MatKind = 'mat2x2f' | 'mat3x3f' | 'mat4x4f' | 'mat2x2h' | 'mat3x3h' | 'mat4x4h';
 
 export type vBaseForMat<T extends matBase> = T extends m2x2f
   ? v2f
@@ -609,7 +639,13 @@ export type vBaseForMat<T extends matBase> = T extends m2x2f
     ? v3f
     : T extends m4x4f
       ? v4f
-      : vecBase;
+      : T extends m2x2h
+        ? v2h
+        : T extends m3x3h
+          ? v3h
+          : T extends m4x4h
+            ? v4h
+            : vecBase;
 
 export type mBaseForVec<T extends vecBase> = T extends v2f
   ? m2x2f
@@ -617,7 +653,13 @@ export type mBaseForVec<T extends vecBase> = T extends v2f
     ? m3x3f
     : T extends v4f
       ? m4x4f
-      : matBase;
+      : T extends v2h
+        ? m2x2h
+        : T extends v3h
+          ? m3x3h
+          : T extends v4h
+            ? m4x4h
+            : matBase;
 
 // #endregion
 
@@ -1128,7 +1170,7 @@ export interface Mat2x2f extends BaseData {
 
   (...elements: [number, number, number, number]): m2x2f;
   (...columns: [v2f, v2f]): m2x2f;
-  (other: m2x2f): m2x2f;
+  (other: m2x2f | m2x2h): m2x2f;
   (): m2x2f;
   identity(): m2x2f;
 }
@@ -1152,7 +1194,7 @@ export interface Mat3x3f extends BaseData {
 
   (...elements: [number, number, number, number, number, number, number, number, number]): m3x3f;
   (...columns: [v3f, v3f, v3f]): m3x3f;
-  (other: m3x3f): m3x3f;
+  (other: m3x3f | m3x3h): m3x3f;
   (): m3x3f;
   identity(): m3x3f;
 }
@@ -1178,7 +1220,7 @@ export interface Mat4x4f extends BaseData {
   // oxfmt-ignore
   (...elements: [number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number]): m4x4f;
   (...columns: [v4f, v4f, v4f, v4f]): m4x4f;
-  (other: m4x4f): m4x4f;
+  (other: m4x4f | m4x4h): m4x4f;
   (): m4x4f;
   identity(): m4x4f;
   translation(vec: v3f): m4x4f;
@@ -1186,6 +1228,77 @@ export interface Mat4x4f extends BaseData {
   rotationX(angle: number): m4x4f;
   rotationY(angle: number): m4x4f;
   rotationZ(angle: number): m4x4f;
+}
+
+/**
+ * Type of the `d.mat2x2h` object/function: matrix data type schema/constructor
+ */
+export interface Mat2x2h extends BaseData {
+  readonly type: 'mat2x2h';
+  readonly primitive: F16;
+
+  // Type-tokens, not available at runtime
+  readonly [$repr]: m2x2h;
+  readonly [$inRepr]: m2x2h | readonly [number, number, number, number] | Float16Array;
+  readonly [$validStorageSchema]: true;
+  readonly [$validUniformSchema]: true;
+  // ---
+
+  (...elements: [number, number, number, number]): m2x2h;
+  (...columns: [v2h, v2h]): m2x2h;
+  (other: m2x2h | m2x2f): m2x2h;
+  (): m2x2h;
+  identity(): m2x2h;
+}
+
+/**
+ * Type of the `d.mat3x3h` object/function: matrix data type schema/constructor
+ */
+export interface Mat3x3h extends BaseData {
+  readonly type: 'mat3x3h';
+  readonly primitive: F16;
+
+  // Type-tokens, not available at runtime
+  readonly [$repr]: m3x3h;
+  readonly [$inRepr]:
+    | m3x3h
+    | readonly [number, number, number, number, number, number, number, number, number]
+    | Float16Array;
+  readonly [$validStorageSchema]: true;
+  readonly [$validUniformSchema]: true;
+  // ---
+
+  (...elements: [number, number, number, number, number, number, number, number, number]): m3x3h;
+  (...columns: [v3h, v3h, v3h]): m3x3h;
+  (other: m3x3h | m3x3f): m3x3h;
+  (): m3x3h;
+  identity(): m3x3h;
+}
+
+/**
+ * Type of the `d.mat4x4h` object/function: matrix data type schema/constructor
+ */
+export interface Mat4x4h extends BaseData {
+  readonly type: 'mat4x4h';
+  readonly primitive: F16;
+
+  // Type-tokens, not available at runtime
+  readonly [$repr]: m4x4h;
+  readonly [$inRepr]:
+    | m4x4h
+    // oxfmt-ignore
+    | readonly [number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number]
+    | Float16Array;
+  readonly [$validStorageSchema]: true;
+  readonly [$validUniformSchema]: true;
+  // ---
+
+  // oxfmt-ignore
+  (...elements: [number, number, number, number, number, number, number, number, number, number, number, number, number, number, number, number]): m4x4h;
+  (...columns: [v4h, v4h, v4h, v4h]): m4x4h;
+  (other: m4x4h | m4x4f): m4x4h;
+  (): m4x4h;
+  identity(): m4x4h;
 }
 
 /**
@@ -1428,6 +1541,9 @@ export const wgslTypeLiterals = [
   'mat2x2f',
   'mat3x3f',
   'mat4x4f',
+  'mat2x2h',
+  'mat3x3h',
+  'mat4x4h',
   'struct',
   'array',
   'ptr',
@@ -1510,7 +1626,7 @@ export type VecData =
   | Vec4u
   | Vec4b;
 
-export type MatData = Mat2x2f | Mat3x3f | Mat4x4f;
+export type MatData = Mat2x2f | Mat3x3f | Mat4x4f | Mat2x2h | Mat3x3h | Mat4x4h;
 
 export type StorableData =
   | ScalarData
@@ -1546,6 +1662,9 @@ export type AnyWgslData =
   | Mat2x2f
   | Mat3x3f
   | Mat4x4f
+  | Mat2x2h
+  | Mat3x3h
+  | Mat4x4h
   | WgslStruct
   | WgslArray
   | Ptr
@@ -1627,8 +1746,32 @@ export function isMat4x4f(value: unknown): value is Mat4x4f {
   return (value as AnyWgslData)?.type === 'mat4x4f' && isMarkedInternal(value);
 }
 
-export function isMat(value: unknown): value is Mat2x2f | Mat3x3f | Mat4x4f {
-  return isMat2x2f(value) || isMat3x3f(value) || isMat4x4f(value);
+export function isMat2x2h(value: unknown): value is Mat2x2h {
+  return (value as AnyWgslData)?.type === 'mat2x2h' && isMarkedInternal(value);
+}
+
+export function isMat3x3h(value: unknown): value is Mat3x3h {
+  return (value as AnyWgslData)?.type === 'mat3x3h' && isMarkedInternal(value);
+}
+
+export function isMat4x4h(value: unknown): value is Mat4x4h {
+  return (value as AnyWgslData)?.type === 'mat4x4h' && isMarkedInternal(value);
+}
+
+export function isMat2x2(value: unknown): value is Mat2x2f | Mat2x2h {
+  return isMat2x2f(value) || isMat2x2h(value);
+}
+
+export function isMat3x3(value: unknown): value is Mat3x3f | Mat3x3h {
+  return isMat3x3f(value) || isMat3x3h(value);
+}
+
+export function isMat4x4(value: unknown): value is Mat4x4f | Mat4x4h {
+  return isMat4x4f(value) || isMat4x4h(value);
+}
+
+export function isMat(value: unknown): value is MatData {
+  return isMat2x2(value) || isMat3x3(value) || isMat4x4(value);
 }
 
 export function isInteger(value: unknown): value is AbstractInt | I32 | U32 {
@@ -1645,6 +1788,10 @@ export function isIntegerVec(
 
 export function isFloat32VecInstance(element: unknown): element is AnyFloat32VecInstance {
   return isVecInstance(element) && ['vec2f', 'vec3f', 'vec4f'].includes(element.kind);
+}
+
+export function isFloatVecInstance(element: unknown): element is AnyFloatVecInstance {
+  return isVecInstance(element) && /^vec[234][fh]$/.test(element.kind);
 }
 
 export function isInteger32VecInstance(value: unknown): value is v2u | v2i | v3u | v3i | v4u | v4i {
