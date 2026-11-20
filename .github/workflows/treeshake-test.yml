@@ -58,11 +58,11 @@ jobs:
 
       - name: Run namespace tree-shake test on PR branch
         working-directory: pr-branch
-        run: pnpm --filter treeshake-test test namespace --tsdown ${{ github.event_name == 'workflow_dispatch' && '--webpack' || '' }}
+        run: pnpm --filter treeshake-test test namespace --tsdown --webpack
 
       - name: Run named tree-shake test on PR branch
         working-directory: pr-branch
-        run: pnpm --filter treeshake-test test named --tsdown ${{ github.event_name == 'workflow_dispatch' && '--webpack' || '' }}
+        run: pnpm --filter treeshake-test test named --tsdown --webpack
 
       - name: Generate import tests on target branch
         working-directory: target-branch
@@ -71,7 +71,7 @@ jobs:
       - name: Run namespace tree-shake test on target branch
         working-directory: target-branch
         continue-on-error: true # if this fails, compareResults will display all results instead of a comparison
-        run: pnpm --filter treeshake-test test namespace --tsdown ${{ github.event_name == 'workflow_dispatch' && '--webpack' || '' }}
+        run: pnpm --filter treeshake-test test namespace --tsdown --webpack
 
       - name: Compare results
         run: |
