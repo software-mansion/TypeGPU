@@ -1,6 +1,6 @@
 import { $ } from 'bun';
 import { consola } from 'consola';
-import { rm } from 'node:fs/promises';
+import { cp, rm } from 'node:fs/promises';
 
 const magenta = '\u001b[35m';
 const reset = '\u001b[0m';
@@ -46,6 +46,34 @@ for await (const path of new Bun.Glob('dist/**/*.js').scan('.')) {
 
 consola.start('Copying bin.mjs...');
 await Bun.write('dist/bin.mjs', Bun.file('bin.mjs'));
+
+consola.start('Copying agent skills...');
+await cp('skills', 'dist/skills', { recursive: true });
+
+const skillPath = 'dist/skills/typegpu/SKILL.md';
+const skill = await Bun.file(skillPath).text();
+const stampedSkill = skill
+  .replace('\n  library: typegpu\n', `\n  library: typegpu\n  library_version: '${version}'\n`)
+  .replace(
+    /^This skill targets TypeGPU .*$/m,
+    `This copy of the skill ships with TypeGPU \`${version}\` and matches its API.`,
+  );
+if (!stampedSkill.includes('library_version') || !stampedSkill.includes('ships with TypeGPU')) {
+  throw new Error(`Could not stamp the version into ${skillPath}`);
+}
+await Bun.write(skillPath, stampedSkill);
+
+const agentsMd = `# typegpu ${version}
+
+This is the installed copy of TypeGPU. Prefer it over anything you remember about TypeGPU.
+
+- Start with ./skills/typegpu/SKILL.md. It routes to ./skills/typegpu/references/.
+- The exact API is in ./index.d.ts and the .d.ts files next to it. Most public functions
+  have TSDoc with @example blocks.
+- Docs: https://docs.swmansion.com/TypeGPU/
+`;
+await Bun.write('dist/AGENTS.md', agentsMd);
+await Bun.write('dist/CLAUDE.md', agentsMd);
 
 consola.start('Swapping index declaration file...');
 // Overriding the generated declaration file with a custom one, that

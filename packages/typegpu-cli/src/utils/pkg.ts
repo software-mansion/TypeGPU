@@ -28,10 +28,15 @@ function isWorkspacePackage(name: string) {
  * as the minimum. This guarantees that APIs used by the CLI and its templates are available.
  */
 export function getVersionRange(name: string): string {
+  return `^${getWorkspaceVersion(name)}`;
+}
+
+/** Returns the version of one of our packages that the CLI was built with. */
+export function getWorkspaceVersion(name: string): string {
   if (!isWorkspacePackage(name)) {
     throw new Error(`[INTERNAL] ${name} is not a TypeGPU package.`);
   }
-  return `^${WORKSPACE_PACKAGE_VERSIONS[name]}`;
+  return WORKSPACE_PACKAGE_VERSIONS[name] as string;
 }
 
 /**
