@@ -57,7 +57,7 @@ import {
 import { SignatureNotSupportedError } from '../errors.ts';
 import type { Infer } from '../shared/repr.ts';
 import { assertExhaustive } from '../shared/utilityTypes.ts';
-import { unify } from '../tgsl/conversion.ts';
+import { signatureError, unify } from '../tgsl/conversion.ts';
 import { asComptime, type ResolutionCtx } from '../types.ts';
 import { mul, sub } from './operators.ts';
 
@@ -85,7 +85,7 @@ export function unifyRestrictedSignature(restrict: BaseData[]) {
   return (...args: BaseData[]) => {
     const uargs = unify(args, restrict);
     if (!uargs) {
-      throw new SignatureNotSupportedError(args, restrict);
+      throw signatureError(args, restrict);
     }
     return {
       argTypes: uargs,
@@ -415,7 +415,7 @@ export const distance = dualImpl({
   signature: (...args) => {
     const uargs = unify(args, anyFloat);
     if (!uargs) {
-      throw new SignatureNotSupportedError(args, anyFloat);
+      throw signatureError(args, anyFloat);
     }
     return {
       argTypes: uargs,
@@ -857,7 +857,7 @@ export const mix = dualImpl({
     }
     const uargs = unify([e1, e2, e3], anyFloat);
     if (!uargs) {
-      throw new SignatureNotSupportedError([e1, e2, e3], anyFloat);
+      throw signatureError([e1, e2, e3], anyFloat);
     }
     return { argTypes: uargs, returnType: uargs[0] };
   },
@@ -1030,7 +1030,7 @@ export const reflect = dualImpl({
   signature: (...args) => {
     const uargs = unify(args, anyFloatVec);
     if (!uargs) {
-      throw new SignatureNotSupportedError(args, anyFloatVec);
+      throw signatureError(args, anyFloatVec);
     }
     return {
       argTypes: uargs,
@@ -1352,7 +1352,7 @@ export const intdiv = dualImpl({
   signature: (lhs, rhs) => {
     const unified = unify([lhs, rhs], [i32, u32]);
     if (!unified) {
-      throw new SignatureNotSupportedError([lhs, rhs], [i32, u32, abstractInt]);
+      throw signatureError([lhs, rhs], [i32, u32, abstractInt]);
     }
     return { argTypes: unified, returnType: unified[0] };
   },
