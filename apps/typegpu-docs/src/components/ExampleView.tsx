@@ -1,5 +1,6 @@
 import cs from 'classnames';
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
+import { X } from 'lucide-react';
 import { Suspense, useEffect, useLayoutEffect, useRef, useState, lazy } from 'react';
 import { currentSnackbarAtom } from '../utils/examples/currentSnackbarAtom.ts';
 import { tsoverUsedAtom, exampleFullscreenAtom } from '../utils/examples/exampleViewStateAtoms.ts';
@@ -174,9 +175,20 @@ export function ExampleView({ example, common }: Props) {
           </div>
 
           {fullscreen && !controlsVisible && (
-            <div className="absolute right-4 bottom-4 z-20">
-              <Button onClick={() => setControlsVisible(true)}>Show controls</Button>
-            </div>
+            <>
+              <div className="absolute right-4 bottom-4 z-20">
+                <Button onClick={() => setControlsVisible(true)}>Show controls</Button>
+              </div>
+              <div className="absolute right-4 top-4 z-20">
+                <Button
+                  onClick={() => setFullscreen(false)}
+                  className="aspect-square !p-2"
+                  aria-label="Exit fullscreen"
+                >
+                  <X className="size-3" aria-hidden="true" />
+                </Button>
+              </div>
+            </>
           )}
         </div>
 
