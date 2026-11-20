@@ -75,7 +75,7 @@ export type TgpuLayoutEntryBase = {
    * By default, each resource is visible to all shader stage types, but
    * depending on the underlying implementation, this may have performance implications.
    *
-   * @default ['compute','fragment'] for mutable resources
+   * @default ['compute','fragment'] for mutable storage buffers and writable storage textures
    * @default ['compute','vertex','fragment'] for everything else
    */
   visibility?: ShaderStage[];
@@ -319,7 +319,9 @@ export function visibilityOf(entry: TgpuLayoutEntry): ShaderStage[] {
   if (entry.visibility) {
     return entry.visibility;
   }
-  const writable = ('storage' in entry && entry.access === 'mutable') || 'storageTexture' in entry;
+  const writable =
+    ('storage' in entry && entry.access === 'mutable') ||
+    ('storageTexture' in entry && entry.storageTexture.access !== 'read-only');
   return writable ? DEFAULT_MUTABLE_VISIBILITY : DEFAULT_READONLY_VISIBILITY;
 }
 

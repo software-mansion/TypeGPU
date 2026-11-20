@@ -2,6 +2,6 @@
   "title": "Clouds",
   "description": "Ray marches a volumetric cloud field shaped by layered procedural noise.",
   "category": "rendering",
-  "tags": ["3d", "ecosystem", "noise", "ray marching", "sdf"],
+  "tags": ["3d", "lighting", "procedural", "ray marching"],
   "coolFactor": 10
 }
