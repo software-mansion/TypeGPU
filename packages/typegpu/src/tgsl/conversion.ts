@@ -1,6 +1,7 @@
-import { UnknownData } from '../data/dataTypes.ts';
+import { type AnyData, UnknownData } from '../data/dataTypes.ts';
 import { undecorate } from '../data/dataTypes.ts';
 import { derefSnippet, RefOperator } from '../data/ref.ts';
+import { schemasEqual } from '../data/schemasEqualCore.ts';
 import { schemaCallWrapperGPU } from '../data/schemaCallWrapper.ts';
 import { snip, withDataType, type Snippet } from '../data/snippet.ts';
 import {
@@ -13,9 +14,11 @@ import {
   isMat,
   isPtr,
   isVec,
+  isWgslArray,
   isWgslStruct,
   type Ptr,
   type U32,
+  type WgslArray,
   type WgslStruct,
 } from '../data/wgslTypes.ts';
 import { invariant, WgslTypeError } from '../errors.ts';
@@ -40,13 +43,70 @@ const INFINITE_RANK: ConversionRankInfo = {
   action: 'none',
 };
 
-function getAutoConversionRank(src: BaseData, dest: BaseData): ConversionRankInfo {
+/** Decides whether two array types produce the same WGSL type. */
+export function arraysHaveSameType(a: WgslArray, b: WgslArray): boolean {
+  if (a.elementCount !== b.elementCount) {
+    return false;
+  }
+
+  const elementA = undecorate(a.elementType);
+  const elementB = undecorate(b.elementType);
+
+  if (isWgslArray(elementA) && isWgslArray(elementB)) {
+    return arraysHaveSameType(elementA, elementB);
+  }
+
+  // Nominal comparison keeps struct elements distinct while letting separately
+  // created element schemas (e.g. two d.atomic(d.u32)) compare equal.
+  return schemasEqual(elementA as AnyData, elementB as AnyData, false);
+}
+
+/** Renders a type for diagnostics, expanding unnamed structs so two distinct
+ * element types never render identically. */
+function describeType(type: BaseData): string {
+  const trueType = undecorate(type);
+  if (isWgslArray(trueType)) {
+    return `arrayOf(${describeType(trueType.elementType)}, ${trueType.elementCount})`;
+  }
+  if (isWgslStruct(trueType) && !getName(trueType)) {
+    const props = Object.entries(trueType.propTypes)
+      .map(([key, propType]) => `${key}: ${describeType(propType)}`)
+      .join(', ');
+    return `struct { ${props} }`;
+  }
+  return String(trueType);
+}
+
+/** A value would need conversion between two different array types. */
+export class ArrayConversionError extends WgslTypeError {
+  constructor(src: BaseData, dest: BaseData) {
+    super(
+      `Cannot use a value of type '${describeType(src)}' where '${describeType(dest)}' is expected.\n-----\nTypeGPU does not convert arrays between different array types automatically. Construct the value with the expected schema instead.`,
+    );
+    Object.setPrototypeOf(this, ArrayConversionError.prototype);
+  }
+}
+
+function getAutoConversionRank(
+  src: BaseData,
+  dest: BaseData,
+  strictArrays = false,
+): ConversionRankInfo {
   const trueSrc = undecorate(src);
   const trueDst = undecorate(dest);
 
   if (trueSrc.type === trueDst.type) {
     if (trueSrc.type === 'struct' && trueSrc !== trueDst) {
       return { rank: 1, action: 'cast', targetType: dest };
+    }
+    if (isWgslArray(trueSrc) && isWgslArray(trueDst) && !arraysHaveSameType(trueSrc, trueDst)) {
+      // Element counts can never be unified: the WGSL shapes differ. Equal
+      // lengths with different element types stay permissive for comptime
+      // consumers, which read the values as JS arrays.
+      if (strictArrays || trueSrc.elementCount !== trueDst.elementCount) {
+        throw new ArrayConversionError(trueSrc, trueDst);
+      }
+      return { rank: 0, action: 'none' };
     }
     return { rank: 0, action: 'none' };
   }
@@ -86,7 +146,11 @@ function getAutoConversionRank(src: BaseData, dest: BaseData): ConversionRankInf
   return INFINITE_RANK;
 }
 
-function getImplicitConversionRank(src: BaseData, dest: BaseData): ConversionRankInfo {
+function getImplicitConversionRank(
+  src: BaseData,
+  dest: BaseData,
+  strictArrays = false,
+): ConversionRankInfo {
   const trueSrc = undecorate(src);
   const trueDst = undecorate(dest);
 
@@ -94,14 +158,14 @@ function getImplicitConversionRank(src: BaseData, dest: BaseData): ConversionRan
     isPtr(trueSrc) &&
     // Only dereferencing implicit pointers, otherwise we'd have a types mismatch between TS and WGSL
     trueSrc.implicit &&
-    getAutoConversionRank(trueSrc.inner, trueDst).rank < Number.POSITIVE_INFINITY
+    getAutoConversionRank(trueSrc.inner, trueDst, strictArrays).rank < Number.POSITIVE_INFINITY
   ) {
     return { rank: 0, action: 'deref' };
   }
 
   if (
     isPtr(trueDst) &&
-    getAutoConversionRank(trueSrc, trueDst.inner).rank < Number.POSITIVE_INFINITY
+    getAutoConversionRank(trueSrc, trueDst.inner, strictArrays).rank < Number.POSITIVE_INFINITY
   ) {
     return { rank: 1, action: 'ref' };
   }
@@ -154,13 +218,23 @@ function getImplicitConversionRank(src: BaseData, dest: BaseData): ConversionRan
  */
 const autoRankCache = new WeakMap<BaseData, WeakMap<BaseData, ConversionRankInfo>>();
 const implicitRankCache = new WeakMap<BaseData, WeakMap<BaseData, ConversionRankInfo>>();
+const strictAutoRankCache = new WeakMap<BaseData, WeakMap<BaseData, ConversionRankInfo>>();
+const strictImplicitRankCache = new WeakMap<BaseData, WeakMap<BaseData, ConversionRankInfo>>();
 
 function getConversionRank(
   src: BaseData,
   dest: BaseData,
   allowImplicit: boolean,
+  strictArrays = false,
 ): ConversionRankInfo {
-  const cache = allowImplicit ? implicitRankCache : autoRankCache;
+  // Strict and permissive ranks differ for the same pair, so cache separately.
+  const cache = strictArrays
+    ? allowImplicit
+      ? strictImplicitRankCache
+      : strictAutoRankCache
+    : allowImplicit
+      ? implicitRankCache
+      : autoRankCache;
   let byDest = cache.get(src);
   if (!byDest) {
     byDest = new WeakMap();
@@ -168,7 +242,7 @@ function getConversionRank(
   }
   let rank = byDest.get(dest);
   if (!rank) {
-    rank = computeConversionRank(src, dest, allowImplicit);
+    rank = computeConversionRank(src, dest, allowImplicit, strictArrays);
     byDest.set(dest, rank);
   }
   return rank;
@@ -178,13 +252,14 @@ function computeConversionRank(
   src: BaseData,
   dest: BaseData,
   allowImplicit: boolean,
+  strictArrays = false,
 ): ConversionRankInfo {
-  const autoRank = getAutoConversionRank(src, dest);
+  const autoRank = getAutoConversionRank(src, dest, strictArrays);
   if (autoRank.rank < Number.POSITIVE_INFINITY) {
     return autoRank;
   }
   if (allowImplicit) {
-    return getImplicitConversionRank(src, dest);
+    return getImplicitConversionRank(src, dest, strictArrays);
   }
   return INFINITE_RANK;
 }
@@ -207,6 +282,12 @@ function findBestType(
   allowImplicit: boolean,
 ): ConversionResult | undefined {
   let bestResult: { type: BaseData; details: ConversionRankInfo[]; sum: number } | undefined;
+  // A single value used where an array type is expected is a real conversion.
+  // Unifying several values stays permissive for comptime array consumers.
+  const strictArrays = types.length === 1 || uniqueTypes.length === 1;
+  // An array mismatch rules out one target candidate, not the whole search:
+  // another candidate may still accept every value. Report it only if none does.
+  let arrayMismatch: ArrayConversionError | undefined;
 
   for (const targetType of uniqueTypes) {
     /**
@@ -215,10 +296,22 @@ function findBestType(
     let destType = targetType;
     const details: ConversionRankInfo[] = [];
     let sum = 0;
+    let invalid = false;
     for (const sourceType of types) {
-      const conversion = getConversionRank(sourceType, targetType, allowImplicit);
+      let conversion: ConversionRankInfo;
+      try {
+        conversion = getConversionRank(sourceType, targetType, allowImplicit, strictArrays);
+      } catch (error) {
+        if (!(error instanceof ArrayConversionError)) {
+          throw error;
+        }
+        arrayMismatch ??= error;
+        invalid = true;
+        break;
+      }
       sum += conversion.rank;
       if (conversion.rank === Number.POSITIVE_INFINITY) {
+        invalid = true;
         break;
       }
       details.push(conversion);
@@ -226,12 +319,18 @@ function findBestType(
         destType = conversion.targetType;
       }
     }
+    if (invalid) {
+      continue;
+    }
     // Ties keep the earlier candidate, so callers order their target types by preference.
     if (sum < (bestResult?.sum ?? Number.POSITIVE_INFINITY)) {
       bestResult = { type: destType, details, sum };
     }
   }
   if (!bestResult) {
+    if (arrayMismatch) {
+      throw arrayMismatch;
+    }
     return undefined;
   }
   const actions: ConversionResultAction[] = bestResult.details.map((detail, index) => ({
@@ -257,16 +356,37 @@ export function getBestConversion(
 
   const uniqueTargetTypes = [...new Set((targetTypes || types).map(undecorate))];
 
-  const explicitResult = findBestType(types, uniqueTargetTypes, false);
-  if (explicitResult) {
-    return explicitResult;
+  // An array mismatch is fatal only if no candidate fits. The explicit pass can
+  // reject every candidate, so hold the error until the implicit pass runs.
+  let arrayMismatch: ArrayConversionError | undefined;
+
+  try {
+    const explicitResult = findBestType(types, uniqueTargetTypes, false);
+    if (explicitResult) {
+      return explicitResult;
+    }
+  } catch (error) {
+    if (!(error instanceof ArrayConversionError)) {
+      throw error;
+    }
+    arrayMismatch = error;
   }
 
-  const implicitResult = findBestType(types, uniqueTargetTypes, true);
-  if (implicitResult) {
-    return implicitResult;
+  try {
+    const implicitResult = findBestType(types, uniqueTargetTypes, true);
+    if (implicitResult) {
+      return implicitResult;
+    }
+  } catch (error) {
+    if (!(error instanceof ArrayConversionError)) {
+      throw error;
+    }
+    arrayMismatch ??= error;
   }
 
+  if (arrayMismatch) {
+    throw arrayMismatch;
+  }
   return undefined;
 }
 
@@ -279,6 +399,18 @@ function applyActionToSnippet(
 ): Snippet {
   if (action.action === 'none') {
     if (targetType === snippet.dataType) {
+      return snippet;
+    }
+
+    // Arrays are deliberately left permissive during multi-value unification
+    // so comptime consumers can read them as JS arrays. Keep the real element
+    // type here: ArrayExpression checks it at WGSL emission, where the lie
+    // would otherwise produce invalid code (e.g. array<u32, 3> labelled i32).
+    if (
+      snippet.dataType !== UnknownData &&
+      isWgslArray(undecorate(snippet.dataType)) &&
+      isWgslArray(undecorate(targetType))
+    ) {
       return snippet;
     }
 
