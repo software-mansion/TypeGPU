@@ -23,6 +23,16 @@ const createTextureMock = (descriptor: GPUTextureDescriptor) => {
 
 type ExperimentalTgpuRoot = TgpuRoot & TgpuRoot['~unstable'];
 
+/**
+ * The WebGPU spec default for `maxBindGroups`. A device only gets more when it asks for them
+ * through `requiredLimits`, and only up to what the adapter supports.
+ */
+const DEFAULT_MAX_BIND_GROUPS = 4;
+/**
+ * What the mock adapter claims to support, so tests can raise `maxBindGroups` above the default.
+ */
+const ADAPTER_MAX_BIND_GROUPS = 8;
+
 function createRenderPassEncoderMock() {
   const mockRenderPassEncoder = {
     get mock() {
@@ -122,6 +132,13 @@ function createDeviceMock(
   commandEncoder: MockCommandEncoder,
   renderBundleEncoder: MockRenderBundleEncoder,
 ) {
+  /**
+   * Limit violations the mock detected. Each one also throws at the call site, but examples often
+   * create pipelines inside callbacks that swallow errors, so the `device` fixture also fails the
+   * test on cleanup if this is not empty. Tests that expect a violation should clear it.
+   */
+  const limitViolations: string[] = [];
+
   const mockDevice = {
     get mock() {
       return mockDevice;
@@ -160,7 +177,18 @@ function createDeviceMock(
       label: descriptor.label ?? '',
       getBindGroupLayout: vi.fn(() => 'mockBindGroupLayout'),
     })),
-    createPipelineLayout: vi.fn(() => 'mockPipelineLayout'),
+    createPipelineLayout: vi.fn((descriptor?: GPUPipelineLayoutDescriptor) => {
+      // Like real WebGPU, the size counts `null` entries too
+      const count = descriptor ? Array.from(descriptor.bindGroupLayouts).length : 0;
+      const limit = mockDevice.limits.maxBindGroups;
+      if (count > limit) {
+        const label = descriptor?.label ? ` '${descriptor.label}'` : '';
+        const message = `[mock GPUDevice] Pipeline layout${label} uses ${count} bind groups, but limits.maxBindGroups is ${limit}. A real device rejects this pipeline. Use fewer bind groups, or request a higher 'maxBindGroups' through 'requiredLimits'.`;
+        limitViolations.push(message);
+        throw new Error(message);
+      }
+      return 'mockPipelineLayout';
+    }),
     createQuerySet: vi.fn(
       ({ type, count, label }: GPUQuerySetDescriptor): GPUQuerySet => ({
         __brand: 'GPUQuerySet',
@@ -188,7 +216,9 @@ function createDeviceMock(
       maxUniformBuffersPerShaderStage: 12,
       maxStorageBuffersPerShaderStage: 8,
       maxComputeWorkgroupStorageSize: 16384,
+      maxBindGroups: DEFAULT_MAX_BIND_GROUPS,
     },
+    limitViolations,
     destroy: vi.fn(),
   };
 
@@ -204,9 +234,20 @@ export const it = base
     createCommandEncoderMock(renderPassEncoder, computePassEncoder),
   )
   .extend('renderBundleEncoder', createRenderBundleEncoderMock)
-  .extend('device', ({ commandEncoder, renderBundleEncoder }) =>
-    createDeviceMock(commandEncoder, renderBundleEncoder),
-  )
+  .extend('device', ({ commandEncoder, renderBundleEncoder }, { onCleanup }) => {
+    const device = createDeviceMock(commandEncoder, renderBundleEncoder);
+
+    onCleanup(() => {
+      const violations = device.mock.limitViolations;
+      if (violations.length > 0) {
+        throw new Error(
+          `The test exceeded the mock device's limits ${violations.length} time(s):\n${violations.join('\n')}`,
+        );
+      }
+    });
+
+    return device;
+  })
   .extend('_stallDeviceRequest', ({ device }) => {
     let stallResolve: () => void;
     let stallPromise: Promise<void> | undefined;
@@ -233,7 +274,20 @@ export const it = base
   .extend('adapter', ({ device, _stallDeviceRequest }) => {
     const adapterMock = {
       features: new Set(['timestamp-query']),
-      requestDevice: vi.fn((_descriptor) => {
+      requestDevice: vi.fn((descriptor?: GPUDeviceDescriptor) => {
+        const requested = descriptor?.requiredLimits?.maxBindGroups;
+        if (requested !== undefined) {
+          if (requested > adapterMock.limits.maxBindGroups) {
+            return Promise.reject(
+              new Error(
+                `[mock GPUAdapter] Requested maxBindGroups (${requested}) exceeds the adapter's limit (${adapterMock.limits.maxBindGroups}).`,
+              ),
+            );
+          }
+          // Asking for less than the default still gives the default, like on a real device
+          device.mock.limits.maxBindGroups = Math.max(DEFAULT_MAX_BIND_GROUPS, requested);
+        }
+
         if (_stallDeviceRequest.enabled) {
           return _stallDeviceRequest.devicePromise;
         }
@@ -243,6 +297,7 @@ export const it = base
       limits: {
         maxStorageBufferBindingSize: 64 * 1024 * 1024,
         maxBufferSize: 64 * 1024 * 1024,
+        maxBindGroups: ADAPTER_MAX_BIND_GROUPS,
       },
     };
 
