@@ -965,7 +965,11 @@ export class GlslGenerator extends WgslGenerator {
     const last = groupedCaseExprs.at(-1);
     if (last && last[1].length === 0) {
       this.ctx.indent();
-      last[1].push({ code: `${this.ctx.pre}break;`, definesInNearestScope: false });
+      last[1].push({
+        code: `${this.ctx.pre}break;`,
+        definesInNearestScope: false,
+        endsWithControlFlow: 1,
+      });
       this.ctx.dedent();
     }
 
@@ -1035,6 +1039,7 @@ export class GlslGenerator extends WgslGenerator {
       return {
         code: this._emitVarDecl('let', name, dataType, this.ctx.resolveSnippet(eq).value),
         definesInNearestScope: true,
+        endsWithControlFlow: 1,
       };
     }
 
@@ -1055,6 +1060,7 @@ export class GlslGenerator extends WgslGenerator {
     return {
       code: hoisted.join('\n'),
       definesInNearestScope: true,
+      endsWithControlFlow: 1,
     };
   }
 

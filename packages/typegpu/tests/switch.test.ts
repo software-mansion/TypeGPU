@@ -256,6 +256,7 @@ describe(`switch statement in 'use gpu' functions`, () => {
         case d.arrayOf(d.i32, 1)()[0]:
           return 1;
       }
+      return 0;
     };
 
     expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
@@ -269,6 +270,7 @@ describe(`switch statement in 'use gpu' functions`, () => {
 
           }
         }
+        return 0;
       }"
     `);
   });
@@ -314,6 +316,7 @@ describe(`switch statement in 'use gpu' functions`, () => {
         case 2:
           return 1;
         default:
+          return 2;
       }
     };
 
@@ -329,7 +332,7 @@ describe(`switch statement in 'use gpu' functions`, () => {
             return 1;
           }
           case default: {
-
+            return 2;
           }
         }
       }"
@@ -574,6 +577,7 @@ describe(`switch statement in 'use gpu' functions`, () => {
           }
         }
       }
+      return 1;
     };
 
     expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
@@ -594,6 +598,7 @@ describe(`switch statement in 'use gpu' functions`, () => {
 
           }
         }
+        return 1;
       }"
     `);
   });
@@ -814,7 +819,6 @@ describe(`switch statement in 'use gpu' functions`, () => {
           {
             return 1;
           }
-          return -1;
         }"
       `);
     });
@@ -920,7 +924,6 @@ describe(`switch statement in 'use gpu' functions`, () => {
           {
             return 2.5;
           }
-          return -1;
         }"
       `);
     });
@@ -946,7 +949,6 @@ describe(`switch statement in 'use gpu' functions`, () => {
           {
             return 2.5;
           }
-          return -1;
         }"
       `);
     });
@@ -982,6 +984,7 @@ describe(`switch statement in 'use gpu' functions`, () => {
           case myConst.$:
             return 1;
         }
+        return 2;
       };
 
       expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
@@ -999,6 +1002,7 @@ describe(`switch statement in 'use gpu' functions`, () => {
 
             }
           }
+          return 2;
         }"
       `);
     });
@@ -1113,19 +1117,19 @@ describe(`switch statement in 'use gpu' functions`, () => {
       };
 
       expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
-          [Error: Resolution of the following tree failed:
-          - <root>
-          - fn*:fn
-          - fn*:fn(): Switch statement cannot have non-trivial fallthrough.
-          The following switch statement is invalid:
-          switch (1) {
-            case 1:
-            case 2:
-              a += 2;
-            case 3:
-              a += 3;
-          }]
-        `);
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - fn*:fn
+        - fn*:fn(): Switch statement cannot have non-trivial fallthrough.
+        The following switch statement is invalid:
+        switch (1) {
+          case 1:
+          case 2:
+            a += 2;
+          case 3:
+            a += 3;
+        }]
+      `);
     });
 
     it('prunes duplicate comptime-known tests', () => {
@@ -1327,6 +1331,7 @@ describe(`switch statement in 'use gpu' functions`, () => {
           case myConst.$:
             return 0;
         }
+        return 1;
       };
 
       const code = tgpu.resolve([fn]);
@@ -1344,6 +1349,7 @@ describe(`switch statement in 'use gpu' functions`, () => {
 
             }
           }
+          return 1;
         }"
       `);
       expect(code).toContain('switch');
