@@ -2,7 +2,11 @@ import * as t from '@babel/types';
 import type { NodePath, TraverseOptions } from '@babel/traverse';
 import type { FilterPattern } from 'unplugin';
 import MagicString from 'magic-string';
-import { transpileBabelFn, type TranspilationResult } from 'tinyest-for-wgsl';
+import {
+  transpileBabelFn,
+  type NodePositionProvider,
+  type TranspilationResult,
+} from 'tinyest-for-wgsl';
 import { getEmbeddedTypegpuMetadata } from './embeddedMetadata.ts';
 import { obfuscate } from './obfuscate.ts';
 import { embedSourceMap, type Block, type SourceMappedNode } from 'tinyest';
@@ -143,11 +147,11 @@ export interface PluginState extends TransformMethods {
   /**
    * Used for source mapping during transpilation.
    */
-  sourceTracker?: SourceTracer | undefined;
+  sourceTracker?: SourceTracker | undefined;
 }
 
-export type SourceTracer = {
-  position(this: void, node: t.Node): [line: number, column: number] | undefined;
+export type SourceTracker = {
+  position: NodePositionProvider<t.Node>;
   filename(this: void, node: t.Node): string | undefined;
 };
 
@@ -485,7 +489,7 @@ const operators = {
   '%=': '__tsover_mod',
 };
 
-export const fallbackSourceTracer = (fallbackFilename: string | undefined): SourceTracer => ({
+export const fallbackSourceTracker = (fallbackFilename: string | undefined): SourceTracker => ({
   position: (node) => {
     if (!node.loc) {
       return undefined;
@@ -667,8 +671,8 @@ export const functionVisitor: TraverseOptions<PluginState> = {
   },
 };
 
-export function originalMappingFor(combinedMap: SourceMap | EncodedSourceMap): SourceTracer {
-  const tracer = new TraceMap({
+export function originalMappingFor(combinedMap: SourceMap | EncodedSourceMap): SourceTracker {
+  const tracker = new TraceMap({
     ...combinedMap,
     version: 3,
     file: combinedMap.file ?? null,
@@ -683,7 +687,7 @@ export function originalMappingFor(combinedMap: SourceMap | EncodedSourceMap): S
       line,
       column,
       source: filename,
-    } = originalPositionFor(tracer, {
+    } = originalPositionFor(tracker, {
       line: node.loc.start.line,
       column: node.loc.start.column,
     });
@@ -700,7 +704,7 @@ export function originalMappingFor(combinedMap: SourceMap | EncodedSourceMap): S
         return [source.line, source.column];
       }
     },
-    filename: (node: t.Node) => {
+    filename: (node) => {
       const source = sourceFor(node);
       return source?.filename;
     },

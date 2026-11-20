@@ -95,7 +95,7 @@ function countMapped(ast: string | null | undefined) {
   return ast.split('[-1,').length - 1;
 }
 
-function stripFilenames(res: string | null | undefined) {
+function extractFilenames(res: string | null | undefined) {
   if (!res) {
     return res;
   }
@@ -430,7 +430,7 @@ describe('source maps', () => {
         const transformed = babelTransform(code, { unstable_sourceMaps: true }, [], [], {
           filename: 'test.ts',
         });
-        expect(stripFilenames(transformed)).toMatchInlineSnapshot(`
+        expect(extractFilenames(transformed)).toMatchInlineSnapshot(`
           [
             "  filename: "/test.ts"",
           ]
@@ -439,7 +439,7 @@ describe('source maps', () => {
 
       test('[ROLLUP]', async () => {
         const transformed = await rollupTransform(code, { unstable_sourceMaps: true });
-        expect(stripFilenames(transformed)).toMatchInlineSnapshot(`
+        expect(extractFilenames(transformed)).toMatchInlineSnapshot(`
           [
             "    filename: "\\u0000virtual:code"",
           ]
@@ -484,7 +484,7 @@ describe('source maps', () => {
           inputSourceMap: mergedMap,
         });
 
-        expect(stripFilenames(transformed)).toMatchInlineSnapshot(`
+        expect(extractFilenames(transformed)).toMatchInlineSnapshot(`
           [
             "  filename: "/first.ts"",
             "  filename: "/second.ts"",
@@ -505,7 +505,7 @@ describe('source maps', () => {
           mergedFilesPlugin,
         ]);
 
-        expect(stripFilenames(transformed)).toMatchInlineSnapshot(`
+        expect(extractFilenames(transformed)).toMatchInlineSnapshot(`
           [
             "    filename: "/first.ts"",
             "    filename: "/second.ts"",
