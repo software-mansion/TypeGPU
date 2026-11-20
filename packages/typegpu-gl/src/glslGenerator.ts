@@ -2,6 +2,7 @@ import { NodeTypeCatalog as NODE } from 'tinyest';
 import type { Expression, Return, ObjectExpression, ObjectProperty } from 'tinyest';
 import { tgpu, d, type ShaderStage, std } from 'typegpu';
 import { WebGLFallbackUnsupportedError } from './errors.ts';
+import { DEV } from './env.ts';
 import {
   abstractInt,
   concretize,
@@ -26,6 +27,8 @@ import type {
   ResolvedStatement,
   BinaryOperator,
 } from 'typegpu/~internal';
+
+const consoleLogFallbackSnippet = snip('/* console.log() */', d.Void, /* origin */ 'runtime');
 
 const vectorComparisonBuiltins: Partial<Record<BinaryOperator, string>> = {
   '==': 'equal',
@@ -352,52 +355,6 @@ const integerDataTypes = new Set([
   'vec4u',
 ]);
 
-let warnedAboutSampleInterpolation = false;
-
-/**
- * Picks the GLSL interpolation qualifier (including a trailing space, or an empty string)
- * of a vertex output/fragment input. The qualifiers have to match between the two shader stages.
- */
-function interpolationQualifier(dataType: d.BaseData): string {
-  const interpolate = d.isDecorated(dataType)
-    ? (dataType.attribs as d.AnyAttribute[]).find((a) => a.type === '@interpolate')
-    : undefined;
-  const [type, sampling] = interpolate
-    ? (interpolate.params[0] as string).split(',').map((part) => part.trim())
-    : [];
-
-  // Both WGSL and GLSL ES 3.00 require integer varyings to be flat. TypeGPU already rejects
-  // them otherwise, so instead of silently making them flat (which WebGPU wouldn't accept),
-  // we throw if one slips through.
-  if (integerDataTypes.has(undecorateDataType(dataType).type) && type !== 'flat') {
-    throw new Error(
-      `Integer varyings require flat interpolation. Wrap the schema in d.interpolate('flat', ...) or d.interpolate('flat, either', ...).`,
-    );
-  }
-
-  if (!type) {
-    return '';
-  }
-  if (type === 'flat') {
-    return 'flat ';
-  }
-  if (type === 'linear') {
-    throw new WebGLFallbackUnsupportedError(
-      'linear interpolation',
-      "GLSL ES 3.00 has no 'noperspective' qualifier, use 'perspective' or 'flat' instead",
-    );
-  }
-  // 'sample' interpolation needs OES_shader_multisample_interpolation, which isn't part of
-  // core WebGL 2. Falling back to 'center' only makes a difference with multisampling.
-  if (sampling === 'sample' && !warnedAboutSampleInterpolation) {
-    warnedAboutSampleInterpolation = true;
-    console.warn(
-      "WebGL fallback: 'sample' interpolation sampling isn't supported by WebGL 2, falling back to 'center'.",
-    );
-  }
-  return sampling === 'centroid' ? 'centroid ' : '';
-}
-
 function glslInputForBuiltin(
   builtinKind: string,
   functionType: 'vertex' | 'fragment' | 'compute',
@@ -578,6 +535,54 @@ const HELPERS = {
  * and overrides variable declaration emission to use `type name = rhs` syntax.
  */
 export class GlslGenerator extends WgslGenerator {
+  // Shared by all GLSL generators, so each warning is printed once per process.
+  static #warnedAboutConsoleLog = false;
+  static #warnedAboutSampleInterpolation = false;
+
+  /**
+   * Picks the GLSL interpolation qualifier (including a trailing space, or an empty string)
+   * of a vertex output/fragment input. The qualifiers have to match between the two shader stages.
+   */
+  static #interpolationQualifier(dataType: d.BaseData): string {
+    const interpolate = d.isDecorated(dataType)
+      ? (dataType.attribs as d.AnyAttribute[]).find((a) => a.type === '@interpolate')
+      : undefined;
+    const [type, sampling] = interpolate
+      ? (interpolate.params[0] as string).split(',').map((part) => part.trim())
+      : [];
+
+    // Both WGSL and GLSL ES 3.00 require integer varyings to be flat. TypeGPU already rejects
+    // them otherwise, so instead of silently making them flat (which WebGPU wouldn't accept),
+    // we throw if one slips through.
+    if (integerDataTypes.has(undecorateDataType(dataType).type) && type !== 'flat') {
+      throw new Error(
+        `Integer varyings require flat interpolation. Wrap the schema in d.interpolate('flat', ...) or d.interpolate('flat, either', ...).`,
+      );
+    }
+
+    if (!type) {
+      return '';
+    }
+    if (type === 'flat') {
+      return 'flat ';
+    }
+    if (type === 'linear') {
+      throw new WebGLFallbackUnsupportedError(
+        'linear interpolation',
+        "GLSL ES 3.00 has no 'noperspective' qualifier, use 'perspective' or 'flat' instead",
+      );
+    }
+    // 'sample' interpolation needs OES_shader_multisample_interpolation, which isn't part of
+    // core WebGL 2. Falling back to 'center' only makes a difference with multisampling.
+    if (sampling === 'sample' && !GlslGenerator.#warnedAboutSampleInterpolation) {
+      GlslGenerator.#warnedAboutSampleInterpolation = true;
+      console.warn(
+        "WebGL fallback: 'sample' interpolation sampling isn't supported by WebGL 2, falling back to 'center'.",
+      );
+    }
+    return sampling === 'centroid' ? 'centroid ' : '';
+  }
+
   readonly #shaderStageToEmit: 'neutral' | 'vertex' | 'fragment';
   readonly #crossShaderStageState: CrossShaderStageState;
 
@@ -616,6 +621,18 @@ export class GlslGenerator extends WgslGenerator {
     for (const id of this.#crossShaderStageState.textureFlipIdentifiers.values()) {
       ctx.reserveIdentifier(id, 'global');
     }
+  }
+
+  protected override _generateLog(): Snippet {
+    // Logs are read back from storage buffers, which WebGL 2 doesn't have, so the call
+    // becomes a no-op. Same as in WGSL when logging outside of a pipeline.
+    if (DEV && !GlslGenerator.#warnedAboutConsoleLog) {
+      GlslGenerator.#warnedAboutConsoleLog = true;
+      console.warn(
+        "WebGL fallback: 'console.log' isn't supported by WebGL 2, the call will be omitted.",
+      );
+    }
+    return consoleLogFallbackSnippet;
   }
 
   override declareGlobalConst(options: ConstantDefinitionOptions): ResolvedSnippet {
@@ -1339,7 +1356,7 @@ The generated shader will omit it, so its runtime side effects will not occur.`)
             this.#crossShaderStageState.varyingQualifiers.set(
               name,
               declaredType
-                ? interpolationQualifier(declaredType)
+                ? GlslGenerator.#interpolationQualifier(declaredType)
                 : integerDataTypes.has(dataType.type)
                   ? 'flat '
                   : '',
@@ -1396,7 +1413,7 @@ The generated shader will omit it, so its runtime side effects will not occur.`)
             // so we don't emit layout(location=N) qualifiers here.
             const qualifier =
               this.#crossShaderStageState.varyingQualifiers.get(varName) ??
-              interpolationQualifier(dataType);
+              GlslGenerator.#interpolationQualifier(dataType);
             this.ctx.addDeclaration(`${qualifier}out ${glslType} ${varName};`);
           }
         }
@@ -1432,7 +1449,7 @@ The generated shader will omit it, so its runtime side effects will not occur.`)
           }
           const qualifier =
             this.#crossShaderStageState.varyingQualifiers.get(inName) ??
-            interpolationQualifier(propType);
+            GlslGenerator.#interpolationQualifier(propType);
           this.ctx.addDeclaration(`${qualifier}in ${glslType} ${inName};`);
           return inName;
         };
