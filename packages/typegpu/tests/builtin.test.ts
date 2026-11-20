@@ -10,6 +10,28 @@ describe('builtin', () => {
 
     expect(tgpu.resolve([s1], { names: 'strict' })).toContain('@builtin(position) position: vec4f');
   });
+
+  it('types clipDistances as an array of f32', () => {
+    expectTypeOf(d.builtin.clipDistances).toEqualTypeOf<
+      d.Decorated<d.WgslArray<d.F32>, [d.Builtin<'clip_distances'>]>
+    >();
+  });
+
+  it('resolves a vertex function that outputs clipDistances', () => {
+    const main = tgpu.vertexFn({
+      out: { pos: d.builtin.position, clip: d.builtin.clipDistances },
+    })(() => {
+      'use gpu';
+      const clip = d.arrayOf(d.f32, 8)();
+      clip[0] = 1;
+      return { pos: d.vec4f(), clip };
+    });
+
+    const wgsl = tgpu.resolve([main], { enableExtensions: ['clip_distances'] });
+
+    expect(wgsl).toMatch(/^enable clip_distances;/);
+    expect(wgsl).toContain('@builtin(clip_distances) clip: array<f32, 8>,');
+  });
 });
 
 describe('IsBuiltin', () => {
