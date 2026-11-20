@@ -1,6 +1,6 @@
 {
   "title": "3D Fish",
-  "description": "Animates a school of stylized 3D fish by updating their movement in GPU buffers and rendering the instances with depth.",
+  "description": "Animates a school of stylized 3D fish by updating their movement in GPU buffers and rendering the instances with depth. Uses \"Animated Low Poly Fish\" by Sketchfab user Atlas under CC BY 4.0, modified from the original.",
   "category": "rendering",
   "tags": ["3d", "double buffering", "interactive", "particles"],
   "coolFactor": 9

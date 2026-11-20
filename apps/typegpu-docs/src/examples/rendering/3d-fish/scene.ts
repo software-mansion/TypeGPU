@@ -287,9 +287,6 @@ export async function setupScene(root: TgpuRoot, context: GPUCanvasContext) {
   let previousMouseX = 0;
   let previousMouseY = 0;
 
-  let isPopupDiscarded = false;
-  const controlsPopup = document.getElementById('help') as HTMLDivElement | null;
-
   const cameraRadius = std.length(std.sub(p.cameraInitialPosition.xyz, p.cameraInitialTarget.xyz));
   let cameraYaw =
     (Math.atan2(p.cameraInitialPosition.x, p.cameraInitialPosition.z) + Math.PI) % Math.PI;
@@ -354,10 +351,6 @@ export async function setupScene(root: TgpuRoot, context: GPUCanvasContext) {
   canvas.addEventListener('mousedown', async (event) => {
     previousMouseX = event.clientX;
     previousMouseY = event.clientY;
-    if (controlsPopup) {
-      controlsPopup.style.opacity = '0';
-    }
-    isPopupDiscarded = true;
 
     if (event.button === 0) {
       isPressed = true;
@@ -371,12 +364,6 @@ export async function setupScene(root: TgpuRoot, context: GPUCanvasContext) {
     }
   };
   window.addEventListener('mouseup', mouseUpEventListener);
-
-  canvas.addEventListener('mousemove', () => {
-    if (!isPopupDiscarded && controlsPopup) {
-      controlsPopup.style.opacity = '1';
-    }
-  });
 
   const mouseMoveEventListener = (event: MouseEvent) => {
     const dx = event.clientX - previousMouseX;
@@ -403,9 +390,6 @@ export async function setupScene(root: TgpuRoot, context: GPUCanvasContext) {
         previousMouseY = event.touches[0].clientY;
       }
       updateMouseRay(event.touches[0].clientX, event.touches[0].clientY);
-      if (controlsPopup) {
-        controlsPopup.style.opacity = '0';
-      }
     },
     { passive: false },
   );
