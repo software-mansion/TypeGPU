@@ -3,7 +3,7 @@ import * as t from '@babel/types';
 import type { Plugin } from 'rollup';
 import * as parser from '@babel/parser';
 import traverse, { NodePath, type TraverseOptions } from '@babel/traverse';
-import MagicString from 'magic-string';
+import MagicString, { Bundle } from 'magic-string';
 import { getBabelParserOptions, getLang } from 'ast-kit';
 import { createUnplugin, type UnpluginFactory } from 'unplugin';
 import {
@@ -93,6 +93,13 @@ function countMapped(ast: string | null | undefined) {
     return 0;
   }
   return ast.split('[-1,').length - 1;
+}
+
+function extractFilenames(res: string | null | undefined) {
+  if (!res) {
+    return res;
+  }
+  return res.split('\n').filter((res) => res.match(/filename/));
 }
 
 /**
@@ -200,7 +207,8 @@ describe('source maps', () => {
             v: 2,
             name: "fn",
             ast: {"params":[{"type":"i","name":"argument"}],"body":[-1,5,38,[0,[[-1,7,8,[13,[-1,7,14,[9,"variable"]],[-1,7,25,[5,"3"]]]],[-1,8,8,[10,[-1,8,15,[1,[-1,8,15,[1,[-1,8,15,[9,"external.n"]],"+",[-1,8,28,[9,"argument"]]]],"+",[-1,8,39,[9,"variable"]]]]]]]]]},
-            externals: {"external.n":() => external.n}
+            externals: {"external.n":() => external.n},
+            filename: "\\u0000virtual:code"
           }) && $.f)({}));
 
         export { fn };
@@ -410,6 +418,99 @@ describe('source maps', () => {
           `"[-1,1,30,[0,[[-1,3,8,[10,[-1,3,15,[5,"1"]]]]]]]"`,
         );
         expectSourceMapsToMatch(code, transformed);
+      });
+    });
+  });
+
+  describe('file name', () => {
+    const code = `const fn = () => { 'use gpu'; return 1; }; console.log(fn)`;
+
+    describe('is included when source maps are enabled', () => {
+      test('[BABEL]', () => {
+        const transformed = babelTransform(code, { unstable_sourceMaps: true }, [], [], {
+          filename: 'test.ts',
+        });
+        expect(extractFilenames(transformed)).toMatchInlineSnapshot(`
+          [
+            "  filename: "/test.ts"",
+          ]
+        `);
+      });
+
+      test('[ROLLUP]', async () => {
+        const transformed = await rollupTransform(code, { unstable_sourceMaps: true });
+        expect(extractFilenames(transformed)).toMatchInlineSnapshot(`
+          [
+            "    filename: "\\u0000virtual:code"",
+          ]
+        `);
+      });
+    });
+
+    describe('is omitted when source maps are disabled', () => {
+      test('[BABEL]', () => {
+        const transformed = babelTransform(code, { unstable_sourceMaps: false }, [], [], {
+          filename: 'test.ts',
+        });
+        expect(transformed).not.toContain('filename:');
+      });
+
+      test('[ROLLUP]', async () => {
+        const transformed = await rollupTransform(code, { unstable_sourceMaps: false });
+        expect(transformed).not.toContain('filename:');
+      });
+    });
+
+    describe('uses original file names instead of the merged one', () => {
+      const bundle = new Bundle();
+      bundle.addSource({
+        filename: '/first.ts',
+        content: new MagicString(
+          `const first = () => { 'use gpu'; return 1; }; console.log(first);`,
+        ),
+      });
+      bundle.addSource({
+        filename: '/second.ts',
+        content: new MagicString(
+          `const second = () => { 'use gpu'; return 2; }; console.log(second);`,
+        ),
+      });
+      const mergedCode = bundle.toString();
+      const mergedMap = { ...bundle.generateMap(), sourcesContent: [] };
+
+      test('[BABEL]', () => {
+        const transformed = babelTransform(mergedCode, { unstable_sourceMaps: true }, [], [], {
+          filename: 'merged.ts',
+          inputSourceMap: mergedMap,
+        });
+
+        expect(extractFilenames(transformed)).toMatchInlineSnapshot(`
+          [
+            "  filename: "/first.ts"",
+            "  filename: "/second.ts"",
+          ]
+        `);
+      });
+
+      test('[ROLLUP]', async () => {
+        const mergedFilesPlugin: Plugin = {
+          name: 'merged-files',
+          load: {
+            order: 'pre',
+            handler: () => ({ code: mergedCode, map: mergedMap }),
+          },
+        };
+
+        const transformed = await rollupTransform(mergedCode, { unstable_sourceMaps: true }, [
+          mergedFilesPlugin,
+        ]);
+
+        expect(extractFilenames(transformed)).toMatchInlineSnapshot(`
+          [
+            "    filename: "/first.ts"",
+            "    filename: "/second.ts"",
+          ]
+        `);
       });
     });
   });
