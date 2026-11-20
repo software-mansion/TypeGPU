@@ -40,6 +40,21 @@ describe('TgpuRootWebGL - unsupported operations throw', () => {
     );
   });
 
+  it('quotes texture features in error messages exactly once', ({ gl }) => {
+    const root = initWithGL({ gl });
+
+    expect(() =>
+      root.createTexture({ size: [1, 1], format: 'bgra8unorm' }),
+    ).toThrowErrorMatchingInlineSnapshot(
+      `[WebGLFallbackUnsupportedError: WebGL fallback does not support 'texture format bgra8unorm' (supported formats: r8unorm, rg8unorm, rgba8unorm, rgba8unorm-srgb, rgba16float, rgba32float). Use WebGPU for full TypeGPU functionality.]`,
+    );
+    expect(() =>
+      root.createTexture({ size: [1, 1], format: 'rgba8unorm' }).$usage('storage'),
+    ).toThrowErrorMatchingInlineSnapshot(
+      `[WebGLFallbackUnsupportedError: WebGL fallback does not support 'storage texture usage'. Use WebGPU for full TypeGPU functionality.]`,
+    );
+  });
+
   it('throws for device access', ({ gl }) => {
     const root = initWithGL({ gl });
 
