@@ -2,6 +2,7 @@ import { roundUp } from '../mathUtils.ts';
 import { DEV } from '../shared/env.ts';
 import { logger } from '../tgpuLogger.ts';
 import { isDisarray, isLooseDecorated, isUnstruct } from './dataTypes.ts';
+import { toHalfBits } from './numeric.ts';
 import { offsetsForProps } from './offsets.ts';
 import { sizeOf } from './sizeOf.ts';
 import { strideOf } from './schemaMemoryLayout.ts';
@@ -169,6 +170,14 @@ const specialPackedFormats = {
   },
 } as const;
 
+/**
+ * Whether this engine's `DataView` can write an f16 itself. Hermes (React Native), Node 22 and
+ * older browsers have no `setFloat16`, so the writer converts to half bits and writes those.
+ */
+function hasNativeSetFloat16(): boolean {
+  return typeof (DataView.prototype as { setFloat16?: unknown }).setFloat16 === 'function';
+}
+
 export function buildWriter(
   node: wgsl.BaseData,
   offsetExpr: string,
@@ -176,10 +185,14 @@ export function buildWriter(
   depth = 0,
   partial = false,
 ): string {
-  const emitWrite = (writeFunc: string, addr: string, value: string): string =>
-    partial
-      ? `if (${addr} < endOffset) { output.${writeFunc}(${addr}, ${value}, littleEndian); }\n`
-      : `output.${writeFunc}(${addr}, ${value}, littleEndian);\n`;
+  const nativeF16 = hasNativeSetFloat16();
+  const emitWrite = (writeFunc: string, addr: string, value: string): string => {
+    const write =
+      writeFunc === 'setFloat16' && !nativeF16
+        ? `output.setUint16(${addr}, toHalfBits(${value}), littleEndian);`
+        : `output.${writeFunc}(${addr}, ${value}, littleEndian);`;
+    return partial ? `if (${addr} < endOffset) { ${write} }\n` : `${write}\n`;
+  };
 
   const emitBlock = (addr: string, block: string): string =>
     partial ? `if (${addr} < endOffset) {\n${block}}\n` : block;
@@ -340,15 +353,12 @@ export function getCompiledWriter(schema: wgsl.BaseData): CompiledWriter | undef
     const partialBody = buildWriter(schema, 'offset', 'value', 0, true);
     const body = `if (offset > 0 || endOffset < output.byteLength) {\n${partialBody}} else {\n${fullBody}}\n`;
 
+    // The body can call `toHalfBits` (see `buildWriter`), so it is closed over here.
     // oxlint-disable-next-line typescript-eslint/no-implied-eval
     const fn = new Function(
-      'output',
-      'offset',
-      'value',
-      'littleEndian=true',
-      'endOffset=output.byteLength',
-      body,
-    ) as CompiledWriter;
+      'toHalfBits',
+      `return function (output, offset, value, littleEndian = true, endOffset = output.byteLength) {\n${body}};`,
+    )(toHalfBits) as CompiledWriter;
 
     compiledWriters.set(schema, fn);
     return fn;
