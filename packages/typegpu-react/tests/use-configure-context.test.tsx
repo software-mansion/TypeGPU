@@ -1,6 +1,7 @@
 import { act, render } from '@testing-library/react';
 import { afterEach, beforeEach, describe, expect, vi } from 'vitest';
-import { useConfigureContext } from '@typegpu/react';
+import tgpu from 'typegpu';
+import { Root, useConfigureContext } from '@typegpu/react';
 import {
   type CanvasRef,
   createUseConfigureContextHook,
@@ -398,6 +399,35 @@ describe('useConfigureContext', () => {
       rerender(<OptionsCanvas transparent onResize={onResize} />);
 
       expect(alphaModesAtNotify).toEqual(['opaque', 'premultiplied']);
+    });
+
+    it('reconfigures with the new root, then notifies, when the root changes', async ({
+      root,
+    }) => {
+      const otherRoot = await tgpu.init();
+      const onResize = vi.fn();
+      const { rerender } = render(
+        <Root root={root}>
+          <OptionsCanvas transparent={false} onResize={onResize} />
+        </Root>,
+      );
+      resizeAll(640, 480);
+      expect(configure).toHaveBeenCalledTimes(1);
+      expect(onResize).toHaveBeenCalledTimes(2);
+
+      rerender(
+        <Root root={otherRoot}>
+          <OptionsCanvas transparent={false} onResize={onResize} />
+        </Root>,
+      );
+
+      expect(configure).toHaveBeenCalledTimes(2);
+      expect(configure).toHaveBeenLastCalledWith(
+        expect.objectContaining({ alphaMode: 'opaque', device: otherRoot.device }),
+      );
+      expect(onResize).toHaveBeenCalledTimes(3);
+      expect(onResize).toHaveBeenLastCalledWith(640, 480);
+      otherRoot.destroy();
     });
 
     it('does not call onResize when the options are equal by value', ({ RootWrapper }) => {

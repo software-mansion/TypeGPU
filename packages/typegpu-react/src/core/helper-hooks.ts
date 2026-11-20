@@ -27,7 +27,7 @@ export function useChangeDetection<T>(value: T): boolean {
 
 /**
  * Structural equality for plain values: primitives, arrays and plain objects are compared by
- * contents, anything else by identity.
+ * contents, anything else by its own enumerable keys.
  */
 export function valuesEqual(a: unknown, b: unknown): boolean {
   if (Object.is(a, b)) {
