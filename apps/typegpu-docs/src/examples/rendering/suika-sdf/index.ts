@@ -93,14 +93,7 @@ const scoreEl = document.getElementById('score') as HTMLElement;
 const finalScoreEl = document.getElementById('final-score') as HTMLElement;
 const loseScreenEl = document.getElementById('lose-screen') as HTMLElement;
 const resetButtonEl = document.getElementById('reset-button') as HTMLButtonElement;
-const attributionEl = document.getElementById('attribution') as HTMLElement;
 
-const dismissAttribution = () => {
-  attributionEl.style.opacity = '0';
-  attributionEl.style.pointerEvents = 'none';
-};
-canvas.addEventListener('click', dismissAttribution, { once: true, signal });
-canvas.addEventListener('touchend', dismissAttribution, { once: true, signal });
 resetButtonEl.addEventListener('click', restart, { signal });
 
 function triggerGameOver() {
