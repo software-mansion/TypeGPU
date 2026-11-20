@@ -108,6 +108,22 @@ describe('mod overload', () => {
     expectTypeOf(mod(vec4u(), vec4u(1))).toEqualTypeOf<v4u>();
   });
 
+  it('has correct return type for mixed operations', () => {
+    expectTypeOf(mod(5, 2)).toEqualTypeOf<number>();
+    expectTypeOf(mod(vec3f(), 2)).toEqualTypeOf<v3f>();
+    expectTypeOf(mod(2, vec3i(1))).toEqualTypeOf<v3i>();
+  });
+
+  it('accepts union', () => {
+    const vecOrNum = vec3f(3, 4, 5) as number | v3f;
+    expectTypeOf(mod(vecOrNum, 2)).toEqualTypeOf<number | v3f>();
+    expectTypeOf(mod(7, vecOrNum)).toEqualTypeOf<number | v3f>();
+    expectTypeOf(mod(vec2f(1), vec2f(2) as number | v2f)).toEqualTypeOf<v2f | number>();
+
+    expect(mod(vecOrNum, 2)).toStrictEqual(vec3f(1, 0, 1));
+    expect(mod(7, vecOrNum)).toStrictEqual(vec3f(1, 3, 2));
+  });
+
   it('rejects when incompatible types', () => {
     // @ts-expect-error
     () => mod(vec2f(), vec2i());

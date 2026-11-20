@@ -226,6 +226,11 @@ function cpuDiv(lhs: number, rhs: number): number; // default js division
 function cpuDiv<T extends NumVec>(lhs: T, rhs: T): T; // component-wise division
 function cpuDiv<T extends NumVec>(lhs: number, rhs: T): T; // mixed division
 function cpuDiv<T extends NumVec>(lhs: T, rhs: number): T; // mixed division
+function cpuDiv<
+  // union overload
+  Lhs extends number | NumVec,
+  Rhs extends Lhs extends number ? number | NumVec : Lhs extends NumVec ? number | Lhs : never,
+>(lhs: Lhs, rhs: Rhs): Lhs | Rhs;
 function cpuDiv(lhs: NumVec | number, rhs: NumVec | number): NumVec | number {
   assertKind([lhs, rhs], numericKind);
   const cast = upCast([lhs, rhs]);
@@ -247,6 +252,14 @@ type ModOverload = {
   <T extends NumVec>(a: T, b: T): T;
   <T extends NumVec>(a: number, b: T): T;
   <T extends NumVec>(a: T, b: number): T;
+  <
+    // union overload
+    Lhs extends number | NumVec,
+    Rhs extends Lhs extends number ? number | NumVec : Lhs extends NumVec ? number | Lhs : never,
+  >(
+    a: Lhs,
+    b: Rhs,
+  ): Lhs | Rhs;
 };
 
 /**
@@ -268,6 +281,7 @@ export const mod = dualImpl({
 
 function cpuNeg(value: number): number;
 function cpuNeg<T extends AnySignedVecInstance>(value: T): T;
+function cpuNeg<T extends number | AnySignedVecInstance>(value: T): T; // union overload
 function cpuNeg(value: NumVec | number): NumVec | number {
   assertKind(value, signedKind);
   return generalizeFn((value) => -value, [value]);
