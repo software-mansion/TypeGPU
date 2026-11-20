@@ -261,9 +261,9 @@ Configures a WebGPU context on the canvas that `ref` is passed to. Accepts all o
 | Option | Description |
 |-|-|
 | autoResize | Whether to keep the canvas resolution in sync with its size on the page. Defaults to `true`. |
-| onResize | A function called with the canvas `width` and `height` once the canvas becomes available, and then again every time its size changes. |
+| onResize | A function called with the canvas `width` and `height` once the canvas becomes available, again every time its size changes, and every time the context is reconfigured because the root or the options changed (reconfiguring clears the canvas). |
 
-Resizing a canvas clears its contents, so if you're not drawing every frame with [`useFrame`](#useframe),
+Resizing a canvas or reconfiguring its context clears its contents, so if you're not drawing every frame with [`useFrame`](#useframe),
 the `onResize` callback is a good place to redraw.
 
 ```tsx
