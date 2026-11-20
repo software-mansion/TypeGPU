@@ -776,6 +776,26 @@ describe('binaryLogicalOps', () => {
       `);
     });
 
+    it('folds a truthy non-bool comptime lhs inside a condition', () => {
+      const n = 5 as number | undefined;
+      const fn = () => {
+        'use gpu';
+        let res = -1;
+        if (n ?? 0) {
+          res = 1;
+        }
+        return res;
+      };
+
+      expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+        "fn fn_1() -> i32 {
+          var res = -1;
+          res = 1i;
+          return res;
+        }"
+      `);
+    });
+
     it('keeps a runtime lhs, which is never nullish', () => {
       const fn = tgpu.fn(
         [d.bool],

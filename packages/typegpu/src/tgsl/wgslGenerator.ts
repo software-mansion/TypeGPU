@@ -643,10 +643,9 @@ export class WgslGenerator implements ShaderGenerator {
           if (!castToBool) {
             return coerceToSnippet(knownLhs.value);
           }
-          // `??` keeps a non-nullish lhs as it is, falsy or not
-          return op === '??'
-            ? tryConvertSnippet(this.ctx, coerceToSnippet(knownLhs.value), bool, false)
-            : snip(op === '||', bool, 'constant', false);
+          // `??` keeps a non-nullish lhs as it is, falsy or not, so its truthiness decides
+          const result = op === '??' ? Boolean(knownLhs.value) : op === '||';
+          return snip(result, bool, 'constant', false);
         }
 
         const rhsExpr = this._expression(rhs);
