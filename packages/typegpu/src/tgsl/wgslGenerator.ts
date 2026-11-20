@@ -1765,9 +1765,9 @@ ${this.ctx.pre}else ${alternate}`,
         this.ctx.pushBlockScope();
         const [initStatement, conditionExpr, updateStatement] = this.ctx.withResetIndentLevel(
           () => [
-            init ? this._statement(init).code : undefined,
-            condition ? this._expressionWithTypeConversion(condition, bool) : undefined,
-            update ? this._statement(update).code : undefined,
+            init !== null ? this._statement(init).code : undefined,
+            condition !== null ? this._expressionWithTypeConversion(condition, bool) : undefined,
+            update !== null ? this._statement(update).code : undefined,
           ],
         );
 
