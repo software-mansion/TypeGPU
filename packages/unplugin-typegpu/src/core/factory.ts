@@ -10,7 +10,7 @@ import { METADATA_FORMAT_VERSION } from './version.ts';
 import type { SourceMap } from 'rollup';
 import {
   defaultOptions,
-  earlyPruneRegex,
+  getEarlyPruneRegex,
   initPluginState,
   functionVisitor,
   getBlockScope,
@@ -18,7 +18,6 @@ import {
   nodePosition,
   originalMappingFor,
 } from './common.ts';
-
 import type {
   Options,
   UnpluginPluginState,
@@ -26,6 +25,7 @@ import type {
   NodeLocation,
   PluginTranspilationResult,
 } from './common.ts';
+import type { FunctionAst, FunctionExternals } from './embeddedMetadata.ts';
 
 // I love CommonJS 💔
 let traverse = _traverse;
@@ -103,6 +103,20 @@ function assignMetadata(
     this.magicString.prependLeft(insertPos, code);
   } else {
     this.overwrite(nodeToOverride, code);
+  }
+}
+
+function replaceWithObfuscated(
+  this: UnpluginPluginState,
+  astPath: NodePath<t.ObjectExpression>,
+  obfuscatedAst: FunctionAst,
+  embeddedExternals: FunctionExternals,
+  externalKeyToObfuscatedMap: Map<string, string>,
+): void {
+  this.overwrite(astPath.node, embedJSON(obfuscatedAst));
+
+  for (const [key, propertyPath] of embeddedExternals) {
+    this.overwrite(propertyPath.node.key, `"${externalKeyToObfuscatedMap.get(key)}"`);
   }
 }
 
@@ -195,7 +209,7 @@ export const unpluginFactory = ((rawOptions, _meta) => {
       filter: options.earlyPruning
         ? {
             id: options,
-            code: earlyPruneRegex,
+            code: getEarlyPruneRegex(options.unstable_obfuscate),
           }
         : {
             id: options,
@@ -234,6 +248,7 @@ export const unpluginFactory = ((rawOptions, _meta) => {
         initPluginState(state, {
           warn: (message) => this.warn(message),
           assignMetadata,
+          replaceWithObfuscated,
           wrapInAutoName,
           replaceWithAssignmentOverload,
           replaceWithBinaryOverload,

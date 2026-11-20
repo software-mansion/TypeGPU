@@ -1,5 +1,7 @@
 import type { TranspilationResult } from 'tinyest-for-wgsl';
 import * as tinyest from 'tinyest';
+import type { FunctionAst } from './embeddedMetadata.ts';
+
 const { NodeTypeCatalog: NODE } = tinyest;
 
 /**
@@ -60,7 +62,12 @@ class Context {
   }
 }
 
-export function obfuscate(fn: TranspilationResult): TranspilationResult {
+type ObfuscationResult = {
+  ast: FunctionAst;
+  externalKeyMap: Map<string, string>;
+};
+
+export function obfuscateAst(fn: FunctionAst, externalKeys: Iterable<string>): ObfuscationResult {
   const ctx = new Context();
 
   const params = fn.params.map((param) => {
@@ -76,10 +83,21 @@ export function obfuscate(fn: TranspilationResult): TranspilationResult {
 
   const body = obf(ctx, fn.body);
 
-  const externalNames = new Map();
-  fn.externalNames.forEach((value, key) => externalNames.set(ctx.obfuscator.obfuscate(key), value));
+  const externalKeyMap = new Map(
+    Array.from(externalKeys, (key) => [key, ctx.obfuscator.obfuscate(key)] as const),
+  );
 
-  return { ...fn, params, body, externalNames };
+  return { ast: { params, body }, externalKeyMap };
+}
+
+export function obfuscate(fn: TranspilationResult): TranspilationResult {
+  const { ast, externalKeyMap } = obfuscateAst(fn, fn.externalNames.keys());
+
+  const externalNames = new Map(
+    Array.from(fn.externalNames, ([key, value]) => [externalKeyMap.get(key) as string, value]),
+  );
+
+  return { ...fn, ...ast, externalNames };
 }
 
 // Nodes like 'continue' and 'break' are still listed
