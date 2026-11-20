@@ -116,7 +116,7 @@ function sampleCpu(
   );
 }
 
-export const textureSample = dualImpl({
+export const textureSample = /*#__PURE__*/ dualImpl({
   name: 'textureSample',
   normalImpl: sampleCpu,
   codegenImpl: (ctx, args) => ctx.gen.emitCall('textureSample', [], compactSnippetArgs(args)),
@@ -178,7 +178,7 @@ function sampleBiasCpu(
   );
 }
 
-export const textureSampleBias = dualImpl({
+export const textureSampleBias = /*#__PURE__*/ dualImpl({
   name: 'textureSampleBias',
   normalImpl: sampleBiasCpu,
   codegenImpl: (ctx, args) => ctx.gen.emitCall('textureSampleBias', [], compactSnippetArgs(args)),
@@ -297,7 +297,7 @@ function sampleLevelCpu(
   );
 }
 
-export const textureSampleLevel = dualImpl({
+export const textureSampleLevel = /*#__PURE__*/ dualImpl({
   name: 'textureSampleLevel',
   normalImpl: sampleLevelCpu,
   codegenImpl: (ctx, args) => ctx.gen.emitCall('textureSampleLevel', [], compactSnippetArgs(args)),
@@ -390,7 +390,7 @@ function textureLoadCpu(
   );
 }
 
-export const textureLoad = dualImpl({
+export const textureLoad = /*#__PURE__*/ dualImpl({
   name: 'textureLoad',
   normalImpl: textureLoadCpu,
   codegenImpl: (ctx, args) => ctx.gen.emitCall('textureLoad', [], compactSnippetArgs(args)),
@@ -458,7 +458,7 @@ function textureStoreCpu(
   );
 }
 
-export const textureStore = dualImpl({
+export const textureStore = /*#__PURE__*/ dualImpl({
   name: 'textureStore',
   normalImpl: textureStoreCpu,
   codegenImpl: (_ctx, args) => stitch`textureStore(${args})`,
@@ -506,7 +506,7 @@ function textureDimensionsCpu(
   );
 }
 
-export const textureDimensions = dualImpl({
+export const textureDimensions = /*#__PURE__*/ dualImpl({
   name: 'textureDimensions',
   normalImpl: textureDimensionsCpu,
   codegenImpl: (ctx, args) => ctx.gen.emitCall('textureDimensions', [], compactSnippetArgs(args)),
@@ -545,7 +545,7 @@ function textureNumLayersCpu<T extends ArrayTexture>(_texture: T): number {
   );
 }
 
-export const textureNumLayers = dualImpl({
+export const textureNumLayers = /*#__PURE__*/ dualImpl({
   name: 'textureNumLayers',
   normalImpl: textureNumLayersCpu,
   codegenImpl: (_ctx, [texture]) => stitch`textureNumLayers(${texture})`,
@@ -571,7 +571,7 @@ function textureNumLevelsCpu<T extends MipmappedTexture>(_texture: T): number {
   );
 }
 
-export const textureNumLevels = dualImpl({
+export const textureNumLevels = /*#__PURE__*/ dualImpl({
   name: 'textureNumLevels',
   normalImpl: textureNumLevelsCpu,
   codegenImpl: (_ctx, [texture]) => stitch`textureNumLevels(${texture})`,
@@ -587,7 +587,7 @@ function textureNumSamplesCpu<T extends textureMultisampled2d | textureDepthMult
   );
 }
 
-export const textureNumSamples = dualImpl({
+export const textureNumSamples = /*#__PURE__*/ dualImpl({
   name: 'textureNumSamples',
   normalImpl: textureNumSamplesCpu,
   codegenImpl: (_ctx, [texture]) => stitch`textureNumSamples(${texture})`,
@@ -680,7 +680,7 @@ const sampleTypeToVecType = {
   u32: vec4u,
 };
 
-export const textureGather = dualImpl({
+export const textureGather = /*#__PURE__*/ dualImpl({
   name: 'textureGather',
   normalImpl: textureGatherCpu,
   codegenImpl: (_ctx, args) => stitch`textureGather(${args})`,
@@ -756,7 +756,7 @@ function textureGatherCompareCpu(
   );
 }
 
-export const textureGatherCompare = dualImpl({
+export const textureGatherCompare = /*#__PURE__*/ dualImpl({
   name: 'textureGatherCompare',
   normalImpl: textureGatherCompareCpu,
   codegenImpl: (_ctx, args) => stitch`textureGatherCompare(${args})`,
@@ -827,7 +827,7 @@ function textureSampleCompareCpu(
   );
 }
 
-export const textureSampleCompare = dualImpl({
+export const textureSampleCompare = /*#__PURE__*/ dualImpl({
   name: 'textureSampleCompare',
   normalImpl: textureSampleCompareCpu,
   codegenImpl: (_ctx, args) => stitch`textureSampleCompare(${args})`,
@@ -892,7 +892,7 @@ function textureSampleCompareLevelCpu(
   );
 }
 
-export const textureSampleCompareLevel = dualImpl({
+export const textureSampleCompareLevel = /*#__PURE__*/ dualImpl({
   name: 'textureSampleCompareLevel',
   normalImpl: textureSampleCompareLevelCpu,
   codegenImpl: (ctx, args) => stitch`textureSampleCompareLevel(${args})`,
@@ -989,7 +989,7 @@ function sampleGradCpu(
   );
 }
 
-export const textureSampleGrad = dualImpl({
+export const textureSampleGrad = /*#__PURE__*/ dualImpl({
   name: 'textureSampleGrad',
   normalImpl: sampleGradCpu,
   codegenImpl: (_ctx, args) => stitch`textureSampleGrad(${args})`,
@@ -1000,7 +1000,7 @@ export const textureSampleGrad = dualImpl({
   sideEffects: false,
 });
 
-export const textureSampleBaseClampToEdge = dualImpl({
+export const textureSampleBaseClampToEdge = /*#__PURE__*/ dualImpl({
   name: 'textureSampleBaseClampToEdge',
   normalImpl: textureSampleBaseClampToEdgeCpu,
   codegenImpl: (_ctx, args) => stitch`textureSampleBaseClampToEdge(${args})`,

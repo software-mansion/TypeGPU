@@ -14,11 +14,11 @@ import { $gpuCallable } from '../shared/symbols.ts';
 import { vec3f } from '../data/vector.ts';
 import { f32 } from '../data/numeric.ts';
 
-const gpuTranslation4 = translation4[$gpuCallable].bind(translation4);
-const gpuScaling4 = scaling4[$gpuCallable].bind(scaling4);
-const gpuRotationX4 = rotationX4[$gpuCallable].bind(rotationX4);
-const gpuRotationY4 = rotationY4[$gpuCallable].bind(rotationY4);
-const gpuRotationZ4 = rotationZ4[$gpuCallable].bind(rotationZ4);
+const gpuTranslation4 = /*#__PURE__*/ translation4[$gpuCallable].bind(translation4);
+const gpuScaling4 = /*#__PURE__*/ scaling4[$gpuCallable].bind(scaling4);
+const gpuRotationX4 = /*#__PURE__*/ rotationX4[$gpuCallable].bind(rotationX4);
+const gpuRotationY4 = /*#__PURE__*/ rotationY4[$gpuCallable].bind(rotationY4);
+const gpuRotationZ4 = /*#__PURE__*/ rotationZ4[$gpuCallable].bind(rotationZ4);
 
 /**
  * Translates the given 4-by-4 matrix by the given vector.
@@ -26,7 +26,7 @@ const gpuRotationZ4 = rotationZ4[$gpuCallable].bind(rotationZ4);
  * @param {v3f} vector - The vector by which to translate the matrix.
  * @returns {m4x4f} The translated matrix.
  */
-export const translate4 = dualImpl({
+export const translate4 = /*#__PURE__*/ dualImpl({
   name: 'translate4',
   normalImpl: (matrix: m4x4f, vector: v3f) => mul(translation4(vector), matrix),
   signature: { argTypes: [mat4x4f, vec3f], returnType: mat4x4f },
@@ -40,7 +40,7 @@ export const translate4 = dualImpl({
  * @param {v3f} vector - A vector of three entries specifying the factor by which to scale in each dimension.
  * @returns {m4x4f} The scaled matrix.
  */
-export const scale4 = dualImpl({
+export const scale4 = /*#__PURE__*/ dualImpl({
   name: 'scale4',
   normalImpl: (matrix: m4x4f, vector: v3f) => mul(scaling4(vector), matrix),
   signature: { argTypes: [mat4x4f, vec3f], returnType: mat4x4f },
@@ -56,7 +56,7 @@ const rotateSignature = { argTypes: [mat4x4f, f32], returnType: mat4x4f };
  * @param {number} angle - The angle by which to rotate (in radians).
  * @returns {m4x4f} The rotated matrix.
  */
-export const rotateX4 = dualImpl({
+export const rotateX4 = /*#__PURE__*/ dualImpl({
   name: 'rotateX4',
   normalImpl: (matrix: m4x4f, angle: number) => mul(rotationX4(angle), matrix),
   signature: rotateSignature,
@@ -70,7 +70,7 @@ export const rotateX4 = dualImpl({
  * @param {number} angle - The angle by which to rotate (in radians).
  * @returns {m4x4f} The rotated matrix.
  */
-export const rotateY4 = dualImpl({
+export const rotateY4 = /*#__PURE__*/ dualImpl({
   name: 'rotateY4',
   normalImpl: (matrix: m4x4f, angle: number) => mul(rotationY4(angle), matrix),
   signature: rotateSignature,
@@ -84,7 +84,7 @@ export const rotateY4 = dualImpl({
  * @param {number} angle - The angle by which to rotate (in radians).
  * @returns {m4x4f} The rotated matrix.
  */
-export const rotateZ4 = dualImpl({
+export const rotateZ4 = /*#__PURE__*/ dualImpl({
   name: 'rotateZ4',
   normalImpl: (matrix: m4x4f, angle: number) => mul(rotationZ4(angle), matrix),
   signature: rotateSignature,

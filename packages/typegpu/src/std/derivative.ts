@@ -10,9 +10,9 @@ type DerivativeSignature = ((value: number) => number) &
 
 const derivativeNormalError = 'Derivative builtins are not allowed on the CPU';
 // WGSL derivative builtins only accept f32 and vecN<f32>
-const derivativeSignature = unifyRestrictedSignature([f32, vec2f, vec3f, vec4f]);
+const derivativeSignature = /*#__PURE__*/ unifyRestrictedSignature([f32, vec2f, vec3f, vec4f]);
 
-export const dpdx = dualImpl<DerivativeSignature>({
+export const dpdx = /*#__PURE__*/ dualImpl<DerivativeSignature>({
   name: 'dpdx',
   normalImpl: derivativeNormalError,
   signature: derivativeSignature,
@@ -20,7 +20,7 @@ export const dpdx = dualImpl<DerivativeSignature>({
   sideEffects: false,
 });
 
-export const dpdxCoarse = dualImpl<DerivativeSignature>({
+export const dpdxCoarse = /*#__PURE__*/ dualImpl<DerivativeSignature>({
   name: 'dpdxCoarse',
   normalImpl: derivativeNormalError,
   signature: derivativeSignature,
@@ -28,7 +28,7 @@ export const dpdxCoarse = dualImpl<DerivativeSignature>({
   sideEffects: false,
 });
 
-export const dpdxFine = dualImpl<DerivativeSignature>({
+export const dpdxFine = /*#__PURE__*/ dualImpl<DerivativeSignature>({
   name: 'dpdxFine',
   normalImpl: derivativeNormalError,
   signature: derivativeSignature,
@@ -36,7 +36,7 @@ export const dpdxFine = dualImpl<DerivativeSignature>({
   sideEffects: false,
 });
 
-export const dpdy = dualImpl<DerivativeSignature>({
+export const dpdy = /*#__PURE__*/ dualImpl<DerivativeSignature>({
   name: 'dpdy',
   normalImpl: derivativeNormalError,
   signature: derivativeSignature,
@@ -44,7 +44,7 @@ export const dpdy = dualImpl<DerivativeSignature>({
   sideEffects: false,
 });
 
-export const dpdyCoarse = dualImpl<DerivativeSignature>({
+export const dpdyCoarse = /*#__PURE__*/ dualImpl<DerivativeSignature>({
   name: 'dpdyCoarse',
   normalImpl: derivativeNormalError,
   signature: derivativeSignature,
@@ -52,7 +52,7 @@ export const dpdyCoarse = dualImpl<DerivativeSignature>({
   sideEffects: false,
 });
 
-export const dpdyFine = dualImpl<DerivativeSignature>({
+export const dpdyFine = /*#__PURE__*/ dualImpl<DerivativeSignature>({
   name: 'dpdyFine',
   normalImpl: derivativeNormalError,
   signature: derivativeSignature,
@@ -60,7 +60,7 @@ export const dpdyFine = dualImpl<DerivativeSignature>({
   sideEffects: false,
 });
 
-export const fwidth = dualImpl<DerivativeSignature>({
+export const fwidth = /*#__PURE__*/ dualImpl<DerivativeSignature>({
   name: 'fwidth',
   normalImpl: derivativeNormalError,
   signature: derivativeSignature,
@@ -68,7 +68,7 @@ export const fwidth = dualImpl<DerivativeSignature>({
   sideEffects: false,
 });
 
-export const fwidthCoarse = dualImpl<DerivativeSignature>({
+export const fwidthCoarse = /*#__PURE__*/ dualImpl<DerivativeSignature>({
   name: 'fwidthCoarse',
   normalImpl: derivativeNormalError,
   signature: derivativeSignature,
@@ -76,7 +76,7 @@ export const fwidthCoarse = dualImpl<DerivativeSignature>({
   sideEffects: false,
 });
 
-export const fwidthFine = dualImpl<DerivativeSignature>({
+export const fwidthFine = /*#__PURE__*/ dualImpl<DerivativeSignature>({
   name: 'fwidthFine',
   normalImpl: derivativeNormalError,
   signature: derivativeSignature,

@@ -20,7 +20,7 @@ export interface TgpuRange extends Array<number> {
  *
  * Can also be combined with `tgpu.unroll` to unroll a specific number of iterations.
  */
-export const range = comptime<
+export const range = /*#__PURE__*/ comptime<
   ((end: number) => TgpuRange) & ((start: number, end?: number, step?: number) => TgpuRange)
 >((start: number, end?: number, step: number = 1): TgpuRange => {
   if (end === undefined) {

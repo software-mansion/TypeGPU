@@ -8,9 +8,9 @@ import type { v2f, v4f, v4i, v4u } from '../data/wgslTypes.ts';
 import { readFloat16, writeFloat16 } from '../data/float16Conversion.ts';
 
 const littleEndian = { endianness: 'little' } as const;
-const packedBuffer = new ArrayBuffer(4);
-const packedWriter = new TB.BufferWriter(packedBuffer, littleEndian);
-const packedReader = new TB.BufferReader(packedBuffer, littleEndian);
+const packedBuffer = /*#__PURE__*/ new ArrayBuffer(4);
+const packedWriter = /*#__PURE__*/ new TB.BufferWriter(packedBuffer, littleEndian);
+const packedReader = /*#__PURE__*/ new TB.BufferReader(packedBuffer, littleEndian);
 
 function readPacked(value: number): TB.BufferReader {
   packedWriter.seekTo(0);
@@ -30,7 +30,7 @@ function writePacked(write: (writer: TB.BufferWriter) => void): number {
  * @privateRemarks
  * https://gpuweb.github.io/gpuweb/wgsl/#unpack2x16float-builtin
  */
-export const unpack2x16float = dualImpl({
+export const unpack2x16float = /*#__PURE__*/ dualImpl({
   name: 'unpack2x16float',
   normalImpl: (e: number): v2f => {
     const reader = readPacked(e);
@@ -45,7 +45,7 @@ export const unpack2x16float = dualImpl({
  * @privateRemarks
  * https://gpuweb.github.io/gpuweb/wgsl/#pack2x16float-builtin
  */
-export const pack2x16float = dualImpl({
+export const pack2x16float = /*#__PURE__*/ dualImpl({
   name: 'pack2x16float',
   normalImpl: (e: v2f): number =>
     writePacked((writer) => {
@@ -61,7 +61,7 @@ export const pack2x16float = dualImpl({
  * @privateRemarks
  * https://www.w3.org/TR/WGSL/#pack2x16snorm-builtin
  */
-export const pack2x16snorm = dualImpl({
+export const pack2x16snorm = /*#__PURE__*/ dualImpl({
   name: 'pack2x16snorm',
   normalImpl: (e: v2f): number => {
     const x = Math.floor(0.5 + 32767 * clampScalar(e.x, -1, 1));
@@ -80,7 +80,7 @@ export const pack2x16snorm = dualImpl({
  * @privateRemarks
  * https://www.w3.org/TR/WGSL/#pack2x16unorm-builtin
  */
-export const pack2x16unorm = dualImpl({
+export const pack2x16unorm = /*#__PURE__*/ dualImpl({
   name: 'pack2x16unorm',
   normalImpl: (e: v2f): number => {
     const x = Math.floor(0.5 + 65535 * clampScalar(e.x, 0, 1));
@@ -99,7 +99,7 @@ export const pack2x16unorm = dualImpl({
  * @privateRemarks
  * https://gpuweb.github.io/gpuweb/wgsl/#unpack4x8unorm-builtin
  */
-export const unpack4x8unorm = dualImpl({
+export const unpack4x8unorm = /*#__PURE__*/ dualImpl({
   name: 'unpack4x8unorm',
   normalImpl: (e: number): v4f => {
     const reader = readPacked(e);
@@ -119,7 +119,7 @@ export const unpack4x8unorm = dualImpl({
  * @privateRemarks
  * https://www.w3.org/TR/WGSL/#unpack4x8snorm-builtin
  */
-export const unpack4x8snorm = dualImpl({
+export const unpack4x8snorm = /*#__PURE__*/ dualImpl({
   name: 'unpack4x8snorm',
   normalImpl: (e: number): v4f => {
     const reader = readPacked(e);
@@ -139,7 +139,7 @@ export const unpack4x8snorm = dualImpl({
  * @privateRemarks
  * https://www.w3.org/TR/WGSL/#unpack4xi8-builtin
  */
-export const unpack4xI8 = dualImpl({
+export const unpack4xI8 = /*#__PURE__*/ dualImpl({
   name: 'unpack4xI8',
   normalImpl: (e: number): v4i => {
     const reader = readPacked(e);
@@ -154,7 +154,7 @@ export const unpack4xI8 = dualImpl({
  * @privateRemarks
  * https://www.w3.org/TR/WGSL/#unpack4xu8-builtin
  */
-export const unpack4xU8 = dualImpl({
+export const unpack4xU8 = /*#__PURE__*/ dualImpl({
   name: 'unpack4xU8',
   normalImpl: (e: number): v4u => {
     const reader = readPacked(e);
@@ -169,7 +169,7 @@ export const unpack4xU8 = dualImpl({
  * @privateRemarks
  * https://www.w3.org/TR/WGSL/#unpack2x16snorm-builtin
  */
-export const unpack2x16snorm = dualImpl({
+export const unpack2x16snorm = /*#__PURE__*/ dualImpl({
   name: 'unpack2x16snorm',
   normalImpl: (e: number): v2f => {
     const reader = readPacked(e);
@@ -187,7 +187,7 @@ export const unpack2x16snorm = dualImpl({
  * @privateRemarks
  * https://www.w3.org/TR/WGSL/#unpack2x16unorm-builtin
  */
-export const unpack2x16unorm = dualImpl({
+export const unpack2x16unorm = /*#__PURE__*/ dualImpl({
   name: 'unpack2x16unorm',
   normalImpl: (e: number): v2f => {
     const reader = readPacked(e);
@@ -202,7 +202,7 @@ export const unpack2x16unorm = dualImpl({
  * @privateRemarks
  * https://gpuweb.github.io/gpuweb/wgsl/#pack4x8unorm-builtin
  */
-export const pack4x8unorm = dualImpl({
+export const pack4x8unorm = /*#__PURE__*/ dualImpl({
   name: 'pack4x8unorm',
   normalImpl: (e: v4f): number =>
     writePacked((writer) => {
@@ -220,7 +220,7 @@ export const pack4x8unorm = dualImpl({
  * @privateRemarks
  * https://www.w3.org/TR/WGSL/#pack4x8snorm-builtin
  */
-export const pack4x8snorm = dualImpl({
+export const pack4x8snorm = /*#__PURE__*/ dualImpl({
   name: 'pack4x8snorm',
   normalImpl: (e: v4f): number =>
     writePacked((writer) => {
@@ -238,7 +238,7 @@ export const pack4x8snorm = dualImpl({
  * @privateRemarks
  * https://www.w3.org/TR/WGSL/#pack4xi8-builtin
  */
-export const pack4xI8 = dualImpl({
+export const pack4xI8 = /*#__PURE__*/ dualImpl({
   name: 'pack4xI8',
   normalImpl: (e: v4i): number =>
     writePacked((writer) => {
@@ -256,7 +256,7 @@ export const pack4xI8 = dualImpl({
  * @privateRemarks
  * https://www.w3.org/TR/WGSL/#pack4xu8-builtin
  */
-export const pack4xU8 = dualImpl({
+export const pack4xU8 = /*#__PURE__*/ dualImpl({
   name: 'pack4xU8',
   normalImpl: (e: v4u): number =>
     writePacked((writer) => {
@@ -274,7 +274,7 @@ export const pack4xU8 = dualImpl({
  * @privateRemarks
  * https://www.w3.org/TR/WGSL/#pack4xi8clamp-builtin
  */
-export const pack4xI8Clamp = dualImpl({
+export const pack4xI8Clamp = /*#__PURE__*/ dualImpl({
   name: 'pack4xI8Clamp',
   normalImpl: (e: v4i): number =>
     writePacked((writer) => {
@@ -292,7 +292,7 @@ export const pack4xI8Clamp = dualImpl({
  * @privateRemarks
  * https://www.w3.org/TR/WGSL/#pack4xu8clamp-builtin
  */
-export const pack4xU8Clamp = dualImpl({
+export const pack4xU8Clamp = /*#__PURE__*/ dualImpl({
   name: 'pack4xU8Clamp',
   normalImpl: (e: v4u): number =>
     writePacked((writer) => {
