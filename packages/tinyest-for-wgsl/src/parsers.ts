@@ -4,6 +4,7 @@ import * as tinyest from 'tinyest';
 import type {
   Context,
   JsNode,
+  Scope,
   TranspilationOptions,
   TranspilationResult,
   Transpile,
@@ -20,20 +21,19 @@ import { extractFunctionParts } from './functionParts.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
-function createContext(params: tinyest.FuncParameter[], opts: TranspilationOptions): Context {
+function paramNames(param: tinyest.FuncParameter): string[] {
+  return param.type === tinyest.FuncParameterType.identifier
+    ? [param.name]
+    : param.props.map((prop) => prop.alias);
+}
+
+function createContext(opts: TranspilationOptions): Context {
   return {
     externalNames: new Map(),
     ignoreExternalDepth: 0,
     visitedNodes: new Set(),
-    stack: [
-      {
-        declaredNames: params.flatMap((param) =>
-          param.type === tinyest.FuncParameterType.identifier
-            ? param.name
-            : param.props.map((prop) => prop.alias),
-        ),
-      },
-    ],
+    // Params get declared one by one, as their default values are transpiled
+    stack: [{ declaredNames: [] }],
     generatedSourceMap: new Map(),
     opts,
   };
@@ -121,8 +121,21 @@ function createParser(kind: 'acorn' | 'babel' | 'legacy') {
 
   return {
     transpileFn(rootNode: JsNode, options: TranspilationOptions): TranspilationResult {
-      const { params, body } = extractFunctionParts(rootNode);
-      const ctx = createContext(params, options);
+      const { params: rawParams, paramDefaults, body } = extractFunctionParts(rootNode);
+      const ctx = createContext(options);
+      const paramScope = ctx.stack[0] as Scope;
+
+      // Just like in JS, a default value can only reference params declared before it,
+      // so a param is declared only after its own default value has been transpiled.
+      const params = rawParams.map((param, i) => {
+        const defaultNode = paramDefaults[i];
+        const transpiled =
+          defaultNode && param.type === tinyest.FuncParameterType.identifier
+            ? { ...param, default: transpile(ctx, defaultNode) as tinyest.Expression }
+            : param;
+        paramScope.declaredNames.push(...paramNames(param));
+        return transpiled;
+      });
 
       const tinyestBody = transpile(ctx, body);
 
@@ -144,7 +157,7 @@ function createParser(kind: 'acorn' | 'babel' | 'legacy') {
     },
 
     transpileNode(node: JsNode, options: TranspilationOptions): tinyest.AnyNode {
-      return transpile(createContext([], options), node);
+      return transpile(createContext(options), node);
     },
   };
 }

@@ -290,6 +290,7 @@ export type FuncParameter =
   | {
       type: typeof FuncParameterType.identifier;
       name: string;
+      default?: Expression | undefined;
     }
   | {
       type: typeof FuncParameterType.destructuredObject;

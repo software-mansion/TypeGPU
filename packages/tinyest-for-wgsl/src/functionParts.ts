@@ -72,7 +72,11 @@ function validateFunction(functionNode: FunctionNode): void {
 
   const unsupportedTypes = new Set(
     functionNode.params.flatMap((param) =>
-      param.type === 'ObjectPattern' || param.type === 'Identifier' ? [] : [param.type],
+      param.type === 'ObjectPattern' ||
+      param.type === 'Identifier' ||
+      (param.type === 'AssignmentPattern' && param.left.type === 'Identifier')
+        ? []
+        : [param.type],
     ),
   );
   if (unsupportedTypes.size > 0) {
@@ -80,15 +84,16 @@ function validateFunction(functionNode: FunctionNode): void {
   }
 }
 
+type SupportedParam =
+  | babel.Identifier
+  | acorn.Identifier
+  | babel.ObjectPattern
+  | acorn.ObjectPattern
+  | babel.AssignmentPattern
+  | acorn.AssignmentPattern;
+
 function parseParams(functionNode: FunctionNode): tinyest.FuncParameter[] {
-  return (
-    functionNode.params as (
-      | babel.Identifier
-      | acorn.Identifier
-      | babel.ObjectPattern
-      | acorn.ObjectPattern
-    )[]
-  ).map((param) =>
+  return (functionNode.params as SupportedParam[]).map((param) =>
     param.type === 'ObjectPattern'
       ? {
           type: tinyest.FuncParameterType.destructuredObject,
@@ -102,13 +107,30 @@ function parseParams(functionNode: FunctionNode): tinyest.FuncParameter[] {
         }
       : {
           type: tinyest.FuncParameterType.identifier,
-          name: param.name,
+          name:
+            param.type === 'AssignmentPattern'
+              ? (param.left as babel.Identifier | acorn.Identifier).name
+              : param.name,
         },
+  );
+}
+
+function parseParamDefaults(
+  functionNode: FunctionNode,
+): (babel.Expression | acorn.Expression | undefined)[] {
+  return (functionNode.params as SupportedParam[]).map((param) =>
+    param.type === 'AssignmentPattern' ? param.right : undefined,
   );
 }
 
 export function extractFunctionParts(rootNode: JsNode): {
   params: tinyest.FuncParameter[];
+  /**
+   * Raw default value expressions (`(a, b = 2) => ...`), aligned by index
+   * with `params`. Transpiled and attached to the params by `transpileFn`,
+   * which owns the transpilation context.
+   */
+  paramDefaults: (babel.Expression | acorn.Expression | undefined)[];
   body: acorn.BlockStatement | acorn.Expression | babel.BlockStatement | babel.Expression;
 } {
   const functionNode = unwrapToFunction(rootNode);
@@ -117,6 +139,7 @@ export function extractFunctionParts(rootNode: JsNode): {
 
   return {
     params: parseParams(functionNode),
+    paramDefaults: parseParamDefaults(functionNode),
     body: functionNode.body,
   };
 }
