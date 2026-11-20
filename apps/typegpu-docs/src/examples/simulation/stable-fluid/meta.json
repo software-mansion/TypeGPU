@@ -1,6 +1,6 @@
 {
   "title": "Stable Fluids",
-  "description": "Implements an interactive stable-fluids solver with advection, diffusion, pressure projection, and double-buffered GPU fields.",
+  "description": "Implements an interactive stable-fluids solver with advection, diffusion, pressure projection, and double-buffered GPU fields. Drag to stir the fluid.",
   "category": "simulation",
   "tags": ["double buffering", "fluid", "interactive"],
   "coolFactor": 8

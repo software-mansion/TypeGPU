@@ -387,14 +387,6 @@ for (const type of ['pointerup', 'pointercancel'] as const) {
   });
 }
 
-canvas.addEventListener(
-  'pointerdown',
-  () => {
-    (document.getElementById('help') as HTMLElement).style.opacity = '0';
-  },
-  { once: true },
-);
-
 export const controls = defineControls({
   'timestep (dt)': {
     initial: 0.5,
