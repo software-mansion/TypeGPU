@@ -422,6 +422,41 @@ describe('tgpu.slot', () => {
     `);
   });
 
+  it('does not leave the bound name on an unnamed function', () => {
+    const valueSlot = tgpu.slot(1);
+    // Wrapped in an array so it does not get auto-named
+    const inner = [
+      tgpu.fn(
+        [],
+        d.i32,
+      )(() => {
+        'use gpu';
+        return valueSlot.$;
+      }),
+    ][0]!;
+
+    expect(tgpu.resolve([inner.with(valueSlot, 2).$name('bound')])).toContain('fn bound()');
+    expect(tgpu.resolve([inner])).not.toContain('bound');
+    expect(inner.toString()).toBe('fn:<unnamed>');
+  });
+
+  it('restores the original name of a function after resolving its bound version', () => {
+    const valueSlot = tgpu.slot(1);
+    const inner = tgpu
+      .fn(
+        [],
+        d.i32,
+      )(() => {
+        'use gpu';
+        return valueSlot.$;
+      })
+      .$name('original');
+
+    expect(tgpu.resolve([inner.with(valueSlot, 2).$name('bound')])).toContain('fn bound()');
+    expect(inner.toString()).toBe('fn:original');
+    expect(tgpu.resolve([inner])).toContain('fn original()');
+  });
+
   it('allows comptime strings', () => {
     const precisionSlot = tgpu.slot<string>('f16');
 
