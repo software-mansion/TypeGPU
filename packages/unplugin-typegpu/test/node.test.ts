@@ -95,6 +95,19 @@ describe('Node.js and Deno loader hooks', () => {
     expect(map.sourcesContent).toEqual([shader]);
   });
 
+  it('names the plugin once when a file does not parse', () => {
+    const source = 'const = tgpu;';
+
+    using warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+    const output = loadHook()('file:///broken.ts', context, () => ({ source, format: 'module' }));
+    expect(output.source).toBe(source);
+    expect(warn).toHaveBeenCalledOnce();
+    expect(warn.mock.calls[0]?.[0]).toMatch(
+      /^\[unplugin-typegpu\] Failed to parse \/broken\.ts\. Cause: /,
+    );
+  });
+
   it('warns and retains the generated map if the incoming map is malformed', () => {
     const source = `${shader}\n//# sourceMappingURL=data:application/json;base64,invalid`;
 

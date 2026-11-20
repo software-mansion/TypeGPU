@@ -167,7 +167,7 @@ export default function TypeGPUPlugin() {
     pre(this: PluginState) {
       this.opts = checkOpts(defu(this.opts, defaultOptions));
       initPluginState(this, {
-        warn: (message) => console.warn(message),
+        warn: (message) => console.warn(`[unplugin-typegpu] ${message}`),
         assignMetadata,
         wrapInAutoName,
         replaceWithAssignmentOverload,
