@@ -48,7 +48,8 @@ export function extractSourceMapURL(source: string): string | undefined {
  */
 export default function install(rawOptions?: Options): ModuleHooks {
   const plugin = unpluginFactory(
-    { include: /\.[cm]?[jt]sx?$/, ...rawOptions },
+    // An explicit `include: undefined` means the default, like any other option
+    { ...rawOptions, include: rawOptions?.include ?? /\.[cm]?[jt]sx?$/ },
     { framework: 'unloader' },
   );
   const filter = createFilterForId(plugin.transform.filter.id);
