@@ -1,11 +1,13 @@
 import { atom } from 'jotai';
 import type { d } from 'typegpu';
+import type { SelectControlParam as SelectControlDefinition } from '../../examples/common/defineControls.ts';
 
-export type SelectControlParam = {
-  onSelectChange: (newValue: string) => void;
-  initial: string;
-  options: string[];
+export type SelectControlParam<
+  Options extends SelectControlDefinition['options'] = SelectControlDefinition['options'],
+> = Pick<SelectControlDefinition<Options>, 'initial' | 'options'> & {
   label: string;
+  // The panel calls each handler with a value from that control's own options.
+  onSelectChange(this: void, value: Options[number]): void;
 };
 
 export type ToggleControlParam = {
@@ -49,8 +51,15 @@ export type TextAreaControlParam = {
   label: string;
 };
 
-export type ExampleControlParam =
-  | SelectControlParam
+export type SectionControlParam = {
+  isSection: true;
+  label: string;
+};
+
+type LabeledControlParam =
+  | SelectControlParam<readonly string[]>
+  | SelectControlParam<readonly number[]>
+  | (SelectControlDefinition & { label: string })
   | ToggleControlParam
   | SliderControlParam
   | ButtonControlParam
@@ -59,5 +68,12 @@ export type ExampleControlParam =
   | VectorSliderControlParam<d.v3f>
   | VectorSliderControlParam<d.v4f>
   | ColorPickerControlParam;
+
+export type ExampleControlParam = (
+  | SectionControlParam
+  | (LabeledControlParam & { isSection?: false })
+) & {
+  path: readonly string[];
+};
 
 export const exampleControlsAtom = atom<ExampleControlParam[]>([]);

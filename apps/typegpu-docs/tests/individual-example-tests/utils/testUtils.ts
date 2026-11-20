@@ -1,3 +1,6 @@
+import { flattenControls } from '../../../src/examples/common/flattenControls.ts';
+import type { ExampleControlOptions } from '../../../src/utils/examples/exampleRunner.ts';
+
 export function getExampleURLs(
   category: string,
   name: string,
@@ -34,17 +37,27 @@ export function createDeepNoopProxy<T extends object>(
   });
 }
 
+export type ControlTrigger = string | readonly string[];
+
 export async function testExampleShaderGeneration(
   examplePath: string,
-  controlTriggers: string[] = [],
+  controlTriggers: readonly ControlTrigger[] = [],
 ) {
   const example = await import(examplePath);
+  const buttons = new Map<string, { onButtonClick: () => void }>();
+  const controls: ExampleControlOptions = example.controls ?? {};
+  for (const { path, value } of flattenControls(controls)) {
+    if ('onButtonClick' in value) {
+      buttons.set(JSON.stringify(path), value);
+    }
+  }
 
   for (const trigger of controlTriggers) {
-    const control = example.controls?.[trigger];
-    if (control?.onButtonClick) {
+    const path = typeof trigger === 'string' ? [trigger] : trigger;
+    const button = buttons.get(JSON.stringify(path));
+    if (button) {
       try {
-        control.onButtonClick();
+        button.onButtonClick();
       } catch {}
     }
   }

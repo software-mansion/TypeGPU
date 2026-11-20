@@ -1,4 +1,10 @@
 import { d } from 'typegpu';
+import type { SelectControlParam } from '../../examples/common/defineControls.ts';
+import {
+  flattenControls,
+  isControlSection,
+  type ControlOptions,
+} from '../../examples/common/flattenControls.ts';
 
 const body = document.querySelector('body') as HTMLBodyElement;
 body.style.display = 'flex';
@@ -30,7 +36,22 @@ for (const controls of Object.values(example)) {
     continue;
   }
 
-  for (const [label, params] of Object.entries(controls as Record<string, ExampleControlParam>)) {
+  for (const { label, value: params } of flattenControls(
+    controls as ControlOptions<ExampleControlParam>,
+  )) {
+    if (isControlSection(params)) {
+      const sectionHeader = document.createElement('h2');
+      sectionHeader.innerText = label;
+      sectionHeader.style.gridColumn = 'span 2';
+      sectionHeader.style.fontSize = 'inherit';
+      sectionHeader.style.fontWeight = 'bold';
+      sectionHeader.style.margin = '1rem 0 0';
+      sectionHeader.style.borderBottom =
+        '1px solid color-mix(in srgb, currentColor 30%, transparent)';
+      controlsPanel.appendChild(sectionHeader);
+      continue;
+    }
+
     if ('onButtonClick' in params) {
       const button = document.createElement('button');
       button.innerText = label;
@@ -61,17 +82,21 @@ for (const controls of Object.values(example)) {
 
       if ('onSelectChange' in params) {
         const select = document.createElement('select');
-        select.innerHTML = params.options
-          .map((option) => `<option value="${option}">${option}</option>`)
-          .join('');
-        select.value = params.initial;
+        for (const option of params.options) {
+          const text = String(option);
+          select.add(new Option(text, text));
+        }
+        select.value = String(params.initial);
 
         select.addEventListener('change', () => {
-          params.onSelectChange(select.value);
+          const option = params.options[select.selectedIndex];
+          if (option !== undefined) {
+            params.onSelectChange(option);
+          }
         });
 
         controlRow.appendChild(select);
-        params.onSelectChange(select.value);
+        params.onSelectChange(params.initial);
       }
 
       if ('onVectorSliderChange' in params) {
@@ -158,12 +183,6 @@ for (const controls of Object.values(example)) {
     }
   }
 }
-
-type SelectControlParam = {
-  onSelectChange: (newValue: string) => void;
-  initial: string;
-  options: string[];
-};
 
 type ToggleControlParam = {
   onToggleChange: (newValue: boolean) => void;

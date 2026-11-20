@@ -4,6 +4,7 @@
 
 import { setupCommonMocks } from './commonMocks.ts';
 import {
+  type ControlTrigger,
   extractShaderCodes,
   getExampleURLs,
   testExampleShaderGeneration,
@@ -13,7 +14,7 @@ import {
 export interface ExampleTestConfig {
   category: string;
   name: string;
-  controlTriggers?: string[];
+  controlTriggers?: readonly ControlTrigger[];
   setupMocks?: () => void;
   waitTime?: number;
   expectedCalls?: number;
