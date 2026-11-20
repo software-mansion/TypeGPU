@@ -1,5 +1,11 @@
-import { describe, expect } from 'vitest';
-import { buildWriter, getCompiledWriter } from '../../src/data/compiledIO.ts';
+import { afterEach, beforeEach, describe, expect, vi } from 'vitest';
+import {
+  buildWriter,
+  getCompiledWriter,
+  setGlobalJITPreference,
+} from '../../src/data/compiledIO.ts';
+import { writeToArrayBuffer } from '../../src/data/dataIO.ts';
+import { toHalfBits } from '../../src/data/numeric.ts';
 import { d } from 'typegpu';
 import { sizeOf } from 'typegpu/data';
 import { it } from 'typegpu-testing-utility';
@@ -1282,5 +1288,52 @@ describe('createCompileInstructions', () => {
     const paddedOffset = scalarsOffset + 16;
     expect([...new Float32Array(arr, paddedOffset, 3)]).toStrictEqual([10, 20, 30]);
     expect([...new Float32Array(arr, paddedOffset + 16, 3)]).toStrictEqual([40, 50, 60]);
+  });
+});
+
+describe('compiled writer without DataView.setFloat16 (Hermes, Node 22)', () => {
+  const proto = DataView.prototype as { setFloat16?: unknown };
+  const nativeSetFloat16 = proto.setFloat16;
+
+  beforeEach(() => {
+    delete proto.setFloat16;
+  });
+
+  afterEach(() => {
+    if (nativeSetFloat16 !== undefined) {
+      proto.setFloat16 = nativeSetFloat16;
+    }
+  });
+
+  it('writes half bits with setUint16 instead', () => {
+    const writer = buildWriter(d.vec2h, 'offset', 'value');
+
+    expect(writer).toMatchInlineSnapshot(`
+      "output.setUint16((offset + 0), toHalfBits(value[0]), littleEndian);
+      output.setUint16((offset + 2), toHalfBits(value[1]), littleEndian);
+      "
+    `);
+  });
+
+  it('writes the same bytes as the fallback writer, without falling back', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const schema = d.struct({ a: d.f16, b: d.vec3h, c: d.arrayOf(d.f16, 3) });
+    const value = { a: 0.5, b: d.vec3h(1, -2, 65504), c: [0.001, 1.5, -0] };
+
+    const compiled = new ArrayBuffer(sizeOf(schema));
+    writeToArrayBuffer(compiled, schema, value);
+
+    const fallback = new ArrayBuffer(sizeOf(schema));
+    setGlobalJITPreference('disabled');
+    try {
+      writeToArrayBuffer(fallback, schema, value);
+    } finally {
+      setGlobalJITPreference('auto');
+    }
+
+    expect([...new Uint16Array(compiled)]).toStrictEqual([...new Uint16Array(fallback)]);
+    expect(new Uint16Array(compiled)[0]).toBe(toHalfBits(0.5));
+    expect(warn).not.toHaveBeenCalled();
+    warn.mockRestore();
   });
 });
