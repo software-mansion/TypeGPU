@@ -36,8 +36,36 @@ const showMotionButton =
   phoneMotion.needsPermission && window.matchMedia('(pointer: coarse)').matches;
 knobBehavior.motionAcceleration = phoneMotion.acceleration;
 
-let qualityScale = 0.5;
-let [width, height] = [canvas.width * qualityScale, canvas.height * qualityScale];
+// Auto quality works with a pixel budget rather than a fraction of the canvas, so that the cost
+// of raymarching stays the same no matter how big the canvas gets (e.g. when going fullscreen
+// on a high-DPI phone).
+/** The budget used until the first Auto measurement finishes. */
+const INITIAL_PIXEL_BUDGET = 512 * 512;
+const MIN_AUTO_SCALE = 0.2;
+/** How long to wait after the last resize before re-measuring the Auto quality. */
+const AUTO_QUALITY_DEBOUNCE_MS = 300;
+
+let qualityMode: 'auto' | 'manual' = 'auto';
+let manualQualityScale = 0.5;
+let autoPixelBudget = INITIAL_PIXEL_BUDGET;
+
+function scaleForPixelBudget(pixelBudget: number) {
+  const canvasPixels = canvas.width * canvas.height;
+  return Math.max(MIN_AUTO_SCALE, Math.min(1, Math.sqrt(pixelBudget / canvasPixels)));
+}
+
+function getQualityScale() {
+  return qualityMode === 'auto' ? scaleForPixelBudget(autoPixelBudget) : manualQualityScale;
+}
+
+function getRenderSize(scale: number): [number, number] {
+  return [
+    Math.max(1, Math.round(canvas.width * scale)),
+    Math.max(1, Math.round(canvas.height * scale)),
+  ];
+}
+
+let [width, height] = getRenderSize(getQualityScale());
 
 let textures = createTextures(root, width, height);
 
@@ -150,7 +178,7 @@ function destroyRenderTextures() {
 }
 
 function handleResize() {
-  [width, height] = [canvas.width * qualityScale, canvas.height * qualityScale];
+  [width, height] = getRenderSize(getQualityScale());
   camera.updateProjection(Math.PI / 4, width, height);
   destroyRenderTextures();
   textures = createTextures(root, width, height);
@@ -164,7 +192,11 @@ const autoResizer = common.attachAutoResizer({
   root,
   canvas,
   onResize() {
+    // Applies the current pixel budget right away, then refines it for the new size.
     handleResize();
+    if (qualityMode === 'auto') {
+      scheduleAutoQuality();
+    }
   },
 });
 
@@ -224,30 +256,44 @@ let disposed = false;
 // Incremented on every quality change, so late Auto benchmarks can tell they were superseded.
 let qualityRequestId = 0;
 
-async function autoSetQuality(isCancelled: () => boolean) {
-  if (!hasTimestampQuery) {
-    return 0.5;
-  }
+let autoQualityTimeout: ReturnType<typeof setTimeout> | undefined;
 
-  const targetFrameTime = 5;
-  const tolerance = 2.0;
-  let resolutionScale = 0.3;
-  let lastTimeMs = 0;
+/** Measures how many pixels can be raymarched within the target frame time. */
+async function measurePixelBudget(isCancelled: () => boolean) {
+  // About 60% of a 60 Hz frame, leaving the rest for TAA, the final blit and the browser.
+  const targetFrameTime = 10;
+  const tolerance = 1.5;
+  // Start from the current budget, so re-measuring after a resize converges quickly.
+  let resolutionScale = scaleForPixelBudget(autoPixelBudget);
+  let [testWidth, testHeight] = getRenderSize(resolutionScale);
 
-  const measurePipeline = rayMarchPipeline.withPerformanceCallback((start, end) => {
-    lastTimeMs = Number(end - start) / 1e6;
-  });
+  // The performance callback fires asynchronously, after the query set has been read back,
+  // which can be later than `onSubmittedWorkDone()` resolves. Each measurement waits for it.
+  let resolveGpuTime: ((ms: number) => void) | undefined;
+  const measurePipeline = hasTimestampQuery
+    ? rayMarchPipeline.withPerformanceCallback((start, end) => {
+        resolveGpuTime?.(Number(end - start) / 1e6);
+      })
+    : rayMarchPipeline;
 
-  for (let i = 0; i < 8; i++) {
-    if (isCancelled()) break;
-
+  /** Draws the raymarch once at the given size, timing it with GPU timestamps and the wall clock. */
+  async function timeDraw(drawWidth: number, drawHeight: number) {
     const testTexture = root
       .createTexture({
-        size: [canvas.width * resolutionScale, canvas.height * resolutionScale],
+        size: [drawWidth, drawHeight],
         format: 'rgba16float',
       })
       .$usage('render');
 
+    const gpuTimePromise = new Promise<number | undefined>((resolve) => {
+      resolveGpuTime = resolve;
+      if (!hasTimestampQuery) resolve(undefined);
+      setTimeout(() => resolve(undefined), 500);
+    });
+
+    // Drain frames already in flight, so the wall clock only times the test draw.
+    await root.device.queue.onSubmittedWorkDone();
+    const wallStart = performance.now();
     measurePipeline
       .withColorAttachment({
         view: testTexture,
@@ -255,20 +301,76 @@ async function autoSetQuality(isCancelled: () => boolean) {
         storeOp: 'store',
       })
       .draw(3);
-
     await root.device.queue.onSubmittedWorkDone();
+    const wallMs = performance.now() - wallStart;
+    const gpuMs = await gpuTimePromise;
+    resolveGpuTime = undefined;
     testTexture.destroy();
+    return { wallMs, gpuMs };
+  }
+
+  // The wall clock also includes a fixed cost per submission (scheduling, the round trip of
+  // `onSubmittedWorkDone()`). A 1x1 draw has next to no shading work, so its time is that cost.
+  let wallOverheadMs = Number.POSITIVE_INFINITY;
+  for (let i = 0; i < 3; i++) {
+    if (isCancelled()) break;
+    wallOverheadMs = Math.min(wallOverheadMs, (await timeDraw(1, 1)).wallMs);
+  }
+
+  for (let i = 0; i < 8; i++) {
+    if (isCancelled()) break;
+
+    [testWidth, testHeight] = getRenderSize(resolutionScale);
+    // Taking the faster of two runs filters out one-off hiccups.
+    const runA = await timeDraw(testWidth, testHeight);
+    if (isCancelled()) break;
+    const runB = await timeDraw(testWidth, testHeight);
+    const gpuTimeMs =
+      runA.gpuMs !== undefined && runB.gpuMs !== undefined
+        ? Math.min(runA.gpuMs, runB.gpuMs)
+        : undefined;
+    const wallTimeMs = Math.max(0, Math.min(runA.wallMs, runB.wallMs) - wallOverheadMs);
+
+    // Some implementations (e.g. Safari on iOS) quantize or zero out timestamps, which shows up
+    // as an implausibly short pass. In that case, fall back to the wall clock.
+    const usesGpuTime = gpuTimeMs !== undefined && gpuTimeMs > 0.1;
+    const lastTimeMs = usesGpuTime ? gpuTimeMs : wallTimeMs;
 
     if (Math.abs(lastTimeMs - targetFrameTime) < tolerance) {
       break;
     }
 
     const adjustment = lastTimeMs > targetFrameTime ? -0.1 : 0.1;
-    resolutionScale = Math.max(0.3, Math.min(1.0, resolutionScale + adjustment));
+    const nextScale = Math.max(MIN_AUTO_SCALE, Math.min(1.0, resolutionScale + adjustment));
+    if (nextScale === resolutionScale) {
+      break;
+    }
+    resolutionScale = nextScale;
   }
 
-  console.log(`Auto-selected quality scale: ${resolutionScale.toFixed(2)}`);
-  return resolutionScale;
+  console.log(
+    `Auto-selected quality: ${testWidth}x${testHeight} (scale ${resolutionScale.toFixed(2)})`,
+  );
+  return testWidth * testHeight;
+}
+
+function runAutoQuality() {
+  clearTimeout(autoQualityTimeout);
+  const requestId = ++qualityRequestId;
+  const isCancelled = () => disposed || requestId !== qualityRequestId;
+  void measurePixelBudget(isCancelled).then((pixelBudget) => {
+    if (isCancelled()) return;
+    autoPixelBudget = pixelBudget;
+    handleResize();
+  });
+}
+
+/** Re-measures the Auto quality once the canvas stops resizing. */
+function scheduleAutoQuality() {
+  // Cancels any measurement made for the previous canvas size.
+  ++qualityRequestId;
+  clearTimeout(autoQualityTimeout);
+  autoQualityTimeout = setTimeout(runAutoQuality, AUTO_QUALITY_DEBOUNCE_MS);
 }
 
 export const controls = defineControls({
@@ -288,16 +390,17 @@ export const controls = defineControls({
     initial: 'Auto',
     options: ['Auto', 'Very Low', 'Low', 'Medium', 'High', 'Ultra'],
     onSelectChange: (value) => {
-      const requestId = ++qualityRequestId;
       if (value === 'Auto') {
-        const isCancelled = () => disposed || requestId !== qualityRequestId;
-        void autoSetQuality(isCancelled).then((scale) => {
-          if (isCancelled()) return;
-          qualityScale = scale;
-          handleResize();
-        });
+        qualityMode = 'auto';
+        handleResize();
+        runAutoQuality();
         return;
       }
+
+      qualityMode = 'manual';
+      // Cancels any pending or in-flight Auto measurement.
+      ++qualityRequestId;
+      clearTimeout(autoQualityTimeout);
 
       const qualityMap: { [key: string]: number } = {
         'Very Low': 0.3,
@@ -307,7 +410,7 @@ export const controls = defineControls({
         Ultra: 1.0,
       };
 
-      qualityScale = qualityMap[value] || 0.5;
+      manualQualityScale = qualityMap[value] || 0.5;
       handleResize();
     },
   },
@@ -321,6 +424,7 @@ export const controls = defineControls({
 
 export function onCleanup() {
   disposed = true;
+  clearTimeout(autoQualityTimeout);
   cancelAnimationFrame(animationFrameHandle);
   autoResizer.detach();
   phoneMotion.destroy();
