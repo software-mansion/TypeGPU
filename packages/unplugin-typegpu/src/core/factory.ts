@@ -168,8 +168,8 @@ export const unpluginFactory = ((rawOptions, _meta) => {
             }),
           );
         } catch (cause) {
-          console.warn(
-            `[unplugin-typegpu] Failed to parse ${id}. Cause: ${
+          this.warn(
+            `Failed to parse ${id}. Cause: ${
               typeof cause === 'object' && cause && 'message' in cause ? cause.message : cause
             }`,
           );
