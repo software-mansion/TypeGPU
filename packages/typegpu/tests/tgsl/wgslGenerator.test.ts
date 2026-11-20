@@ -338,6 +338,54 @@ describe('WgslGenerator', () => {
     `);
   });
 
+  it('creates correct code for "for ... of ..." statements using pointer iterables', () => {
+    const layout = tgpu.bindGroupLayout({
+      arr: { storage: d.arrayOf(d.f32) },
+    });
+
+    const sum = tgpu.fn(
+      [d.ptrStorage(d.arrayOf(d.f32, 4))],
+      d.f32,
+    )((values) => {
+      let res = d.f32(0);
+      for (const foo of values) {
+        res += foo;
+      }
+      return res;
+    });
+
+    const main = () => {
+      'use gpu';
+      const values = layout.$.arr;
+      let res = d.f32(0);
+      for (const foo of values) {
+        res += foo;
+      }
+    };
+
+    expect(tgpu.resolve([sum, main])).toMatchInlineSnapshot(`
+      "fn sum(values: ptr<storage, array<f32, 4>, read>) -> f32 {
+        var res = 0f;
+        for (var i = 0u; i < 4u; i += 1u) {
+          let foo = (*values)[i];
+          res += foo;
+        }
+        return res;
+      }
+
+      @group(0) @binding(0) var<storage, read> arr: array<f32>;
+
+      fn main() {
+        let values = (&arr);
+        var res = 0f;
+        for (var i = 0u; i < arrayLength(values); i += 1u) {
+          let foo = (*values)[i];
+          res += foo;
+        }
+      }"
+    `);
+  });
+
   it('creates correct code for "for ... of ..." statements using lazy and comptime iterables', () => {
     const comptimeVec = tgpu.comptime(() => d.vec2f(1, 2));
 

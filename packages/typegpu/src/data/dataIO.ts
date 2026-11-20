@@ -272,6 +272,12 @@ const dataWriters = {
     dataWriters[schema.inner.type]?.(output, schema, value);
   },
 
+  buffer(output, schema, value) {
+    const beginning = output.currentByteOffset;
+    output.writeSlice(bytesOf(value).subarray(0, schema.byteSize));
+    output.seekTo(beginning + schema.byteSize);
+  },
+
   decorated(output, schema, value) {
     const beginning = output.currentByteOffset;
     dataWriters[(schema.inner as AnyData)?.type]?.(output, schema.inner, value);
@@ -483,6 +489,12 @@ const dataWriters = {
   (output: ISerialOutput, schema: unknown, value: unknown) => void
 >;
 
+export function bytesOf(value: ArrayBuffer | ArrayBufferView): Uint8Array {
+  return ArrayBuffer.isView(value)
+    ? new Uint8Array(value.buffer, value.byteOffset, value.byteLength)
+    : new Uint8Array(value);
+}
+
 export function writeData<TData extends wgsl.BaseData>(
   output: ISerialOutput,
   schema: TData,
@@ -671,6 +683,12 @@ const dataReaders = {
     return readData(input, schema.inner);
   },
 
+  buffer(input, schema) {
+    const bytes = new Uint8Array(schema.byteSize);
+    input.readSlice(bytes, 0, schema.byteSize);
+    return bytes.buffer;
+  },
+
   decorated(input, schema: wgsl.Decorated) {
     const beginning = input.currentByteOffset;
     const value = readData(input, schema.inner);
@@ -817,10 +835,7 @@ export function writeToArrayBuffer<T extends wgsl.BaseData>(
 
   // Fast path: raw byte copy, user guarantees the padded layout
   if (data instanceof ArrayBuffer || ArrayBuffer.isView(data)) {
-    const src =
-      data instanceof ArrayBuffer
-        ? new Uint8Array(data)
-        : new Uint8Array(data.buffer, data.byteOffset, data.byteLength);
+    const src = bytesOf(data);
     const regionSize = endOffset - startOffset;
     if (DEV && src.byteLength !== regionSize) {
       logger.warn(
