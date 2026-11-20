@@ -180,12 +180,11 @@ class TgpuWebGLRenderPipelineImpl implements TgpuWebGLRenderPipeline {
     program: WebGLProgram,
     crossShaderStageState: CrossShaderStageState,
     offscreen: OffscreenCanvas,
+    vao: WebGLVertexArrayObject,
   ) {
     this.#gl = gl;
     this.#program = program;
     this.#offscreen = offscreen;
-    const vao = gl.createVertexArray();
-    if (!vao) throw new Error('Failed to create VAO');
     this.#vao = vao;
 
     // Discover bindings from shader references, without retaining a root-wide uniform history.
@@ -416,10 +415,15 @@ export class TgpuRootWebGL {
           }
         });
   #programCache = new Map<string, WebGLProgram>();
+  #vao: WebGLVertexArrayObject | undefined;
 
   constructor(gl: WebGL2RenderingContext) {
     this.#gl = gl;
     this.#offscreen = gl.canvas as OffscreenCanvas;
+    // Pipelines use vertex/instance builtins only; no API configures vertex attributes.
+    const vao = gl.createVertexArray();
+    if (!vao) throw new Error('Failed to create VAO');
+    this.#vao = vao;
   }
 
   createBuffer(_typeSchema: d.AnyWgslData, _initial?: unknown): never {
@@ -509,6 +513,7 @@ export class TgpuRootWebGL {
   }
 
   createRenderPipeline(descriptor: TgpuRenderPipeline.Descriptor): TgpuWebGLRenderPipeline {
+    if (!this.#vao) throw new Error('Cannot create a pipeline on a destroyed WebGL root');
     const fakeRoot = tgpu.initFromDevice({ device: {} as GPUDevice });
     // oxlint-disable-next-line typescript/no-explicit-any
     const fakePipeline = fakeRoot.createRenderPipeline(descriptor as any);
@@ -538,6 +543,7 @@ export class TgpuRootWebGL {
       program,
       crossShaderStageState,
       this.#offscreen,
+      this.#vao,
     );
   }
 
@@ -562,6 +568,10 @@ export class TgpuRootWebGL {
   }
 
   destroy(): void {
+    if (this.#vao) {
+      this.#gl.deleteVertexArray(this.#vao);
+      this.#vao = undefined;
+    }
     for (const program of this.#programCache.values()) {
       this.#gl.deleteProgram(program);
     }

@@ -76,6 +76,7 @@ import { getAttributesString } from '../data/attributes.ts';
 import { validSelectBranchTypes } from '../std/boolean.ts';
 import { isInfixDispatch } from './infixDispatch.ts';
 import type { VariableScope } from '../core/variable/tgpuVariable.ts';
+import { DEV } from '../shared/env.ts';
 import { logger } from '../tgpuLogger.ts';
 import { TgpuDeclareImpl } from '../core/declare/tgpuDeclare.ts';
 
@@ -784,7 +785,7 @@ export class WgslGenerator implements ShaderGenerator {
           );
         }
 
-        if (['>>', '>>='].includes(op) && lhsPrimitive.type === 'u32') {
+        if (DEV && ['>>', '>>='].includes(op) && lhsPrimitive.type === 'u32') {
           logger.warn(
             'deprecated',
             `\nExpression: ${stringifyNode(expression)}\nUsing u32 or vecN<u32> as left-hand side of ${op} is deprecated.\nUse >${op} instead.`,
@@ -1027,7 +1028,7 @@ export class WgslGenerator implements ShaderGenerator {
           if (propType === undefined) {
             // Evaluate every field even if it gets stripped by the struct schema
             const expr = this._expression(value);
-            if (expr.possibleSideEffects) {
+            if (DEV && expr.possibleSideEffects) {
               logger.warn(
                 'suspicious',
                 `\
@@ -1060,7 +1061,7 @@ The generated shader will omit it, so its runtime side effects will not occur.`,
         const changesSideEffectsOrder = keysWithSideEffectsInSourceOrder.some(
           (key, index) => key !== keysWithSideEffectsInSchemaOrder[index],
         );
-        if (changesSideEffectsOrder) {
+        if (DEV && changesSideEffectsOrder) {
           logger.warn(
             'suspicious',
             `\
@@ -1842,11 +1843,11 @@ ${this.ctx.pre}else ${alternate}`,
             return { code: '', definesInNearestScope: false };
           }
 
-          const firstElement = elements[0] as Snippet;
-          if (
-            !isStoredInMemory(firstElement) &&
-            !wgsl.isNaturallyEphemeral(firstElement.dataType)
-          ) {
+          const constructedInPlace = (e: Snippet) =>
+            !isStoredInMemory(e) &&
+            asComptime(e) === undefined &&
+            !wgsl.isNaturallyEphemeral(e.dataType);
+          if (elements.some(constructedInPlace)) {
             throw new WgslTypeError(
               `Cannot unroll '${stringifyNode(iterable)}'. The elements of iterable are constructed in place but are not value types.`,
             );

@@ -2,6 +2,6 @@
   "title": "Image Blur",
   "description": "Applies a configurable GPU blur to an image, demonstrating texture sampling and multi-pass image processing.",
   "category": "image-processing",
-  "tags": ["filtering"],
+  "tags": ["double buffering"],
   "coolFactor": 5
 }

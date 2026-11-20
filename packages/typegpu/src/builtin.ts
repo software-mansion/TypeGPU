@@ -22,7 +22,7 @@ import { $internal } from './shared/symbols.ts';
 
 export type BuiltinVertexIndex = Decorated<U32, [Builtin<'vertex_index'>]>;
 export type BuiltinInstanceIndex = Decorated<U32, [Builtin<'instance_index'>]>;
-export type BuiltinClipDistances = Decorated<WgslArray<U32>, [Builtin<'clip_distances'>]>;
+export type BuiltinClipDistances = Decorated<WgslArray<F32>, [Builtin<'clip_distances'>]>;
 export type BuiltinPosition = Decorated<Vec4f, [Builtin<'position'>]>;
 export type BuiltinFrontFacing = Decorated<Bool, [Builtin<'front_facing'>]>;
 export type BuiltinFragDepth = Decorated<F32, [Builtin<'frag_depth'>]>;
@@ -56,7 +56,7 @@ function defineBuiltin<T extends Decorated | LooseDecorated>(
 export const builtin = {
   vertexIndex: defineBuiltin<BuiltinVertexIndex>(u32, 'vertex_index'),
   instanceIndex: defineBuiltin<BuiltinInstanceIndex>(u32, 'instance_index'),
-  clipDistances: defineBuiltin<BuiltinClipDistances>(arrayOf(u32, 8), 'clip_distances'),
+  clipDistances: defineBuiltin<BuiltinClipDistances>(arrayOf(f32, 8), 'clip_distances'),
   position: defineBuiltin<BuiltinPosition>(vec4f, 'position'),
   frontFacing: defineBuiltin<BuiltinFrontFacing>(bool, 'front_facing'),
   fragDepth: defineBuiltin<BuiltinFragDepth>(f32, 'frag_depth'),

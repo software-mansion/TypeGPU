@@ -410,6 +410,61 @@ describe('tgpu.unroll', () => {
     `);
   });
 
+  it('unrolls external comptime iterable of vectors', () => {
+    const offsets = [d.vec2i(-1, 0), d.vec2i(1, 0)];
+
+    const f = (p: d.v2i) => {
+      'use gpu';
+      let result = d.i32();
+      for (const offset of tgpu.unroll(offsets)) {
+        result += (p + offset).x;
+      }
+
+      return result;
+    };
+
+    const main = () => {
+      'use gpu';
+      return f(d.vec2i());
+    };
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn f(p: vec2i) -> i32 {
+        var result = 0i;
+        // unrolled iteration #0
+        result += (p + vec2i(-1, 0)).x;
+        // unrolled iteration #1
+        result += (p + vec2i(1, 0)).x;
+        // ---
+        return result;
+      }
+
+      fn main() -> i32 {
+        return f(vec2i());
+      }"
+    `);
+  });
+
+  it('throws when a later element is constructed in place', () => {
+    const offset = d.vec2i(1);
+
+    const f = () => {
+      'use gpu';
+      let r = d.i32(1);
+      for (const o of tgpu.unroll([offset, d.vec2i(r)])) {
+        r += o.x;
+      }
+      return r;
+    };
+
+    expect(() => tgpu.resolve([f])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:f
+      - fn*:f(): Cannot unroll 'tgpu.unroll([offset, d.vec2i(r)])'. The elements of iterable are constructed in place but are not value types.]
+    `);
+  });
+
   it('unrolls tgpu.const arrays', () => {
     const arr = tgpu.const(d.arrayOf(d.vec3f, 2), [d.vec3f(1), d.vec3f(2)]);
 

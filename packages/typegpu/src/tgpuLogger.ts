@@ -1,4 +1,4 @@
-import { DEV, TEST } from './shared/env.ts';
+import { DEV } from './shared/env.ts';
 
 const warningTypes = [
   'deprecated',
@@ -100,6 +100,6 @@ export class TgpuLogger implements Logger, Warn {
   }
 }
 
-const tgpuLogger = new TgpuLogger(!(DEV || TEST));
+const tgpuLogger = new TgpuLogger(!DEV);
 export const logger: Logger = tgpuLogger;
 export const warn: Warn = tgpuLogger;

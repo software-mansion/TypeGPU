@@ -1,5 +1,5 @@
 import { version } from 'typegpu/package.json';
-import { DEV, TEST } from './env.ts';
+import { DEV } from './env.ts';
 import type { TgpuSoul } from './soul.ts';
 import { $getNameForward, $soul, isMarkedInternal } from './symbols.ts';
 import { normalizeMetadata, type Metadata, type RawMetadata } from './normalizeMetadata.ts';
@@ -114,7 +114,7 @@ export function hasTinyestMetadata(value: unknown): value is (...args: never[]) 
  * Performance measurements are only enabled in dev & test environments for now
  */
 export const PERF =
-  ((DEV || TEST) && {
+  (DEV && {
     get enabled() {
       return !!globalExt.__TYPEGPU_MEASURE_PERF__;
     },

@@ -2,6 +2,6 @@
   "title": "Caustics",
   "description": "Generates animated patterns of focused light with procedural noise and GPU fragment shading.",
   "category": "rendering",
-  "tags": ["ecosystem", "lighting", "noise"],
+  "tags": ["lighting", "procedural"],
   "coolFactor": 8
 }
