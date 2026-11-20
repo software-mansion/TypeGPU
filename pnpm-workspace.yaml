@@ -25,6 +25,7 @@ catalogs:
     rollup: ^4.64.0
     tsdown: 0.15.12
     unbuild: ^3.5.0
+    webpack: ^5.112.2
   example:
     three: ^0.181.0
     wgpu-matrix: ^3.4.0
