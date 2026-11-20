@@ -803,4 +803,257 @@ describe('WgslGenerator with console.log', () => {
       }"
     `);
   });
+
+  it('works with template literal', ({ root }) => {
+    const log = console.log;
+
+    const helper = () => {
+      'use gpu';
+      return 4;
+    };
+
+    const myPipeline = root.createGuardedComputePipeline((x) => {
+      'use gpu';
+      log(`first ${4 + 4} last`);
+    });
+
+    expect(tgpu.resolve([myPipeline.pipeline])).toMatchInlineSnapshot(`
+      "@group(0) @binding(0) var<uniform> sizeUniform: vec3u;
+
+      var<private> dataBlockIndex: u32;
+
+      @group(0) @binding(1) var<storage, read_write> indexBuffer: atomic<u32>;
+
+      struct SerializedLogData {
+        id: u32,
+        serializedData: array<u32, 63>,
+      }
+
+      @group(0) @binding(2) var<storage, read_write> dataBuffer: array<SerializedLogData, 64>;
+
+      var<private> dataByteIndex: u32;
+
+      fn nextByteIndex() -> u32 {
+        let i = dataByteIndex;
+        dataByteIndex = dataByteIndex + 1u;
+        return i;
+      }
+
+      fn serializeI32(n: i32) {
+        dataBuffer[dataBlockIndex].serializedData[nextByteIndex()] = bitcast<u32>(n);
+      }
+
+      fn log1serializer(_arg_0: i32) {
+        serializeI32(_arg_0);
+      }
+
+      fn log1(_arg_0: i32) {
+        dataBlockIndex = atomicAdd(&indexBuffer, 1);
+        if (dataBlockIndex >= 64) {
+          return;
+        }
+        dataBuffer[dataBlockIndex].id = 1;
+        dataByteIndex = 0;
+
+        log1serializer(_arg_0);
+      }
+
+      fn wrappedCallback(x: u32, _arg_1: u32, _arg_2: u32) {
+        log1(8i);
+      }
+
+      @compute @workgroup_size(256, 1, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
+        if (any(id >= sizeUniform)) {
+          return;
+        }
+        wrappedCallback(id.x, id.y, id.z);
+      }"
+    `);
+  });
+
+  it('works with template literal that contains a function call', ({ root }) => {
+    const log = console.log;
+
+    const helper = () => {
+      'use gpu';
+      return 4;
+    };
+
+    const myPipeline = root.createGuardedComputePipeline((x) => {
+      'use gpu';
+      log(`first ${4 + helper()} last`);
+    });
+
+    expect(tgpu.resolve([myPipeline.pipeline])).toMatchInlineSnapshot(`
+      "@group(0) @binding(0) var<uniform> sizeUniform: vec3u;
+
+      fn helper() -> i32 {
+        return 4;
+      }
+
+      var<private> dataBlockIndex: u32;
+
+      @group(0) @binding(1) var<storage, read_write> indexBuffer: atomic<u32>;
+
+      struct SerializedLogData {
+        id: u32,
+        serializedData: array<u32, 63>,
+      }
+
+      @group(0) @binding(2) var<storage, read_write> dataBuffer: array<SerializedLogData, 64>;
+
+      var<private> dataByteIndex: u32;
+
+      fn nextByteIndex() -> u32 {
+        let i = dataByteIndex;
+        dataByteIndex = dataByteIndex + 1u;
+        return i;
+      }
+
+      fn serializeI32(n: i32) {
+        dataBuffer[dataBlockIndex].serializedData[nextByteIndex()] = bitcast<u32>(n);
+      }
+
+      fn log1serializer(_arg_0: i32) {
+        serializeI32(_arg_0);
+      }
+
+      fn log1(_arg_0: i32) {
+        dataBlockIndex = atomicAdd(&indexBuffer, 1);
+        if (dataBlockIndex >= 64) {
+          return;
+        }
+        dataBuffer[dataBlockIndex].id = 1;
+        dataByteIndex = 0;
+
+        log1serializer(_arg_0);
+      }
+
+      fn wrappedCallback(x: u32, _arg_1: u32, _arg_2: u32) {
+        log1((4i + helper()));
+      }
+
+      @compute @workgroup_size(256, 1, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
+        if (any(id >= sizeUniform)) {
+          return;
+        }
+        wrappedCallback(id.x, id.y, id.z);
+      }"
+    `);
+  });
+
+  it('works with template literal that contains complex quasis', ({ root }) => {
+    const log = console.log;
+
+    const myPipeline = root.createGuardedComputePipeline((x) => {
+      'use gpu';
+      log(`Log with template literal: \`first\` \n new line \n another line with slash: \\`);
+    });
+
+    expect(tgpu.resolve([myPipeline.pipeline])).toMatchInlineSnapshot(`
+      "@group(0) @binding(0) var<uniform> sizeUniform: vec3u;
+
+      var<private> dataBlockIndex: u32;
+
+      @group(0) @binding(1) var<storage, read_write> indexBuffer: atomic<u32>;
+
+      struct SerializedLogData {
+        id: u32,
+        serializedData: array<u32, 63>,
+      }
+
+      @group(0) @binding(2) var<storage, read_write> dataBuffer: array<SerializedLogData, 64>;
+
+      var<private> dataByteIndex: u32;
+
+      fn log1serializer() {
+
+      }
+
+      fn log1() {
+        dataBlockIndex = atomicAdd(&indexBuffer, 1);
+        if (dataBlockIndex >= 64) {
+          return;
+        }
+        dataBuffer[dataBlockIndex].id = 1;
+        dataByteIndex = 0;
+
+        log1serializer();
+      }
+
+      fn wrappedCallback(x: u32, _arg_1: u32, _arg_2: u32) {
+        log1();
+      }
+
+      @compute @workgroup_size(256, 1, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
+        if (any(id >= sizeUniform)) {
+          return;
+        }
+        wrappedCallback(id.x, id.y, id.z);
+      }"
+    `);
+  });
+
+  it('works with nested template literals', ({ root }) => {
+    const log = console.log;
+
+    const myPipeline = root.createGuardedComputePipeline((x) => {
+      'use gpu';
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-template-expression
+      log(`The value is: ${`nested ${4 + 4}`}`);
+    });
+
+    expect(tgpu.resolve([myPipeline.pipeline])).toMatchInlineSnapshot(`
+      "@group(0) @binding(0) var<uniform> sizeUniform: vec3u;
+
+      var<private> dataBlockIndex: u32;
+
+      @group(0) @binding(1) var<storage, read_write> indexBuffer: atomic<u32>;
+
+      struct SerializedLogData {
+        id: u32,
+        serializedData: array<u32, 63>,
+      }
+
+      @group(0) @binding(2) var<storage, read_write> dataBuffer: array<SerializedLogData, 64>;
+
+      var<private> dataByteIndex: u32;
+
+      fn nextByteIndex() -> u32 {
+        let i = dataByteIndex;
+        dataByteIndex = dataByteIndex + 1u;
+        return i;
+      }
+
+      fn serializeI32(n: i32) {
+        dataBuffer[dataBlockIndex].serializedData[nextByteIndex()] = bitcast<u32>(n);
+      }
+
+      fn log1serializer(_arg_0: i32) {
+        serializeI32(_arg_0);
+      }
+
+      fn log1(_arg_0: i32) {
+        dataBlockIndex = atomicAdd(&indexBuffer, 1);
+        if (dataBlockIndex >= 64) {
+          return;
+        }
+        dataBuffer[dataBlockIndex].id = 1;
+        dataByteIndex = 0;
+
+        log1serializer(_arg_0);
+      }
+
+      fn wrappedCallback(x: u32, _arg_1: u32, _arg_2: u32) {
+        log1(8i);
+      }
+
+      @compute @workgroup_size(256, 1, 1) fn mainCompute(@builtin(global_invocation_id) id: vec3u) {
+        if (any(id >= sizeUniform)) {
+          return;
+        }
+        wrappedCallback(id.x, id.y, id.z);
+      }"
+    `);
+  });
 });

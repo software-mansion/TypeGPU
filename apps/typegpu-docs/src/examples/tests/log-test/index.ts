@@ -286,6 +286,51 @@ export const controls = defineControls({
         })
         .dispatchThreads(16),
   },
+  'Template literals': {
+    onButtonClick: () =>
+      root
+        .createGuardedComputePipeline(() => {
+          'use gpu';
+          console.log(`Log with template literal: ${4 + 4}`);
+        })
+        .dispatchThreads(),
+  },
+  'Template literals with helper function': {
+    onButtonClick: () => {
+      const helper = (n: number) => {
+        'use gpu';
+        return n;
+      };
+
+      return root
+        .createGuardedComputePipeline(() => {
+          'use gpu';
+          console.log(`Log with template literal: ${helper(4 + 16)}`);
+        })
+        .dispatchThreads();
+    },
+  },
+  'Template literals with complex content': {
+    onButtonClick: () =>
+      root
+        .createGuardedComputePipeline(() => {
+          'use gpu';
+          console.log(
+            `Log with template literal: \`first\` \n new line \n another line with slash: \\`,
+          );
+        })
+        .dispatchThreads(),
+  },
+  'Template literals with nested template literals': {
+    onButtonClick: () =>
+      root
+        .createGuardedComputePipeline(() => {
+          'use gpu';
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-template-expression
+          console.log(`The value is: ${`nested ${4 + 4}`}`);
+        })
+        .dispatchThreads(),
+  },
 });
 
 export function onCleanup() {
