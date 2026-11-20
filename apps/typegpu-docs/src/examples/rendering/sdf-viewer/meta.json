@@ -1,0 +1,7 @@
+{
+  "title": "SDF Viewer",
+  "description": "A ray-marched gallery of every signed distance function in @typegpu/sdf, explorable with a first-person camera.",
+  "category": "rendering",
+  "tags": ["ecosystem", "ray marching", "sdf"],
+  "coolFactor": 4
+}
