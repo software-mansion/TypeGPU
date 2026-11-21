@@ -193,7 +193,7 @@ export interface TgpuBuffer<TData extends BaseData> extends TgpuNamable {
 
   /**
    * Creates a typed region of the element the accessor navigates to. The region reads,
-   * writes and binds only that element's bytes, and takes its usage flags from this buffer.
+   * writes and binds only that element's bytes, and takes the usage flags of this buffer that its schema supports.
    *
    * The schema has to match the element. An array schema can also cover a prefix of an
    * array element, or run over the elements of an array starting at the element.

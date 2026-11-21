@@ -100,8 +100,8 @@ export interface BufferRegionOptions {
  *
  * A region reads, writes, clears and copies only its own bytes, and can be used
  * wherever a buffer can: in bind groups, as `.as('uniform' | 'readonly' | 'mutable')`
- * bindings, as vertex, index and indirect buffers. A region takes its usage
- * flags from its buffer.
+ * bindings, as vertex, index and indirect buffers. A region takes the usage
+ * flags of its buffer that its schema supports.
  *
  * Reading, writing and copying put no requirement on the region's offset beyond the
  * 4-byte granularity of WebGPU copies. Binding a region as a uniform or storage buffer

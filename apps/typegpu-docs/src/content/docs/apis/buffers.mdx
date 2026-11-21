@@ -717,7 +717,7 @@ const pool = root.createBuffer(d.arrayOf(d.u32, 1024)).$usage('storage');
 const boids = pool.region(d.arrayOf(Boid, 16), { offsetBytes: 256 });
 ```
 
-A region takes its usage flags from its buffer, so `thirdBoid` above can be bound as storage, but not as a uniform.
+A region takes the usage flags of its buffer that its schema supports, so `thirdBoid` above can be bound as storage, but not as a uniform.
 
 ### Reading and writing a region
 
@@ -790,11 +790,13 @@ To bind it, place it at a multiple of the limit, for example by wrapping its str
 Regions that are only read, written, copied, or used as vertex, index or indirect buffers carry no such restriction.
 :::
 
+WebGPU tracks buffer usage per whole buffer, not per range. Within one dispatch or render pass, binding a region as writable storage conflicts with any read-only use of the same parent buffer: another region bound read-only or as a uniform, or use as a vertex, index or indirect buffer. Regions that are used together like that need separate buffers. Several regions of one buffer can be bound as writable storage together, as long as they do not overlap.
+
 ### Other uses
 
 Regions of buffers with the matching usage can be passed as vertex buffers, as index buffers to `.withIndexBuffer()`, and as indirect buffers
 to `.dispatchWorkgroupsIndirect()`, `.drawIndirect()` and `.drawIndexedIndirect()`. Offsets passed alongside a region count from its start.
 
-`root.unwrap(region)` returns the region's buffer, offset and size as a `GPUBufferBinding` for raw WebGPU bind group entries. Unlike `root.createBindGroup`, it does not round the size up to 4 bytes or check the offset alignment.
+`root.unwrap(region)` returns the region's exact byte range (`buffer`, `offset` and `size`) as a `GPUBufferBinding` without checking offset alignment or rounding `size` up. A size such as 6 bytes for three `f16` values is therefore not directly usable as a storage binding, whose size must be a multiple of 4. Round it up yourself only when the padding belongs to the region. TypeGPU's own bindings already do this.
 
 `TgpuMutable<T>`, `TgpuReadonly<T>` and `TgpuUniform<T>` stand for bindings of whole buffers. A function that also takes bindings of regions can type its parameter as `TgpuMutable<T, BindableBuffer<T> & StorageFlag>`.
