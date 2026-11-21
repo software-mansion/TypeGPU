@@ -81,6 +81,14 @@ describe('buffer.region', () => {
     expectTypeOf(uniformRegion).toEqualTypeOf<
       TgpuBufferRegion<typeof Boid> & UniformFlag & VertexFlag
     >();
+    const pool = root.createBuffer(d.arrayOf(d.u32, 16)).$usage('storage', 'vertex', 'index');
+    const positions = d.disarrayOf(d.float32x3, 4);
+    expectTypeOf(pool.region(positions, { offsetBytes: 0 })).toEqualTypeOf<
+      TgpuBufferRegion<typeof positions> & VertexFlag
+    >();
+    expectTypeOf(pool.region(d.vec2u, { offsetBytes: 0 })).toEqualTypeOf<
+      TgpuBufferRegion<d.Vec2u> & StorageFlag & VertexFlag
+    >();
     // @ts-expect-error: the buffer is not usable as a uniform
     expect(() => storageRegion.as('uniform')).toThrow();
   });

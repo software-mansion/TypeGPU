@@ -3,11 +3,20 @@ import { isDisarray, isUnstruct, undecorate, type AnyData } from '../../data/dat
 import { navigateSchema } from '../../data/offsetUtils.ts';
 import { schemasEqualStructurally } from '../../data/schemasEqual.ts';
 import { sizeOf } from '../../data/sizeOf.ts';
-import { isWgslArray, type BaseData, type WgslArray } from '../../data/wgslTypes.ts';
+import { isWgslArray, isWgslData, type BaseData, type WgslArray } from '../../data/wgslTypes.ts';
 import type { StorageFlag } from '../../extension.ts';
 import { roundUp } from '../../mathUtils.ts';
 import { getName, setName, type TgpuNamable } from '../../shared/meta.ts';
-import type { Infer, InferInput, InferPatch, MemIdentity } from '../../shared/repr.ts';
+import type {
+  Infer,
+  InferInput,
+  InferPatch,
+  IsValidIndexSchema,
+  IsValidStorageSchema,
+  IsValidUniformSchema,
+  IsValidVertexSchema,
+  MemIdentity,
+} from '../../shared/repr.ts';
 import type { TgpuSoul } from '../../shared/soul.ts';
 import { $internal, $soul } from '../../shared/symbols.ts';
 import type { TgpuCommandEncoder } from '../commandEncoder/commandEncoder.ts';
@@ -43,12 +52,30 @@ interface UsageFlagCarrier {
   readonly usableAsIndirect: boolean;
 }
 
-export type InheritedUsageFlags<TBuffer extends UsageFlagCarrier> =
-  (boolean extends TBuffer['usableAsUniform'] ? unknown : UniformFlag) &
-    (boolean extends TBuffer['usableAsStorage'] ? unknown : StorageFlag) &
-    (boolean extends TBuffer['usableAsVertex'] ? unknown : VertexFlag) &
-    (boolean extends TBuffer['usableAsIndex'] ? unknown : IndexFlag) &
-    (boolean extends TBuffer['usableAsIndirect'] ? unknown : IndirectFlag);
+export type InheritedUsageFlags<
+  TBuffer extends UsageFlagCarrier,
+  TData extends BaseData,
+> = (boolean extends TBuffer['usableAsUniform']
+  ? unknown
+  : IsValidUniformSchema<TData> extends true
+    ? UniformFlag
+    : unknown) &
+  (boolean extends TBuffer['usableAsStorage']
+    ? unknown
+    : IsValidStorageSchema<TData> extends true
+      ? StorageFlag
+      : unknown) &
+  (boolean extends TBuffer['usableAsVertex']
+    ? unknown
+    : IsValidVertexSchema<TData> extends true
+      ? VertexFlag
+      : unknown) &
+  (boolean extends TBuffer['usableAsIndex']
+    ? unknown
+    : IsValidIndexSchema<TData> extends true
+      ? IndexFlag
+      : unknown) &
+  (boolean extends TBuffer['usableAsIndirect'] ? unknown : IndirectFlag);
 
 /** An array region's accessor may also return the first element it runs over */
 export type RegionAccessorResult<TRegion extends BaseData> =
@@ -274,11 +301,11 @@ class TgpuBufferRegionImpl<TData extends BaseData> implements TgpuBufferRegion<T
   }
 
   get usableAsUniform(): boolean {
-    return this.buffer.usableAsUniform;
+    return this.buffer.usableAsUniform && isWgslData(this.dataType);
   }
 
   get usableAsStorage(): boolean {
-    return this.buffer.usableAsStorage;
+    return this.buffer.usableAsStorage && isWgslData(this.dataType);
   }
 
   get usableAsVertex(): boolean {

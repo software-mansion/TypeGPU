@@ -209,7 +209,7 @@ export interface TgpuBuffer<TData extends BaseData> extends TgpuNamable {
   region<TRegion extends AnyWgslData>(
     schema: TRegion,
     accessor: (data: Infer<TData>) => NoInfer<RegionAccessorResult<TRegion>>,
-  ): TgpuBufferRegion<TRegion> & InheritedUsageFlags<this>;
+  ): TgpuBufferRegion<TRegion> & InheritedUsageFlags<this, TRegion>;
   /**
    * Creates a typed region that starts `offsetBytes` into this buffer (0 by default).
    * The caller is responsible for the bytes there holding data laid out as the schema.
@@ -223,7 +223,7 @@ export interface TgpuBuffer<TData extends BaseData> extends TgpuNamable {
   region<TRegion extends AnyData>(
     schema: TRegion,
     options?: BufferRegionOptions,
-  ): TgpuBufferRegion<TRegion> & InheritedUsageFlags<this>;
+  ): TgpuBufferRegion<TRegion> & InheritedUsageFlags<this, TRegion>;
 
   compileWriter(): void;
   write(data: InferInput<TData>, options?: BufferWriteOptions): void;
@@ -681,12 +681,12 @@ class TgpuBufferImpl<TData extends BaseData> implements TgpuBuffer<TData> {
   region<TRegion extends AnyData>(
     schema: TRegion,
     accessorOrOptions?: ((data: Infer<TData>) => unknown) | BufferRegionOptions,
-  ): TgpuBufferRegion<TRegion> & InheritedUsageFlags<this> {
+  ): TgpuBufferRegion<TRegion> & InheritedUsageFlags<this, TRegion> {
     return INTERNAL_createBufferRegion(
       this,
       schema,
       accessorOrOptions as ((data: never) => unknown) | BufferRegionOptions | undefined,
-    ) as TgpuBufferRegion<TRegion> & InheritedUsageFlags<this>;
+    ) as TgpuBufferRegion<TRegion> & InheritedUsageFlags<this, TRegion>;
   }
 
   destroy() {
