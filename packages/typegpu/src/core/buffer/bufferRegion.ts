@@ -160,6 +160,7 @@ export function INTERNAL_createBufferRegion<TRegion extends AnyData>(
     );
   }
 
+  let offset: number;
   if (typeof accessorOrOptions === 'function') {
     const parentSchema = undecorate(buffer.dataType);
     if (isUnstruct(parentSchema) || isDisarray(parentSchema)) {
@@ -180,12 +181,12 @@ export function INTERNAL_createBufferRegion<TRegion extends AnyData>(
         `Cannot create a region of type '${schema}' over an element of type '${element.schema}'${run}. To reinterpret the memory, pass { offsetBytes: ${element.offset} } instead of an accessor.`,
       );
     }
-    return new TgpuBufferRegionImpl(buffer, schema, element.offset);
-  }
-
-  const offset = accessorOrOptions?.offsetBytes ?? 0;
-  if (!Number.isSafeInteger(offset) || offset < 0) {
-    throw new Error(`A buffer region's offset must be a non-negative integer, got ${offset}.`);
+    offset = element.offset;
+  } else {
+    offset = accessorOrOptions?.offsetBytes ?? 0;
+    if (!Number.isSafeInteger(offset) || offset < 0) {
+      throw new Error(`A buffer region's offset must be a non-negative integer, got ${offset}.`);
+    }
   }
 
   const regionSize = sizeOf(schema);
