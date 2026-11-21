@@ -150,9 +150,11 @@ function frame(timestamp: number) {
       .read()
       .then(({ instanceCount }) => {
         counter.textContent = `${instanceCount} of ${FLOWER_COUNT} flowers drawn`;
-        reading = false;
       })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => {
+        reading = false;
+      });
   }
 
   frameId = requestAnimationFrame(frame);
