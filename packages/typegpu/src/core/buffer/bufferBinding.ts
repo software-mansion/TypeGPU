@@ -105,19 +105,19 @@ export function isBufferBinding<TData extends BaseData>(
 
 export function isUniformBinding<TData extends BaseData>(
   value: unknown,
-): value is TgpuUniform<TData> {
+): value is TgpuUniform<TData, BindableBuffer<TData> & UniformFlag> {
   return isBufferBinding(value) && value.resourceType === 'uniform';
 }
 
 export function isMutableBinding<TData extends BaseData>(
   value: unknown,
-): value is TgpuMutable<TData> {
+): value is TgpuMutable<TData, BindableBuffer<TData> & StorageFlag> {
   return isBufferBinding(value) && value.resourceType === 'mutable';
 }
 
 export function isReadonlyBinding<TData extends BaseData>(
   value: unknown,
-): value is TgpuReadonly<TData> {
+): value is TgpuReadonly<TData, BindableBuffer<TData> & StorageFlag> {
   return isBufferBinding(value) && value.resourceType === 'readonly';
 }
 

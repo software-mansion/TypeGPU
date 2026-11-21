@@ -529,7 +529,9 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
   unwrap(resource: TgpuBindGroupLayout): GPUBindGroupLayout;
   unwrap(resource: TgpuBindGroup): GPUBindGroup;
   unwrap(resource: TgpuBuffer<BaseData>): GPUBuffer;
-  unwrap(resource: TgpuBufferBinding<BaseData>): GPUBuffer;
+  unwrap(
+    resource: TgpuMutable<BaseData> | TgpuReadonly<BaseData> | TgpuUniform<BaseData>,
+  ): GPUBuffer;
   unwrap(resource: TgpuBufferRegion<BaseData>): GPUBufferBinding;
   unwrap(resource: TgpuTexture): GPUTexture;
   unwrap(resource: TgpuTextureView | TgpuTextureRenderView): GPUTextureView;

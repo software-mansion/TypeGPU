@@ -240,6 +240,7 @@ describe('binding buffer regions', () => {
     const third = buffer.region(Boid, (scene) => scene.boids[2]).$name('third');
 
     expect(root.unwrap(third)).toStrictEqual({ buffer: root.unwrap(buffer), offset: 40, size: 16 });
+    // @ts-expect-error: region bindings do not unwrap to a GPUBuffer
     expect(() => root.unwrap(third.as('readonly'))).toThrowErrorMatchingInlineSnapshot(
       `[Error: Cannot unwrap the readonly binding of region 'third' into a GPUBuffer. Unwrap the region to get its GPUBufferBinding.]`,
     );
