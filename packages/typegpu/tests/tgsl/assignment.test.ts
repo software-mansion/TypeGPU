@@ -187,3 +187,33 @@ it('throws a readable error on an assignment used in a for loop update', () => {
     - fn*:foo(): 'a = i + 1' is invalid because assignment is only allowed as a standalone statement.]
   `);
 });
+
+it('throws when the right-hand side cannot be converted to the type of the left-hand side', () => {
+  const foo = () => {
+    'use gpu';
+    let t: number | d.v2f = d.u32(1);
+    t = d.vec2f();
+  };
+
+  expect(() => tgpu.resolve([foo])).toThrowErrorMatchingInlineSnapshot(`
+    [Error: Resolution of the following tree failed:
+    - <root>
+    - fn*:foo
+    - fn*:foo(): 't = d.vec2f()' is invalid, because a value of type 'vec2f' cannot be assigned to 't', which is of type 'u32'.]
+  `);
+});
+
+it('throws when assigning a vector of a different size', () => {
+  const foo = () => {
+    'use gpu';
+    let v: d.v2f | d.v3f = d.vec3f();
+    v = d.vec2f();
+  };
+
+  expect(() => tgpu.resolve([foo])).toThrowErrorMatchingInlineSnapshot(`
+    [Error: Resolution of the following tree failed:
+    - <root>
+    - fn*:foo
+    - fn*:foo(): 'v = d.vec2f()' is invalid, because a value of type 'vec2f' cannot be assigned to 'v', which is of type 'vec3f'.]
+  `);
+});
