@@ -9,6 +9,7 @@
 # Basic usage
 
 ```ts
+import { useMemo } from 'react';
 import { d, common } from 'typegpu';
 import { hsvToRgb } from '@typegpu/color';
 import { useFrame, useRoot, useUniform, useMirroredUniform, useConfigureContext } from '@typegpu/react';
@@ -25,7 +26,7 @@ const App = (props: Props) => {
         // Executed per pixel on the GPU 🌈
         fragment: ({ uv }) => {
           'use gpu';
-          return hsvToRgb(time.$, uv.x, uv.y) * color.$;
+          return d.vec4f(hsvToRgb(d.vec3f(time.$ % 1, uv.x, uv.y)) * color.$, 1);
         },
       }),
     [root, time, color]
@@ -35,7 +36,9 @@ const App = (props: Props) => {
 
   // Runs each frame on the CPU 🤖
   useFrame(({ elapsedSeconds }) => {
-    if (!ctxRef.current) return;
+    if (!ctxRef.current) {
+      return;
+    }
     
     time.write(elapsedSeconds);
     

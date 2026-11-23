@@ -132,14 +132,13 @@ const renderBackgroundPipeline = root.createRenderPipeline({
   multisample: { count: 4 },
 });
 
-let msTexture = device.createTexture({
-  size: [canvas.width, canvas.height],
-  sampleCount: 4,
-  format: presentationFormat,
-  usage: GPUTextureUsage.RENDER_ATTACHMENT,
-});
-
-let msView = msTexture.createView();
+let msTexture = root
+  .createTexture({
+    size: [canvas.width, canvas.height],
+    sampleCount: 4,
+    format: presentationFormat,
+  })
+  .$usage('render');
 
 // Render shader
 
@@ -239,7 +238,7 @@ function runComputePass(functionNumber: number) {
 function runRenderBackgroundPass() {
   renderBackgroundPipeline
     .withColorAttachment({
-      view: msView,
+      view: msTexture,
       resolveTarget: context,
       clearValue: [1, 1, 1, 1],
     })
@@ -256,7 +255,7 @@ function runRenderPass() {
     renderPipeline
       .with(renderBindGroup)
       .withColorAttachment({
-        view: msView,
+        view: msTexture,
         resolveTarget: context,
         clearValue: [0.3, 0.3, 0.3, 1],
         loadOp: 'load',
@@ -390,13 +389,13 @@ const autoResizer = common.attachAutoResizer({
     queuePropertiesBufferUpdate();
 
     msTexture.destroy();
-    msTexture = device.createTexture({
-      size: [canvas.width, canvas.height],
-      sampleCount: 4,
-      format: presentationFormat,
-      usage: GPUTextureUsage.RENDER_ATTACHMENT,
-    });
-    msView = msTexture.createView();
+    msTexture = root
+      .createTexture({
+        size: [canvas.width, canvas.height],
+        sampleCount: 4,
+        format: presentationFormat,
+      })
+      .$usage('render');
   },
 });
 

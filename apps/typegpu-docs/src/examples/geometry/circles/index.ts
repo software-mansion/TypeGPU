@@ -1,50 +1,25 @@
 import { circle, circleVertexCount } from '@typegpu/geometry';
 import { tgpu, common, d, std as s } from 'typegpu';
 
+const root = await tgpu.init({
+  device: { requiredFeatures: ['timestamp-query'] },
+});
+const canvas = document.querySelector('canvas') as HTMLCanvasElement;
+const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
-const canvas = document.querySelector('canvas');
-const context = canvas?.getContext('webgpu');
 const multisample = true;
 
-if (!canvas) {
-  throw new Error('Could not find canvas');
-}
-if (!context) {
-  throw new Error('Could not create WebGPU context');
-}
-
-const adapter = await navigator.gpu.requestAdapter();
-const device = await adapter?.requestDevice({
-  requiredFeatures: ['timestamp-query'],
-});
-if (!device) {
-  throw new Error('Could not get WebGPU device');
-}
-const root = tgpu.initFromDevice({ device });
-
-context.configure({
-  device: root.device,
-  format: presentationFormat,
-  alphaMode: 'premultiplied',
-});
-
-let msaaTexture: GPUTexture;
-let msaaTextureView: GPUTextureView;
-
-const createDepthAndMsaaTextures = () => {
-  if (msaaTexture) {
-    msaaTexture.destroy();
-  }
-  msaaTexture = device.createTexture({
-    size: [canvas.width, canvas.height, 1],
-    format: presentationFormat,
-    sampleCount: 4,
-    usage: GPUTextureUsage.RENDER_ATTACHMENT,
-  });
-  msaaTextureView = msaaTexture.createView();
+const createMsaaTexture = () => {
+  return root
+    .createTexture({
+      size: [canvas.width, canvas.height],
+      format: presentationFormat,
+      sampleCount: 4,
+    })
+    .$usage('render');
 };
 
-createDepthAndMsaaTextures();
+let msaaTexture = createMsaaTexture();
 
 // const Uniforms = d.struct({});
 
@@ -132,7 +107,7 @@ const render = () => {
     .withColorAttachment({
       ...(multisample
         ? {
-            view: msaaTextureView,
+            view: msaaTexture,
             resolveTarget: context,
           }
         : { view: context }),
@@ -155,7 +130,8 @@ const autoResizer = common.attachAutoResizer({
     canvas.width = size;
     canvas.height = size;
 
-    createDepthAndMsaaTextures();
+    msaaTexture.destroy();
+    msaaTexture = createMsaaTexture();
 
     render();
   },

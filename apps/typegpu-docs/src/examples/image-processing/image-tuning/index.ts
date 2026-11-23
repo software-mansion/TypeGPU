@@ -25,7 +25,6 @@ const Adjustments = d.struct({
 });
 
 const root = await tgpu.init();
-const device = root.device;
 const canvas = document.querySelector('canvas') as HTMLCanvasElement;
 const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 const presentationFormat = navigator.gpu.getPreferredCanvasFormat();
@@ -244,15 +243,7 @@ async function updateLUT(file: string) {
     })
     .$usage('sampled');
 
-  device.queue.writeTexture(
-    { texture: root.unwrap(currentLUTTexture) },
-    parsed.data.buffer,
-    {
-      bytesPerRow: parsed.size * 4 * 2,
-      rowsPerImage: parsed.size,
-    },
-    [parsed.size, parsed.size, parsed.size],
-  );
+  currentLUTTexture.write(parsed.data);
 }
 
 // #endregion

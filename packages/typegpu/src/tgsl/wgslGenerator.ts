@@ -79,6 +79,8 @@ import type { VariableScope } from '../core/variable/tgpuVariable.ts';
 import { DEV } from '../shared/env.ts';
 import { logger } from '../tgpuLogger.ts';
 import { TgpuDeclareImpl } from '../core/declare/tgpuDeclare.ts';
+import { isWgslComparisonSampler, isWgslSampler } from '../data/sampler.ts';
+import { isWgslExternalTexture, isWgslStorageTexture, isWgslTexture } from '../data/texture.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -248,6 +250,20 @@ function schemaWrappingSuggestion(declaration: string, rhs: string, value: unkno
 -----
 - Try using or defining a schema that matches your desired value the most, and wrap the value with it: '${declaration} = Schema(${rhs})'
 -----`;
+}
+
+/**
+ * Textures and samplers live in the 'handle' address space, and can only be referenced
+ * by their global identifier (or a function parameter), not stored in local variables.
+ */
+function isHandleData(dataType: unknown): boolean {
+  return (
+    isWgslTexture(dataType) ||
+    isWgslStorageTexture(dataType) ||
+    isWgslExternalTexture(dataType) ||
+    isWgslSampler(dataType) ||
+    isWgslComparisonSampler(dataType)
+  );
 }
 
 export class WgslGenerator implements ShaderGenerator {
@@ -1483,6 +1499,17 @@ Try 'return ${typeStr}(${str});' instead.
       );
     }
 
+    if (isHandleData(definitionDataType)) {
+      // Handles cannot be reassigned, so only `const` aliases make sense
+      const rhsStr = stringifyNode(eqNode);
+      throw new WgslTypeError(
+        `'let ${rawId} = ${rhsStr}' is invalid, because textures and samplers cannot be assigned to 'let' variable declarations.
+-----
+- Try 'const ${rawId} = ${rhsStr}' instead.
+-----`,
+      );
+    }
+
     if (isStoredInMemory(eq) && !wgsl.isNaturallyEphemeral(eq.dataType)) {
       // `let` declarations cannot store references
       const rhsStr = stringifyNode(eqNode);
@@ -1573,6 +1600,10 @@ Try 'return ${typeStr}(${str});' instead.
       );
     }
 
+    if (isHandleData(definitionDataType)) {
+      return this._aliasHandleStatement(rawId, eq);
+    }
+
     if (eq.origin === 'argument') {
       // Arguments are immutable, so we 'let' them be (kill me)
       varType = 'let';
@@ -1629,6 +1660,19 @@ Try 'return ${typeStr}(${str});' instead.
       code: this._emitVarDecl(emittedVarType, snippet.value, concreteType, rhsStr),
       definesInNearestScope: true,
     };
+  }
+
+  /**
+   * Handles declarations whose right-hand side is a texture or sampler handle.
+   *
+   * WGSL forbids handle types in `const` and `var` declarations, and allows them in `let`
+   * declarations only with the optional `texture_and_sampler_let` language extension.
+   * Instead of emitting a declaration, we treat the variable as a compile-time alias,
+   * so every use of it resolves to the original handle expression.
+   */
+  protected _aliasHandleStatement(rawId: string, eq: Snippet): ResolvedStatement {
+    this.ctx.defineVariable(rawId, eq);
+    return { code: '', definesInNearestScope: false };
   }
 
   /**
@@ -2035,7 +2079,7 @@ ${this.ctx.pre}else ${alternate}`,
             const testNode = cases[i]?.[0];
             invariant(testNode, `Expected node to be not nullish.`);
             throw new Error(`All of switch tests must be constant.
-Test '${stringifyNode(testNode)}' is not constant, making the following switch statement invalid. 
+Test '${stringifyNode(testNode)}' is not constant, making the following switch statement invalid.
 This error may be caused by an implicit conversion.
 ${stringifyNode(statement)}`);
           }

@@ -67,6 +67,7 @@ root.createGuardedComputePipeline(main).dispatchThreads();
 - [:jigsaw: TypeGPU as a piece of the puzzle](#jigsaw-typegpu-as-a-piece-of-the-puzzle)
 - [:book: TypeGPU for libraries](#book-typegpu-for-libraries)
 - [Documentation](#documentation)
+- [Coding agents](#coding-agents)
 - [What's next?](#whats-next)
 - [Projects using TypeGPU](#projects-using-typegpu)
 - [Repository structure](#repository-structure)
@@ -179,6 +180,15 @@ utilities!
 
 We created a set of guides and tutorials to get you up and running fast. Check
 out our [Official Docs](https://docs.swmansion.com/TypeGPU/getting-started)!
+
+## Coding agents
+
+The `typegpu` package ships a skill for AI coding agents in
+`node_modules/typegpu/skills/typegpu/`, matching the installed version. Projects
+created with `npx typegpu@latest` get a short TypeGPU section in `AGENTS.md` and
+`CLAUDE.md` that points agents at it. To add that section to an existing
+project, or to install the skill into an agent's skill folder instead, see the
+[AI Tools guide](https://docs.swmansion.com/TypeGPU/tooling/ai-tools).
 
 ## What's next?
 

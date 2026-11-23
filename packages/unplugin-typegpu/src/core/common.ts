@@ -18,7 +18,7 @@ import { METADATA_FORMAT_VERSION } from './version.ts';
 
 export interface Options {
   /** @default /\.m?[jt]sx?(?:\?.*)?$/ */
-  include?: FilterPattern;
+  include?: FilterPattern | undefined;
 
   /** @default undefined */
   exclude?: FilterPattern | undefined;
@@ -30,7 +30,7 @@ export interface Options {
   forceTgpuAlias?: string | undefined;
 
   /** @default true */
-  autoNamingEnabled?: boolean;
+  autoNamingEnabled?: boolean | undefined;
 
   /**
    * Obfuscate the generated AST.
@@ -38,14 +38,14 @@ export interface Options {
    *
    * @default false
    */
-  unstable_obfuscate?: boolean;
+  unstable_obfuscate?: boolean | undefined;
 
   /**
    * Keep the source map info so that resolve errors link to an appropriate source.
    *
    * @default false
    */
-  unstable_sourceMaps?: boolean;
+  unstable_sourceMaps?: boolean | undefined;
 
   /**
    * Skipping files that don't contain "typegpu", "tgpu" or "use gpu".
