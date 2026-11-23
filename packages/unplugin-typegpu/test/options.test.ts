@@ -24,7 +24,8 @@ describe('options set to undefined', () => {
       const cst = tgpu.const(d.u32, 1);
     `;
 
-    expect(babelTransform(code, unset)).toBe(babelTransform(code, { autoNamingEnabled: true }));
-    expect(babelTransform(code, unset)).toContain('__TYPEGPU_AUTONAME__');
+    const transformed = babelTransform(code, unset);
+    expect(transformed).toBe(babelTransform(code, { autoNamingEnabled: true }));
+    expect(transformed).toContain('__TYPEGPU_AUTONAME__');
   });
 });
