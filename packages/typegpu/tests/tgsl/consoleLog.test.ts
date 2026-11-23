@@ -805,16 +805,9 @@ describe('WgslGenerator with console.log', () => {
   });
 
   it('works with template literal', ({ root }) => {
-    const log = console.log;
-
-    const helper = () => {
-      'use gpu';
-      return 4;
-    };
-
     const myPipeline = root.createGuardedComputePipeline((x) => {
       'use gpu';
-      log(`first ${4 + 4} last`);
+      console.log(`first ${4 + 4} last`);
     });
 
     expect(tgpu.resolve([myPipeline.pipeline])).toMatchInlineSnapshot(`
@@ -872,8 +865,6 @@ describe('WgslGenerator with console.log', () => {
   });
 
   it('works with template literal that contains a function call', ({ root }) => {
-    const log = console.log;
-
     const helper = () => {
       'use gpu';
       return 4;
@@ -881,7 +872,7 @@ describe('WgslGenerator with console.log', () => {
 
     const myPipeline = root.createGuardedComputePipeline((x) => {
       'use gpu';
-      log(`first ${4 + helper()} last`);
+      console.log(`first ${4 + helper()} last`);
     });
 
     expect(tgpu.resolve([myPipeline.pipeline])).toMatchInlineSnapshot(`
@@ -943,11 +934,11 @@ describe('WgslGenerator with console.log', () => {
   });
 
   it('works with template literal that contains complex quasis', ({ root }) => {
-    const log = console.log;
-
     const myPipeline = root.createGuardedComputePipeline((x) => {
       'use gpu';
-      log(`Log with template literal: \`first\` \n new line \n another line with slash: \\`);
+      console.log(
+        `Log with template literal: \`first\` \n new line \n another line with slash: \\`,
+      );
     });
 
     expect(tgpu.resolve([myPipeline.pipeline])).toMatchInlineSnapshot(`
@@ -995,12 +986,10 @@ describe('WgslGenerator with console.log', () => {
   });
 
   it('works with nested template literals', ({ root }) => {
-    const log = console.log;
-
     const myPipeline = root.createGuardedComputePipeline((x) => {
       'use gpu';
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-template-expression
-      log(`The value is: ${`nested ${4 + 4}`}`);
+      console.log(`The value is: ${`nested ${4 + 4}`}`);
     });
 
     expect(tgpu.resolve([myPipeline.pipeline])).toMatchInlineSnapshot(`

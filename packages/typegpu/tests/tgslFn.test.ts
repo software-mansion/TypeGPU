@@ -1369,3 +1369,55 @@ describe('nulls in TGSL', () => {
     `);
   });
 });
+
+describe('template literal in TGSL', () => {
+  it('disallows assigning template literals to variables', () => {
+    const fn = () => {
+      'use gpu';
+      const a = `${2 + 2}`;
+    };
+
+    expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:fn
+      - fn*:fn(): 'const a = \`\${2 + 2}\`' is invalid, cannot determine WGSL type of '\`\${2 + 2}\`'
+      -----
+      - Try using or defining a schema that matches your desired value the most, and wrap the value with it: 'const a = Schema(\`\${2 + 2}\`)'
+      -----]
+    `);
+  });
+
+  it('allows comptime template literals', () => {
+    const fn = () => {
+      'use gpu';
+      if (`${2 + 2}` === '4') {
+        return true;
+      }
+      return false;
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1() -> bool {
+        return true;
+      }"
+    `);
+  });
+
+  it('allows nested comptime template literals', () => {
+    const fn = () => {
+      'use gpu';
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-template-expression
+      if (`2${`${1 + 3}`}` === '24') {
+        return true;
+      }
+      return false;
+    };
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+        "fn fn_1() -> bool {
+          return true;
+        }"
+      `);
+  });
+});
