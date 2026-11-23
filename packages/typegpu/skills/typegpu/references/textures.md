@@ -96,54 +96,19 @@ Texture `write`, `copyFrom`, `clear` and `generateMipmaps` go to the queue immed
 
 ## Texture views
 
-Views expose a texture (or a subset) to shaders or render passes. A sampled or storage view is a fixed resource: `view.$` inside a shader binds it automatically, like `createUniform`. A layout entry also accepts the texture itself and creates the matching view.
-
-### Sampled views
+Views expose a texture (or a subset) to shaders or render passes. A sampled or storage view is a fixed resource: `view.$` inside a shader binds it automatically, like `createUniform`. A layout entry also accepts the texture itself and creates the matching view. Create views at setup (see "Cache bind groups and views" in `references/buffers.md`).
 
 ```ts
-texture.createView()                           // default schema from the texture's dimension, format and sampleCount
-texture.createView(d.texture2d(d.f32))
-texture.createView(d.texture2d(d.u32))
-texture.createView(d.texture2d(d.i32))
-
-texture.createView(d.texture2dArray(d.f32))
-texture.createView(d.textureCube(d.f32))
-texture.createView(d.textureCubeArray(d.f32))
-texture.createView(d.texture3d(d.f32))
-texture.createView(d.textureMultisampled2d(d.f32))
-texture.createView(d.texture1d(d.f32))
+texture.createView()                                         // schema from the texture's dimension, format and sampleCount
+texture.createView(d.texture2d(d.u32))                       // sampled
+texture.createView(d.textureDepth2d())                       // depth
+texture.createView(d.textureStorage2d('rgba8unorm', 'read-write')) // storage
+texture.createView('render', { baseMipLevel: 2, mipLevelCount: 1 }) // render attachment: one mip or layer
 ```
 
-`d.texture2d()` and the other sampled schemas default to `d.f32`.
-
-### Depth views
-
-```ts
-texture.createView(d.textureDepth2d())
-texture.createView(d.textureDepth2dArray())
-texture.createView(d.textureDepthCube())
-texture.createView(d.textureDepthCubeArray())
-texture.createView(d.textureDepthMultisampled2d())
-```
-
-### Storage texture views
-
-```ts
-texture.createView(d.textureStorage2d('rgba8unorm', 'write-only'))  // default access
-texture.createView(d.textureStorage2d('rgba8unorm', 'read-only'))
-texture.createView(d.textureStorage2d('rgba8unorm', 'read-write'))
-
-// Also: d.textureStorage1d, d.textureStorage2dArray, d.textureStorage3d
-```
-
-### Render attachment view
-
-```ts
-const renderView = texture.createView('render');
-const mipTarget  = texture.createView('render', { baseMipLevel: 2, mipLevelCount: 1 }); // render into one mip or layer
-```
-
-> Cache view handles at setup - `createView(...)` inline is fine for prototypes but raises GC pressure at scale.
+- Sampled: `d.texture1d`, `d.texture2d`, `d.texture2dArray`, `d.textureCube`, `d.textureCubeArray`, `d.texture3d`, `d.textureMultisampled2d`, each taking `d.f32` (the default), `d.u32` or `d.i32`.
+- Depth: `d.textureDepth2d`, `d.textureDepth2dArray`, `d.textureDepthCube`, `d.textureDepthCubeArray`, `d.textureDepthMultisampled2d`.
+- Storage: `d.textureStorage1d`, `d.textureStorage2d`, `d.textureStorage2dArray`, `d.textureStorage3d`, taking a format and `'write-only'` (the default), `'read-only'` or `'read-write'`.
 
 ### View descriptor (subset of texture)
 
@@ -161,14 +126,9 @@ texture.createView(d.texture2d(d.f32), {
 
 `d.f32` views bind as `'float'` by default, which only filterable formats satisfy. For an unfilterable format (`r32float`, `rgba32float` without the `float32-filterable` feature, or a depth texture read as `d.texture2d(d.f32)`), pass `sampleType: 'unfilterable-float'` on the view for fixed use, or on the layout entry for manual binding (`{ texture: d.texture2d(), sampleType: 'unfilterable-float' }`), and read it with `textureLoad` or a `'non-filtering'` sampler.
 
-Example - bind a single layer of an array texture:
+Binding one layer of an array texture (`size: [256, 256, 4]`):
 
 ```ts
-const arrayTex = root.createTexture({
-  size: [256, 256, 4],
-  format: 'rgba8unorm',
-}).$usage('sampled');
-
 const layout = tgpu.bindGroupLayout({ layer: { texture: d.texture2d() } });
 
 const bindGroup = root.createBindGroup(layout, {
@@ -182,9 +142,7 @@ const bindGroup = root.createBindGroup(layout, {
 
 ```ts
 const sampler = root.createSampler({
-  addressModeU?: 'clamp-to-edge' | 'repeat' | 'mirror-repeat',
-  addressModeV?: ...,
-  addressModeW?: ...,
+  addressModeU?: 'clamp-to-edge' | 'repeat' | 'mirror-repeat',  // also V, W
   magFilter?:    'nearest' | 'linear',
   minFilter?:    'nearest' | 'linear',
   mipmapFilter?: 'nearest' | 'linear',
@@ -193,14 +151,14 @@ const sampler = root.createSampler({
   maxAnisotropy?: number,              // 1-16
 });
 
-// Comparison sampler (shadow mapping) - separate constructor, `compare` required:
+// Comparison sampler (shadow mapping): separate constructor, `compare` required
 const shadowSampler = root.createComparisonSampler({
   compare: 'less',                     // GPUCompareFunction
   magFilter: 'linear',
 });
 ```
 
-Both are fixed resources: use `sampler.$` directly in shaders, or pass the sampler as a bind group entry. In bind group layouts: `{ sampler: 'filtering' | 'non-filtering' | 'comparison' }`.
+Both are fixed resources: use `sampler.$` in shaders, or pass the sampler to a `{ sampler: 'filtering' | 'non-filtering' | 'comparison' }` layout entry.
 
 ---
 
@@ -215,22 +173,12 @@ Both are fixed resources: use `sampler.$` directly in shaders, or pass the sampl
 | `std.textureSampleGrad` | Any | Non-uniform OK | Auto via explicit derivatives |
 
 ```ts
-const color = std.textureSample(layout.$.tex, layout.$.samp, uv);       // fragment, uniform
-const color = std.textureSampleLevel(layout.$.tex, layout.$.samp, uv, 0); // any stage
-const color = std.textureSampleGrad(layout.$.tex, layout.$.samp, uv, ddx, ddy); // explicit grads
+std.textureSample(layout.$.tex, layout.$.samp, uv);
+std.textureSampleLevel(layout.$.tex, layout.$.samp, uv, 0);
+std.textureSampleGrad(layout.$.tex, layout.$.samp, uv, ddx, ddy);
 ```
 
-### Sampled texture in a bind group
-
-```ts
-const layout = tgpu.bindGroupLayout({
-  tex:  { texture: d.texture2d(d.f32) },
-  samp: { sampler: 'filtering' },
-});
-// Shader: std.textureSample(layout.$.tex, layout.$.samp, uv)
-```
-
-### Storage texture (read/write without sampler)
+### Storage texture (no sampler)
 
 ```ts
 const layout = tgpu.bindGroupLayout({
@@ -259,7 +207,7 @@ const layout = tgpu.bindGroupLayout({
 });
 // Shader: std.textureSampleBaseClampToEdge(layout.$.frame, sampler.$, uv)
 
-// Per frame: an imported video frame expires, so import it and create the bind group each frame
+// An imported video frame expires: import it and create the bind group each frame
 const group = root.createBindGroup(layout, {
   frame: root.device.importExternalTexture({ source: video }),
 });
@@ -271,7 +219,7 @@ The same slot also accepts a sampled TypeGPU texture in `rgba8unorm`, `bgra8unor
 
 ## Render to a texture, then sample it
 
-A two-pass effect bakes a field into an intermediate texture, then a second pass samples it. The intermediate needs both `'render'` and `'sampled'` usage:
+A two-pass effect bakes a field into an intermediate texture with `'render'` and `'sampled'` usage, then samples it:
 
 ```ts
 const field = root
@@ -310,12 +258,11 @@ encoder.submit();
 ```
 
 - The producer pass must end before the consumer starts, and keep the default `storeOp: 'store'`. Sampling a texture subresource while it's a render attachment is invalid.
-- For a field that doesn't change every frame, record the bake only when its inputs change and record just the display pass on other frames. Values only the display reads (gain, tint) belong in a uniform, so changing them doesn't need a rebake.
-- Create the texture, views and sampler once, not per frame.
+- For a field that doesn't change every frame, record the bake only when its inputs change. Values only the display reads (gain, tint) belong in a uniform, so changing them doesn't need a rebake.
 
 ### Mapping a domain to texel centers
 
-Ordinary UVs put the domain endpoints on texture edges, so filtering at `0` and `1` blends with the clamp border. When a lookup table's endpoints must land exactly on the first and last texels, map through texel centers in both the writer and the reader:
+Ordinary UVs map the domain onto the texture's edges rather than its texel centers, so a filtered lookup is stretched by half a texel at each end. When a lookup table's endpoints must land exactly on the first and last texels (`count > 1`), bake texel `i` from domain value `i / (count - 1)`, and read domain value `u` through the texel centers:
 
 ```ts
 const toTexelCenter = (u: number, count: number) => {

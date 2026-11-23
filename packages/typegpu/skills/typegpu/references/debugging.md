@@ -2,9 +2,9 @@
 
 ## After every edit
 
-1. **Type check** (`tsc --noEmit`, or the project's `types` script). Schemas carry types through buffers, layouts and shader signatures, so most wiring mistakes surface here. Operators on vectors (`a + b`, `v * 2`) typecheck only with `tsover` set up (see `references/setup.md`).
+1. **Type check** (`tsc --noEmit`, or the project's `types` script); most wiring mistakes surface here. Operators on vectors (`a + b`, `v * 2`) typecheck only with `tsover` set up (see `references/setup.md`).
 2. **Lint** with `eslint-plugin-typegpu` (in ESLint, or in oxlint as a JS plugin; the `check` script in projects created by the TypeGPU CLI runs it through oxlint). It flags `Math.*`, integer division, assignments to parameters and outer-scope variables, uninitialised variables, unwrapped object literals and unsupported syntax inside `'use gpu'` functions.
-3. **Resolve the shaders** for anything beyond a small change. Resolution turns `'use gpu'` code into WGSL and reports the `ResolutionError`s that type checking can't see (references, literal types, unsupported syntax, unbound slots). It needs the build plugin but no GPU, so it runs in a plain vitest test:
+3. **Resolve the shaders** for anything beyond a small change. Resolution reports the `ResolutionError`s that type checking can't see (references, literal types, unsupported syntax, unbound slots). It needs the build plugin but no GPU, so it runs in a plain vitest test:
 
 ```ts
 // vitest.config.ts
@@ -26,13 +26,13 @@ test('preview shader resolves', () => {
 });
 ```
 
-`config` binds slots and accessors the way `root.with(...)` does when creating a pipeline. Pipelines enable WGSL extensions from the device's features; a standalone resolve of code using `f16` or subgroups needs `enableExtensions: ['f16']` (or `'subgroups'`), otherwise the `enable` line is missing. `tgpu.resolveWithContext` takes the same arguments and returns `{ code, usedBindGroupLayouts, catchall }`.
+`config` binds slots and accessors the way `root.with(...)` does when creating a pipeline. Pipelines enable WGSL extensions from the device's features; a standalone resolve of code using `f16` or subgroups needs `enableExtensions: ['f16']` (or `'subgroups'`), otherwise the `enable` line is missing. Other resolve options: "Resolve API" in `references/pipelines.md`.
 
-Outside vitest, a plain Node.js (22.15+) or Deno (2.8+) script can resolve shaders through the plugin's module hooks: a preload file with `import install from 'unplugin-typegpu/node'; install();`, then `node --import ./preload.mjs scripts/print-wgsl.ts`.
+Outside vitest, a plain Node.js (22.15+) or Deno (2.8+) script can resolve shaders through the plugin's module hooks: a preload file with `import install from 'unplugin-typegpu/node'; install();`, then `node --import ./preload.mjs scripts/print-wgsl.ts` (Deno also needs `--allow-env`). Run it with `NODE_ENV=development`: TypeGPU treats an unset `NODE_ENV` as production and drops its conversion and layout warnings. Vitest sets `test`, which keeps them.
 
-Shaders that capture fixed resources (`root.createUniform` and friends) need a device to resolve. Shaders defined without a root, reading layouts, slots and accessors, resolve anywhere; see `references/composition.md`.
+Shaders that capture fixed resources (`root.createUniform` and friends) need a root to create those resources, but resolving them never touches the device: a root from `tgpu.initFromDevice({ device })` with a stub device is enough. Shaders defined without a root, reading layouts, slots and accessors, resolve anywhere; see `references/composition.md`.
 
-A shader that resolves has valid TypeGPU semantics. WGSL validation and pipeline creation happen on the device, so run the app (or a browser test) to confirm those, and look at the output to confirm the result is right.
+A shader that resolves has valid TypeGPU semantics. WGSL validation and pipeline creation happen on the device: run the app (or a browser test) to confirm those, and look at the output.
 
 ## Reading a `ResolutionError`
 
@@ -57,20 +57,17 @@ Unsupported syntax (`var`, prefix `++i`, destructuring declarations, arrow funct
 | `Unsupported data types: ...`, `Call '...' is invalid, the function expected ...` | Wrong argument count or types for a `std` function or `tgpu.fn` | Check the signature in `references/std.md` or the function's `.d.ts` |
 | `Cannot access ... need to be part of a compute dispatch, draw call or simulation`, `.$ is inaccessible during normal JS execution` | A function reading a buffer, accessor or variable was called as plain JS | Run it in a pipeline; on the CPU use `.write()` / `.read()` |
 
-Errors thrown when drawing, dispatching or creating a bind group, not during resolution: `Missing bind groups for layouts: '...'` (`MissingBindGroupsError`, add `.with(bindGroup)`), `Missing vertex buffers for layouts: '...'` (`MissingVertexBuffersError`, add `.with(vertexLayout, buffer)`), `Missing value for immediate variable '...'` (`MissingImmediatesError`), `Buffer '...' is not bindable as a uniform` (`NotUniformError`, add `.$usage('uniform')`). `ResolutionError`, `MissingSlotValueError` and these four classes are exported from `typegpu` for `instanceof` checks.
+Errors thrown when drawing, dispatching or creating a bind group, not during resolution: `Missing bind groups for layouts: '...'` (`MissingBindGroupsError`, add `.with(bindGroup)`, built from the layout object the shader reads), `Missing vertex buffers for layouts: '...'` (`MissingVertexBuffersError`, add `.with(vertexLayout, buffer)`), `Missing value for immediate variable '...'` (`MissingImmediatesError`), `Buffer '...' is not bindable as a uniform` (`NotUniformError`, add `.$usage('uniform')`). `ResolutionError`, `MissingSlotValueError` and these four classes are exported from `typegpu` for `instanceof` checks.
 
 ## Inspecting generated WGSL
 
-`tgpu.resolve([pipelineOrFunction])` returns the full WGSL with dependencies. Use it to:
-
-- check what a specialization emits, e.g. that an excluded term leaves no bindings behind (see `references/composition.md`);
-- compare variants with a snapshot test (`expect(tgpu.resolve([fn])).toMatchSnapshot()`).
+Resolve a pipeline or function to check what a specialization emits (e.g. that an excluded term leaves no bindings behind, see `references/composition.md`), or compare variants with a snapshot test (`expect(tgpu.resolve([fn])).toMatchSnapshot()`).
 
 `console.log` inside `'use gpu'` functions of a pipeline prints once the submission finishes and the log buffer is read back (see `references/shaders.md`); `tgpu.resolve` alone ignores it. Remove it before measuring performance.
 
 ## Isolating a wrong image
 
-After the pipeline validates, find the first stage that produces wrong data:
+Find the first stage that produces wrong data:
 
 - Return a constant color from the fragment shader, then reintroduce the real expression piece by piece.
 - Display an intermediate texture directly before adding the pass that consumes it.

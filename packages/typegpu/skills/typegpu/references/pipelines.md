@@ -13,16 +13,15 @@ Docs: https://docs.swmansion.com/TypeGPU/apis/pipelines.md, https://docs.swmansi
 - **Loading 3D models** — `@loaders.gl`, scattering attributes with `common.writeSoA`
 - **Index buffers**
 - **Depth / stencil**
-- **Multiple render targets (MRT)** — named-record `out`, single-target shorthand, per-target blend and writeMask, custom `fragDepth` output, name and location matching, why fragment output is always 4-component
+- **Multiple render targets (MRT)** — named-record `out`, single-target shorthand, blend and writeMask, custom `fragDepth` output, name and location matching, 4-component outputs
 - **`common.fullScreenTriangle`**
 - **Pipeline initialization** — `initSync` / `initAsync`, first-use compilation on WebKit, replacing size-dependent state
-- **GPU timing** — pointer to `timing.md`
-- **Recording a frame** — pointer to `encoders.md`
+- **Timing and recording a frame** — pointers to `timing.md` and `encoders.md`
 - **Resolve API** — WGSL code generation
 
 ## Compute pipelines
 
-Write the entrypoint with an explicit workgroup size and guard the threads past the end of the data, then dispatch enough workgroups to cover it:
+An explicit workgroup size, a bounds check, and enough workgroups to cover the data:
 
 ```ts
 const COUNT = 10_000;
@@ -44,9 +43,9 @@ const pipeline = root.createComputePipeline({ compute: double });
 pipeline.dispatchWorkgroups(Math.ceil(COUNT / 64));
 ```
 
-Use `pipeline.with(bindGroup)` when the shader reads a bind group layout. 64 threads per workgroup (or `[8, 8]` for 2D work) is a good default; workgroup builtins (`localInvocationIndex`, `workgroupId`) and `tgpu.workgroupVar` need an explicit entrypoint.
+Use `pipeline.with(bindGroup)` when the shader reads a bind group layout. 64 threads per workgroup (or `[8, 8]` for 2D work) is a good default; workgroup builtins (`localInvocationIndex`, `workgroupId`) need an explicit entrypoint, and so does a kernel with `std.workgroupBarrier()`: the guarded form below returns early on out-of-range threads.
 
-`root.createGuardedComputePipeline(callback).dispatchThreads(...)` also exists: it picks the workgroup size and adds the bounds check, but its callback gets no builtins and it cannot record into a command encoder. Write the explicit form above.
+`root.createGuardedComputePipeline(callback).dispatchThreads(...)` picks the workgroup size and adds the bounds check, but its callback gets no builtins and it cannot record into a pass or encoder: each `dispatchThreads` submits on its own. Write the explicit form above.
 
 ## Render pipelines
 
@@ -68,7 +67,7 @@ pipeline
 
 `primitive` is WebGPU's `GPUPrimitiveState`: `topology` (`'triangle-list'` by default, `'triangle-strip'`, `'line-list'`, `'line-strip'`, `'point-list'`), `cullMode`, `frontFace`; `stripIndexFormat` also accepts `d.u32` / `d.u16`.
 
-`targets` is optional: a target without a `format` uses `navigator.gpu.getPreferredCanvasFormat()`. A fragment entrypoint's color outputs are 4-component (`d.vec4f`) even when the target format has fewer channels; see the MRT section. `fragment` is optional too: omit it (and `targets`) for a depth-only pass such as a shadow map, then attach only `withDepthStencilAttachment`.
+`targets` is optional: a target without a `format` uses `navigator.gpu.getPreferredCanvasFormat()`. `fragment` is optional too: omit it (and `targets`) for a depth-only pass such as a shadow map, then attach only `withDepthStencilAttachment`.
 
 `vertex` and `fragment` also accept shell-less `'use gpu'` callbacks. Builtins are `$`-prefixed keys (`$vertexIndex`, `$instanceIndex`, `$position`, `$frontFacing`, `$primitiveIndex`, `$fragDepth`, `$sampleMask`, ...); every other returned key is a varying, matched to the fragment input by name with locations assigned automatically. Integer varyings get flat interpolation automatically (shells require an explicit `d.interpolate('flat', ...)`). With `attribs`, a shell-less vertex receives each attribute under its key.
 
@@ -89,7 +88,7 @@ A shell-less fragment returns a `d.vec4f` for one target, or a record of `d.vec4
 
 ## WebGPU coordinate conventions
 
-WebGPU matches DirectX/Metal, **not** OpenGL/WebGL. Porting tutorials verbatim causes subtle bugs:
+WebGPU follows DirectX/Metal conventions, not OpenGL/WebGL:
 
 - **NDC z is `[0, 1]`**, not `[-1, 1]`. A copied `gluPerspective` clips the near plane. Use `wgpu-matrix`'s `mat4.perspective` (already `[0, 1]`) or `mat4.perspectiveReverseZ`.
 - **Framebuffer `(0, 0)` is top-left**, `+y` down. `d.builtin.position.xy` in a fragment shader is in pixels with this origin.
@@ -116,30 +115,11 @@ const looseLayout = tgpu.vertexLayout(d.disarrayOf(d.unstruct({
 
 ### Compact vertex formats (for `unstruct` / `disarrayOf`)
 
-Reduce vertex bandwidth. Use inside `d.unstruct({...})`:
+Compact formats cut vertex bandwidth inside `d.unstruct({...})`:
 
-```ts
-// Float
-d.float32   d.float32x2   d.float32x3   d.float32x4
-d.float16   d.float16x2   d.float16x4
-
-// Unsigned integer
-d.uint8     d.uint8x2     d.uint8x4
-d.uint16    d.uint16x2    d.uint16x4
-d.uint32    d.uint32x2    d.uint32x3    d.uint32x4
-
-// Signed integer
-d.sint8     d.sint8x2     d.sint8x4
-d.sint16    d.sint16x2    d.sint16x4
-d.sint32    d.sint32x2    d.sint32x3    d.sint32x4
-
-// Normalised (integer packed float in [0,1] or [-1,1])
-d.unorm8    d.unorm8x2    d.unorm8x4    d.unorm8x4_bgra
-d.unorm16   d.unorm16x2   d.unorm16x4
-d.snorm8    d.snorm8x2    d.snorm8x4
-d.snorm16   d.snorm16x2   d.snorm16x4
-d.unorm10_10_10_2
-```
+- `d.float32`, `d.uint32`, `d.sint32` with `x2`, `x3`, `x4` variants (`d.float32x3`).
+- `d.float16`, `d.uint8`, `d.uint16`, `d.sint8`, `d.sint16` and the normalized `d.unorm8`, `d.unorm16`, `d.snorm8`, `d.snorm16` (integers read as floats in `[0, 1]` or `[-1, 1]`) with `x2` and `x4` variants only.
+- `d.unorm8x4_bgra`, `d.unorm10_10_10_2`.
 
 Compact-format buffers are restricted to `'vertex'` usage. To share memory with storage, use buffer reinterpretation (`references/advanced.md`).
 
@@ -147,7 +127,7 @@ Compact-format buffers are restricted to `'vertex'` usage. To share memory with 
 
 ## Wiring layouts into a render pipeline
 
-The `attribs` field maps vertex layout attributes to shader `in` parameter names. For struct layouts, use the **spread trick**:
+`attribs` maps vertex layout attributes to shader `in` parameter names. A struct layout's `attrib` is a record of attributes; spread it:
 
 ```ts
 const VertexData   = d.struct({ position: d.vec3f, normal: d.vec3f, uv: d.vec2f });
@@ -164,11 +144,10 @@ const pipeline = root.createRenderPipeline({
 });
 ```
 
-For a non-struct layout, `layout.attrib` is a single `TgpuVertexAttrib`:
+For a non-struct layout, `layout.attrib` is a single `TgpuVertexAttrib`; map it to the vertex input by name:
 
 ```ts
-attribs: vertexLayout.attrib              // name inferred from shader param
-attribs: { pos: vertexLayout.attrib }     // explicit name mapping
+attribs: { pos: vertexLayout.attrib }
 ```
 
 Pick fields selectively:
@@ -180,13 +159,13 @@ attribs: {
 }
 ```
 
-Builtins (`d.builtin.vertexIndex`, etc.) are accessed directly via shader `in` - they do not go through `attribs`.
+Builtins (`d.builtin.vertexIndex`, ...) come through the shader `in` directly, not `attribs`.
 
 ---
 
 ## Binding vertex buffers
 
-Use `.with(layout, buffer)`. Can be pre-bound at creation or swapped per frame:
+`.with(layout, buffer)` binds a vertex buffer, once at setup or per frame:
 
 ```ts
 const prebound = pipeline.with(vertexLayout, vertexBuffer);
@@ -212,7 +191,7 @@ pipeline.pipe(mesh.inject()).drawIndexed(indexCount);
 
 ## Loading 3D models
 
-Use `@loaders.gl/obj` or `@loaders.gl/gltf` to load meshes. loaders.gl returns separate flat typed arrays per attribute (positions, normals, UVs) — already SoA format. Combine with `common.writeSoA` to write them into the vertex buffer:
+`@loaders.gl/obj` and `@loaders.gl/gltf` return one flat typed array per attribute, which `common.writeSoA` scatters into the vertex buffer with correct padding:
 
 ```ts
 import { load } from '@loaders.gl/core';
@@ -226,14 +205,13 @@ const vertexBuffer = root
   .createBuffer(vertexLayout.schemaForCount(vertexCount))
   .$usage('vertex');
 
+// loaders.gl types attribute values as TypedArray; OBJ data is Float32Array
 common.writeSoA(vertexBuffer, {
-  position: mesh.attributes.POSITION.value,   // Float32Array, packed xyz
-  normal:   mesh.attributes.NORMAL.value,      // Float32Array, packed xyz
-  uv:       mesh.attributes.TEXCOORD_0.value,  // Float32Array, packed uv
+  position: mesh.attributes.POSITION.value as Float32Array,   // packed xyz
+  normal:   mesh.attributes.NORMAL.value as Float32Array,     // packed xyz
+  uv:       mesh.attributes.TEXCOORD_0.value as Float32Array, // packed uv
 });
 ```
-
-`writeSoA` scatters packed per-field arrays into the AoS GPU layout with correct padding — performant and convenient, no manual loops or per-vertex `d.vec3f()` allocations.
 
 ---
 
@@ -248,8 +226,6 @@ pipeline
   .withIndexBuffer(indexBuffer)
   .drawIndexed(6);
 ```
-
-Only arrays of `d.u16` or `d.u32` are valid.
 
 ---
 
@@ -266,9 +242,7 @@ pipeline
   .draw(vertexCount);
 ```
 
-The depth attachment defaults to `depthLoadOp: 'clear'`, `depthStoreOp: 'store'`, `depthClearValue: 1`; stencil ops are filled in for formats with a stencil aspect. `pipeline.withStencilReference(ref)` sets the reference value used by the `stencilFront` / `stencilBack` ops.
-
-Enable depth testing via `depthStencil` in `createRenderPipeline`:
+Attachment op defaults are listed under "Recording a frame" in `references/encoders.md`. `pipeline.withStencilReference(ref)` sets the reference value used by the `stencilFront` / `stencilBack` ops. Depth testing is enabled by `depthStencil` in `createRenderPipeline`:
 
 ```ts
 root.createRenderPipeline({
@@ -322,24 +296,9 @@ pipeline
   .draw(vertexCount);
 ```
 
-> `albedoView`/`normalView`/`positionView` are cached at setup - see "Cache bind groups and views" in `references/buffers.md`.
+### Single-target shorthand, blend and writeMask
 
-### Single-target shorthand
-
-```ts
-fragment: tgpu.fragmentFn({ out: d.vec4f })(() => {
-  'use gpu';
-  return d.vec4f(1, 0, 0, 1);
-}),
-targets:  { format: 'bgra8unorm' },
-// pipeline.withColorAttachment({ view: context })
-```
-
-Equivalent to a single named target. Switch to the keyed form once you need >=2 outputs or per-target config.
-
-### Per-target blend, writeMask, etc.
-
-Each entry in `targets` accepts the full `GPUColorTargetState`:
+A fragment with `out: d.vec4f` takes `targets: { format }` and `withColorAttachment({ view })`, equivalent to a single named target. The shorthand and each keyed entry take the full `GPUColorTargetState`:
 
 ```ts
 targets: {
@@ -357,11 +316,9 @@ targets: {
 }
 ```
 
-Per-target config is one of the main reasons to use the keyed form even with a single output.
-
 ### Custom depth output (`d.builtin.fragDepth`)
 
-A fragment shader can write its own depth via the `fragDepth` builtin - useful for ray marching, impostors, anything not drawn at the rasterized depth. The builtin lives in the fragment `out` record, **but it is not a colour target** - it does not appear in `targets` or `withColorAttachment`. Depth still goes through `depthStencil` + `withDepthStencilAttachment`.
+A fragment shader can write its own depth through the `fragDepth` builtin (ray marching, impostors). Builtins in `out` (`fragDepth`, `sampleMask`) are not colour targets: leave them out of `targets` and `withColorAttachment`, which take only colour outputs (`d.vec4f`, `d.vec4i`, `d.vec4u`). Depth still goes through `depthStencil` and `withDepthStencilAttachment`.
 
 ```ts
 const fragMain = tgpu.fragmentFn({
@@ -378,59 +335,31 @@ const fragMain = tgpu.fragmentFn({
 const pipeline = root.createRenderPipeline({
   vertex: myVertex,
   fragment: fragMain,
-  targets: {
-    color: { format: presentationFormat }, // only `color` - `depth` NOT here
-  },
-  depthStencil: {
-    format: 'depth24plus',
-    depthWriteEnabled: true,
-    depthCompare: 'less',
-  },
+  targets: { color: { format: presentationFormat } },
+  depthStencil: { format: 'depth24plus', depthWriteEnabled: true, depthCompare: 'less' },
 });
 
 pipeline
-  .with(bindGroup)
-  .withColorAttachment({
-    color: { view: context },           // only `color`
-  })
+  .withColorAttachment({ color: { view: context } })
   .withDepthStencilAttachment({ view: depthTexture })
   .draw(vertexCount);
 ```
 
-> **Common footgun:** writing `targets: { color: ..., depth: ... }` because the fragment has a `depth` output. Builtins (`fragDepth`, `sampleMask`) are control signals, not colour attachments. Only `d.vec4f` outputs become entries in `targets`.
-
 ### Name and location matching
 
-- Keys in `targets` name fragment outputs (builtins excluded). TypeGPU assigns sequential `@location(N)` automatically; no `d.location(...)` needed.
+- Keys in `targets` name fragment outputs (builtins excluded). TypeGPU assigns sequential `@location(N)` automatically; no `d.location(...)` needed. An explicit `d.location(n, ...)` on an output is kept, and its target moves to that index.
 - `withColorAttachment` takes one entry per output. TypeScript rejects missing/extra entries, and a missing one also throws at draw time.
 - Varyings are matched between vertex `out` and fragment `in` by name, not location. Explicit `d.location(n, ...)` indices are kept and automatic ones fill the free numbers. Resolution throws when one varying carries different explicit locations on the two sides, or when two members share a location.
 
 ### Fragment output is always 4-component
 
-Even for formats with fewer than 4 channels (`r8unorm`, `rg16float`), the output is still `d.vec4f` (`d.vec4i`/`d.vec4u` for integer formats). WebGPU drops unused channels.
-
-```ts
-const luminanceFrag = tgpu.fragmentFn({
-  in: { uv: d.vec2f },
-  out: d.vec4f,
-})((input) => {
-  'use gpu';
-  return d.vec4f(luma(input.uv), 0, 0, 1);
-});
-
-root.createRenderPipeline({
-  vertex, fragment: luminanceFrag,
-  targets: { format: 'r8unorm' }, // only the red channel is written
-});
-```
-
-TypeGPU's fragment `out` accepts only 4-component vectors (plus builtins) - it does not derive narrower output types from texture formats.
+For formats with fewer channels (`r8unorm`, `rg16float`) the output is still `d.vec4f` (`d.vec4i`/`d.vec4u` for integer formats), and WebGPU drops the unused channels. Fragment `out` accepts only 4-component vectors (plus builtins); TypeGPU doesn't derive narrower types from the format.
 
 ---
 
 ## `common.fullScreenTriangle`
 
-A helper for fullscreen post-processing - a single oversized triangle covering the viewport, no vertex buffer needed. It outputs `uv` (`(0, 0)` top-left) for the fragment to read.
+A vertex function drawing one oversized triangle over the viewport, with no vertex buffer. It outputs `uv` (`(0, 0)` top-left) for the fragment.
 
 ```ts
 import { common } from 'typegpu';
@@ -439,7 +368,7 @@ const pipeline = root.createRenderPipeline({
   vertex: common.fullScreenTriangle,
   fragment: tgpu.fragmentFn({ in: { uv: d.vec2f }, out: d.vec4f })((input) => {
     'use gpu';
-    return std.textureSample(screenView.$, sampler.$, input.uv); // a sampled texture view
+    return std.textureSample(screenView.$, sampler.$, input.uv);
   }),
   targets: { format: presentationFormat },
 });
@@ -451,15 +380,14 @@ pipeline.withColorAttachment({ view: context }).draw(3);
 
 ## Pipeline initialization
 
-Pipelines are lazy: shader resolution, module creation, and WebGPU pipeline creation all happen on the first `draw`/`dispatchWorkgroups`. To move that cost to a moment you control (e.g. a loading screen):
+Pipelines are lazy: shader resolution, module creation and WebGPU pipeline creation happen on the first `draw`/`dispatchWorkgroups`. To move that cost to a moment you control (e.g. a loading screen):
 
 ```ts
-pipeline.initSync();          // start initialization now (JS side + issue device work)
-await pipeline.initAsync();   // additionally wait until the device finishes - fully
-                              // avoids the first-use stall
+pipeline.initSync();          // JS side now, device work issued
+await pipeline.initAsync();   // also waits for the device, avoiding the first-use stall
 ```
 
-For small/medium shaders this makes no noticeable difference - use it only for large or numerous shaders.
+For small and medium shaders this makes no noticeable difference; it matters for large or numerous shaders.
 
 ### First use on WebKit
 
@@ -482,30 +410,20 @@ When the replacement is prepared with `initAsync`, keep drawing with the old sta
 
 ---
 
-## GPU timing
+## Timing and recording a frame
 
-`pipeline.withPerformanceCallback((start: bigint, end: bigint) => ...)` for quick one-off measurement; `root.createQuerySet('timestamp', n)` + `pipeline.withTimestampWrites(...)` for durable multi-pass timing. Both need the `timestamp-query` device feature: without it `withPerformanceCallback` logs a warning and skips timing, and `withTimestampWrites` throws. Allocation behavior, the `available` guard, and how to interpret overlapping pass timings: `references/timing.md`.
+GPU timing (`withPerformanceCallback`, `withTimestampWrites`, query sets) is in `references/timing.md`.
 
----
-
-## Recording a frame
-
-`draw()`, `drawIndexed()` and `dispatchWorkgroups()` each record and submit their own single-pipeline pass. Indirect variants (`drawIndirect`, `drawIndexedIndirect`, `dispatchWorkgroupsIndirect`) read their counts from a buffer; see `references/advanced.md`. Per frame, record all work into one `root.createCommandEncoder()` and submit once: `pipeline.with(encoder)` for a pass with a single pipeline, `pipeline.with(pass)` for pipelines sharing a pass. See `references/encoders.md`, which also covers render bundles and raw-WebGPU encoder interop.
+`draw()`, `drawIndexed()` and `dispatchWorkgroups()` each record and submit their own single-pipeline pass; record a frame into one `root.createCommandEncoder()` instead (`references/encoders.md`). Indirect variants (`drawIndirect`, `drawIndexedIndirect`, `dispatchWorkgroupsIndirect`) read their counts from a buffer; see `references/advanced.md`.
 
 ---
 
 ## Resolve API (WGSL code generation)
 
-`tgpu.resolve` generates complete WGSL, with all transitive dependencies (helpers, layouts, buffers, constants) included and deduplicated automatically:
+`tgpu.resolve([pipeline])` generates complete WGSL with all transitive dependencies (helpers, layouts, buffers, constants), deduplicated. Several pipelines can be resolved in one call; all items must come from the same root (mixing roots throws). Resolving in tests, `config` and `enableExtensions` for a standalone resolve: `references/debugging.md`.
 
-```ts
-const wgsl = tgpu.resolve([pipeline]); // debugging, tooling, shader inspection
-```
+`tgpu.resolve({ template, externals })` injects TypeGPU objects into hand-written WGSL: each `externals` entry (even objects with member access, e.g. `randf.sample`) becomes available inside the `template` string.
 
-Several pipelines can be resolved in one call; all items must originate from the same root (mixing roots throws). `config: (cfg) => cfg.with(slot, value)` binds slots and accessors for a standalone resolve.
+`names: 'strict'` (default) names generated code after the JS identifiers the build plugin records, sanitized and suffixed on conflict; `'random'` is the alternative.
 
-There's also a raw-WGSL interop form, `tgpu.resolve({ template, externals })` - each `externals` entry (even objects with member access, e.g. `randf.sample`) becomes available inside the WGSL `template` string. Niche; only for injecting TypeGPU objects into existing hand-written WGSL.
-
-Options: `names: 'strict'` (default - generated names follow the JS identifiers the build plugin records, sanitized and suffixed on conflict) or `'random'`.
-
-`tgpu.resolveWithContext(...)` additionally returns `usedBindGroupLayouts` and a `catchall` bind group. Sharing one naming scope across several resolve calls (`tgpu['~unstable'].namespace()`): `references/advanced.md`.
+`tgpu.resolveWithContext(...)` takes the same arguments and returns `{ code, usedBindGroupLayouts, catchall }`. Sharing one naming scope across several resolve calls (`tgpu['~unstable'].namespace()`): `references/advanced.md`.

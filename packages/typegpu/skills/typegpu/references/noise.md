@@ -1,6 +1,6 @@
 # `@typegpu/noise` - Random Values, Distributions, and Perlin
 
-Take all shader randomness and noise from this package: per-thread `randf` for random values, `perlin2d`/`perlin3d` for gradient noise. Docs: <https://docs.swmansion.com/TypeGPU/ecosystem/typegpu-noise.md>.
+Per-thread `randf` for random values, `perlin2d`/`perlin3d` for gradient noise. Docs: <https://docs.swmansion.com/TypeGPU/ecosystem/typegpu-noise.md>.
 
 ```ts
 import { randf, perlin2d, perlin3d } from '@typegpu/noise';
@@ -10,7 +10,7 @@ Calls inside TypeGPU functions link automatically. Raw WGSL can use them through
 
 ## PRNG (`randf`)
 
-`randf.sample()` returns a uniform `f32` in `[0, 1)`. The default generator is xoroshiro64\*\*; seeds are bitcast and hashed, so seed magnitude does not matter. Each thread has private generator state: **seed every thread from something thread-unique** (pixel position, global invocation id) once, before sampling. Unseeded, the default generator's state is zero and `sample()` returns `0` on every call.
+`randf.sample()` returns a uniform `f32` in `[0, 1)`. The default generator is xoroshiro64\*\*; seeds are bitcast and hashed, so seed magnitude does not matter. Each thread has private generator state: seed every thread once, before sampling, from something thread-unique (pixel position, global invocation id). Unseeded, the default generator's state is zero and `sample()` returns `0` on every call.
 
 ```ts
 const main = tgpu.fragmentFn({
@@ -70,8 +70,6 @@ All draw from the thread's `randf` state; no separate seeding.
 | `randf.inHemisphere(normal)` | `d.v3f` | Inside the hemisphere around `normal` |
 | `randf.onHemisphere(normal)` | `d.v3f` | Uniform direction in the hemisphere around `normal` |
 
-Uniform hemisphere direction: `onHemisphere(normal)`. Uniform sphere direction: `onUnitSphere()`.
-
 ## Swapping the generator
 
 `randomGeneratorSlot` holds the `StatefulGenerator` behind `randf`. Built-ins: `XOROSHIRO64STARSTAR` (`DefaultGenerator`), `LCG32`, `BPETER`. Bind one with `root.with(randomGeneratorSlot, LCG32)`. A custom generator is `{ seed?, seed2?, seed3?, seed4?, sample }`, with `sample` built from `randomGeneratorShell` and state in a `tgpu.privateVar`; the helpers `hash`, `rotl`, `u32To01F32` and `scrambleSeed{,2,3,4}` are exported for that.
@@ -91,11 +89,9 @@ const main = tgpu.fragmentFn({
 });
 ```
 
-Uncached, `sample` recomputes lattice gradients per call. Precompute them into a cache and inject it into the pipeline that samples; shader code stays unchanged. The docs report up to 10x speedups, largest with many samples per thread (FBM, warping, derivatives).
+Uncached, `sample` recomputes lattice gradients per call. Precompute them into a cache and inject it into the pipeline that samples; shader code stays unchanged. The docs report up to 10x speedups, largest with many samples per thread (FBM, warping, derivatives). Use `staticCache` when the size is known up front; the dynamic one adds a bind group and a size uniform read per lookup.
 
-### Static cache
-
-Fixed domain size, chosen at creation:
+### Static cache (fixed size)
 
 ```ts
 const cache = perlin3d.staticCache({ root, size: d.vec3u(64, 64, 64) });
@@ -103,11 +99,9 @@ const cache = perlin3d.staticCache({ root, size: d.vec3u(64, 64, 64) });
 const pipeline = root.pipe(cache.inject()).createComputePipeline({ compute: main });
 ```
 
-`root.pipe(cache.inject())` binds the cache's gradient lookup into the root's configuration, like the matching `.with(...)` calls. Sampling wraps at the domain boundary, so noise tiles with period `size`. 2D: `perlin2d.staticCache({ root, size: d.vec2u(...) })`. `cache.destroy()` frees the buffer.
+`cache.inject()` binds the cache's gradient lookup like the matching `.with(...)` calls. Sampling wraps at the domain boundary, so noise tiles with period `size`. 2D: `perlin2d.staticCache({ root, size: d.vec2u(...) })`. `cache.destroy()` frees the buffer.
 
-### Dynamic cache
-
-Domain size changes at runtime without recompiling:
+### Dynamic cache (size changes at runtime without recompiling)
 
 ```ts
 const cacheConfig = perlin3d.dynamicCacheConfig();
@@ -129,4 +123,4 @@ let bindGroup = cacheBindGroup(d.vec3u(10, 10, 1));
 bindGroup = cacheBindGroup(d.vec3u(64, 64, 32));
 ```
 
-Bind `bindGroup` with `pipeline.with(bindGroup)` when recording. Setting `cache.size` rebuilds the gradients the next time `cache.bindings` is read; `cache.destroy()` frees its buffers. `dynamicCacheConfig({ prefix })` renames the layout entries (default `perlin3dCache__`) to avoid key clashes when spreading them into a layout with other entries. Use `staticCache` when the size is known up front; the dynamic one adds a bind group and a size uniform read per lookup.
+Bind `bindGroup` with `pipeline.with(bindGroup)` when recording. Setting `cache.size` rebuilds the gradients the next time `cache.bindings` is read; `cache.destroy()` frees its buffers. `dynamicCacheConfig({ prefix })` renames the layout entries (default `perlin3dCache__`) to avoid key clashes when spreading them into a layout with other entries.

@@ -1,12 +1,6 @@
 # TypeGPU `std` Library Reference
 
-`std` wraps WGSL built-in functions ([WGSL built-in functions](https://www.w3.org/TR/WGSL/#builtin-functions)) plus some TypeGPU additions. The WGSL documentation applies.
-
-```ts
-import { std } from 'typegpu';
-```
-
-The listing covers every export of `typegpu/std`.
+`std` (`import { std } from 'typegpu'`) wraps the [WGSL built-in functions](https://www.w3.org/TR/WGSL/#builtin-functions), whose documentation applies, plus TypeGPU additions. The listing covers every export of `typegpu/std`.
 
 Inside `'use gpu'`, `Math.abs`, `sign`, `floor`, `ceil`, `trunc`, `sqrt`, `exp`, `log`, `log2`, `pow`, `min`, `max`, the trig and hyperbolic functions, `atan2`, `clz32` and `fround` lower to their `std` equivalents, and `Math.PI` and other constants inline. Other `Math` functions throw: use `std.round` (WGSL rounds half to even), and `@typegpu/noise` instead of `Math.random`.
 
@@ -18,7 +12,7 @@ std.exp   std.exp2   std.log   std.log2
 std.pow(x, y)                 // WGSL pow, undefined for x < 0; `x ** n` handles negative bases (references/shaders.md)
 std.min(a, b, ...)  std.max(a, b, ...)   // variadic: std.max(dx, dy, dz)
 std.clamp(x, lo, hi)
-std.intdiv(a, b)              // integer scalar division; scalar `/` always divides as f32
+std.intdiv(a, b)              // integer scalar division; scalar `/` divides as f32 (f16 for two f16)
 std.mix(a, b, t)              // linear interpolation
 std.smoothstep(edge0, edge1, x)
 std.step(edge, x)
@@ -38,7 +32,7 @@ std.firstLeadingBit  std.firstTrailingBit
 std.extractBits(e, offset, count)  std.insertBits(e, newbits, offset, count)
 ```
 
-**Operator functions** — `std.add`, `std.sub`, `std.mul`, `std.div`, `std.mod`, `std.neg`, `std.bitShiftLeft`, `std.bitShiftRight` are function forms of `+ - * / % -x << >>`, for code that can't use `tsover` (see `references/setup.md`). Inside `'use gpu'` write the operators.
+**Operator functions** — `std.add`, `std.sub`, `std.mul`, `std.div`, `std.mod`, `std.neg`, `std.bitShiftLeft`, `std.bitShiftRight` are function forms of `+ - * / % -x << >>` for CPU code without `tsover` (`references/setup.md`); inside `'use gpu'` write the operators.
 
 **Comparison / boolean** — componentwise on vectors, returning bool vectors (`d.vec2b`/`d.vec3b`/`d.vec4b`); combine with `std.select` for vectorized branching
 ```ts
@@ -74,7 +68,7 @@ std.range(end)  std.range(start, end)  std.range(start, end, step)
                       // compile-time integer range for for...of (references/shaders.md)
 ```
 
-**Texture** — stage/uniformity rules and the sampling reference table live in `references/textures.md`. Short version: `textureSample` is fragment-only and must be in uniform control flow; `textureSampleLevel` works in any stage; `textureSampleGrad` gives auto-LOD in compute/non-uniform branches.
+**Texture** — stage and uniformity rules per sampling function: `references/textures.md`
 ```ts
 std.textureSample(view.$, sampler.$, uv)
 std.textureSampleLevel(view.$, sampler.$, uv, mipLevel)
@@ -91,13 +85,9 @@ std.textureDimensions(view.$)
 std.textureNumLevels(view.$)  std.textureNumLayers(view.$)  std.textureNumSamples(view.$)
 ```
 
-**Fragment control**
+**Fragment only**
 ```ts
-std.discard()   // fragment-only; discards the fragment (WGSL `discard`)
-```
-
-**Derivatives** (fragment only)
-```ts
+std.discard()
 std.dpdx(v)  std.dpdy(v)  std.fwidth(v)   // + Coarse/Fine variants of each
 ```
 

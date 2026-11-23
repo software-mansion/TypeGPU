@@ -19,7 +19,7 @@ Only non-movable work (derivative sampling, atomics, writes) is worth moving beh
 
 ## Do by hand
 
-- **Hoist loop-invariant algebra.** Rewrite the maths so invariant work leaves the loop, e.g. transform a ray once instead of every marched point (measured: 60% less time, and the smaller body then auto-unrolled).
+- **Hoist loop-invariant algebra**, e.g. transform a ray once instead of every marched point (measured: 60% less time, and the smaller body then auto-unrolled).
 - **Keep integer `%` and `std.intdiv` by runtime values out of hot loops.** Each costs several times a `sin`; `%` by a constant is about half of that. For unsigned values and a power-of-two `n`, write `x & (n - 1)` and `x >>> k` (where `n = 2 ** k`).
 
 ## Branches and divergence

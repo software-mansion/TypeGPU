@@ -2,9 +2,9 @@
 
 Docs: `https://docs.swmansion.com/TypeGPU/advanced/timestamp-queries.md`.
 
-Requires the `timestamp-query` device feature (see `references/setup.md`) — gate all timing code on `root.enabledFeatures.has('timestamp-query')` and no-op without it. All timestamps are nanosecond `bigint`s.
+Timing requires the `timestamp-query` device feature (see `references/setup.md`): gate all timing code on `root.enabledFeatures.has('timestamp-query')` and no-op without it. Without the feature `withPerformanceCallback` logs a warning and skips timing, and `withTimestampWrites` throws. All timestamps are nanosecond `bigint`s.
 
-**Timestamps are quantized by default in most environments** as a timing-attack mitigation ([WebGPU spec, device/queue timing](https://www.w3.org/TR/webgpu/#security-timing-device)) — Chrome rounds them to 100 µs, so very fast pipelines read as 0 or noise. Full precision requires opting out per browser; in Chrome that's `chrome://flags/#enable-webgpu-developer-features`, which is a bundle, not a timestamp-only switch: it also removes the timing-attack mitigation, exposes extended adapter information (driver, backend, memory heaps — a device-fingerprinting surface), and enables other non-standard developer features. Inform the user of that full trade-off before recommending it; it is for local development/testing only and can never be a production requirement.
+**Timestamps are quantized by default in most environments** as a timing-attack mitigation ([WebGPU spec, device/queue timing](https://www.w3.org/TR/webgpu/#security-timing-device)). Chrome rounds them to 100 µs, so very fast pipelines read as 0 or noise. Full precision needs a per-browser opt-out. Chrome's `chrome://flags/#enable-webgpu-developer-features` is a bundle, not a timestamp-only switch: it also removes the timing-attack mitigation, exposes extended adapter information (driver, backend, memory heaps, a device-fingerprinting surface) and enables other non-standard developer features. Tell the user the full trade-off before recommending it; it is for local development only, never a production requirement.
 
 ## Quick timing: `withPerformanceCallback`
 
@@ -16,10 +16,10 @@ const pipeline = root
   });
 ```
 
-- Callback signature `(start: bigint, end: bigint) => void | Promise<void>`; calling `.withPerformanceCallback()` again replaces the previous callback — attach once after pipeline creation.
-- **Each pipeline with a callback allocates its own query set** (plus resolve buffers), and resolves + reads back per submission. Four timed pipelines = four query sets and four readbacks. Fine for quick, temporary measurement of a pipeline or two; for a durable setup (perf HUD, profiler across many passes) use one shared query set instead (below).
+- Signature `(start: bigint, end: bigint) => void | Promise<void>`. Calling `.withPerformanceCallback()` again replaces the callback, so attach it once after pipeline creation.
+- **Each pipeline with a callback allocates its own query set** (plus resolve buffers) unless `withTimestampWrites` supplies one, and resolves and reads back per submission: four timed pipelines mean four query sets and four readbacks. Use it to measure a pipeline or two temporarily; a durable setup (perf HUD, profiler across many passes) uses one shared query set (below).
 - Works for direct `draw`/`dispatchWorkgroups` calls and for `pipeline.with(encoder)` on a `root.createCommandEncoder()` encoder (the callback fires after `encoder.submit()`). It is ignored, with a warning, when recording into a raw `GPUCommandEncoder` or drawing into a shared pass: timestamp writes belong to the pass descriptor there, so pass `timestampWrites` to `encoder.beginRenderPass`/`beginComputePass`.
-- One encoder submission fires the callback once. Executing the same timed pipeline several times in one encoder reuses the same query indices, so it reports the last execution (and warns).
+- Executions in one encoder share the pipeline's query indices, so every reading is the last execution. Reusing one bound wrapper (`const timed = pipeline.with(encoder)`) fires the callback once per submission (and warns); calling `pipeline.with(encoder)` again for each execution fires it once per call, with the same final timestamps.
 - A submission whose readback would overlap a previous, still-pending one skips its callback; a read that fails (device lost or destroyed) is dropped silently.
 - An error thrown inside the callback is logged with `console.error` and never reaches the caller; handle errors inside the callback.
 
@@ -40,9 +40,9 @@ const timedPipeline = pipeline.withTimestampWrites({
 });
 ```
 
-`withTimestampWrites` throws when the `timestamp-query` feature is missing. It applies when the pipeline records its own pass (a direct `draw` / `dispatchWorkgroups`, or `pipeline.with(encoder)`); in a shared pass it is ignored with a warning. Pass descriptors take the same shape: `encoder.beginRenderPass({ ..., timestampWrites })` / `beginComputePass({ timestampWrites })` accept a `TgpuQuerySet` directly; a raw WebGPU encoder needs `root.unwrap(querySet)`.
+`withTimestampWrites` applies when the pipeline records its own pass (a direct `draw` / `dispatchWorkgroups`, or `pipeline.with(encoder)`); in a shared pass it is ignored with a warning. Pass descriptors take the same shape: `encoder.beginRenderPass({ ..., timestampWrites })` / `beginComputePass({ timestampWrites })` accept a `TgpuQuerySet` directly; a raw WebGPU encoder needs `root.unwrap(querySet)`.
 
-Timestamp *writes* are near-free, so tracked passes can be timed on every dispatch. The expensive part is the readback — `resolve()` + `read()` (a buffer map). Sample at a low rate (a HUD refresh a few times per second), and one readback covers every tracked pass:
+Timestamp writes are near-free, so tracked passes can be timed on every dispatch. The readback (`resolve()` and `read()`, a buffer map) is the expensive part: sample at a low rate (a HUD refresh a few times per second), and one readback covers every tracked pass:
 
 ```ts
 if (querySet.available) {        // false while a previous read is in flight
@@ -52,15 +52,13 @@ if (querySet.available) {        // false while a previous read is in flight
 }
 ```
 
-- **Always check `querySet.available` before `resolve()`/`read()`** — `resolve()` throws and a second `read()` fails while a previous read is still in progress (CPU-side buffer mapping regularly outlives a GPU frame). Keep at most one read in flight.
-- `read()` without a prior `resolve()` throws or returns stale data.
-- A pass that didn't run since the last sample keeps its previous timestamps — track the last seen end value per slot and report 0 when it hasn't changed, rather than repeating the stale duration.
+- **Check `querySet.available` before `resolve()`/`read()`.** `resolve()` throws and a second `read()` fails while a previous read is still in progress (CPU-side buffer mapping regularly outlives a GPU frame). Keep at most one read in flight.
+- `read()` without a prior `resolve()` throws or returns stale data. `resolve()` submits its own command buffer, so submit the encoder that writes the slots first; resolving while a frame is still being recorded reads the previous values.
+- A pass that didn't run since the last sample keeps its previous timestamps: track the last seen end value per slot and report 0 when it hasn't changed.
 
 ## Interpreting the numbers: passes overlap
 
-GPUs run passes with no resource dependency between them concurrently. Per-pass durations therefore double-count shared wall time — **the sum of per-pass times inside an encoder is usually more than the actual GPU time for the frame**. Treat per-pass numbers as relative attribution, not as budget shares.
-
-The true GPU wall time of a frame is the span from the earliest `begin` to the latest `end` across all of the frame's slots — compute that from the same readback when the total matters.
+GPUs run passes with no resource dependency between them concurrently, so per-pass durations double-count shared wall time: **the sum of per-pass times inside an encoder is usually more than the frame's GPU time**. Treat per-pass numbers as relative attribution, not budget shares. The frame's GPU wall time is the span from the earliest `begin` to the latest `end` across its slots, computed from the same readback.
 
 ## Occlusion queries
 

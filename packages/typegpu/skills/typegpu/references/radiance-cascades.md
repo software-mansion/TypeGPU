@@ -66,8 +66,9 @@ tolerance and minimum step; it allocates nothing. Set `renderAspect` when the
 lighting texture's aspect differs from the scene's. For drawn scenes, generate
 the distance and colour textures with `sdf.createJumpFlood` from `@typegpu/sdf`
 and sample them in both callbacks. A caller-supplied `output` (an `rgba16float`
-storage texture, or a write-only storage view plus `size`) stays owned by the
-caller.
+storage texture, or a write-only storage view, whose size it reads) stays owned by
+the caller, and `runner.output` returns that same object: sample it through a
+view of your texture, which needs `'sampled'` usage.
 
 `rayMarch: (origin, dir, startT, endT, eps, minStep, bias) => rc.RayMarchResult({ color, transmittance })`
 replaces the built-in tracer (`rc.defaultRayMarch`) for attenuation or partial
@@ -86,8 +87,6 @@ runner.run({ pass });
 pass.end();
 encoder.submit();
 ```
-
-The two runners record differently:
 
 | Runner | Recording call |
 | --- | --- |

@@ -1,54 +1,35 @@
 # Matrices, `wgpu-matrix`, Cameras, and Fast CPU Writes
 
-Covers `wgpu-matrix` as the CPU math library, camera uniforms, and allocation-free CPU writes. Read it for view/projection matrices, particle systems, animated transforms or per-frame uniform updates.
-
 Docs: `https://docs.swmansion.com/TypeGPU/integration/working-with-wgpu-matrix.md`.
-
----
 
 ## `wgpu-matrix` integration
 
-On the CPU, TypeGPU vectors and matrices are indexable (`vec[0]`, `mat[0]`) in the layout `wgpu-matrix` expects (`d.mat3x3f` has 12 slots, one padding float per column, like `wgpu-matrix`'s `mat3`). Pass them as sources **or as the `dst` argument**; with `dst` the function writes into it and returns it, with no `Float32Array` allocated.
+On the CPU, TypeGPU vectors and matrices are indexable (`vec[0]`, `mat[0]`) in the layout `wgpu-matrix` expects, so pass them as sources or as the `dst` argument. With `dst` the function writes into it and returns it; without `dst`, every call allocates a new `Float32Array`. In per-frame code, allocate destinations once at setup and reuse them. Requires `wgpu-matrix` 3.3.0 or newer.
 
 ```ts
 import { d } from 'typegpu';
 import { mat4, vec3 } from 'wgpu-matrix';
 
-// Bad - allocates a fresh Float32Array each call:
-const view = mat4.lookAt(eye, target, up);
-
-// Good - writes into a TypeGPU matrix you control:
 const viewM = d.mat4x4f();
 mat4.lookAt(eye, target, up, viewM);
 
-// In-place chain (no allocations):
 mat4.identity(viewM);
 mat4.translate(viewM, [tx, ty, tz], viewM);
 mat4.rotateY(viewM, yaw, viewM);
-```
 
-Same for vectors:
-
-```ts
 const dir = d.vec3f();
-vec3.subtract(target, eye, dir); // writes into `dir`
-vec3.normalize(dir, dir);        // in-place
+vec3.subtract(target, eye, dir);
+vec3.normalize(dir, dir);
 ```
 
-Requires `wgpu-matrix` 3.3.0 or newer. Without `dst`, every call allocates a new `Float32Array`; in per-frame code allocate the destinations once at setup and reuse them.
-
-For building matrices *inside shaders* (no CPU round-trip), `std` has `identity2/3/4`, `translation4`, `scaling4`, `rotationX4/Y4/Z4`, `translate4`, `scale4`, `rotateX4/Y4/Z4`, `transpose`, `determinant` (no inverse) — see `references/std.md`.
-
----
+To build matrices inside shaders, `std` has `identity2/3/4`, `translation4`, `scaling4`, `rotationX4/Y4/Z4`, `translate4`, `scale4`, `rotateX4/Y4/Z4`, `transpose`, `determinant` (no inverse); see `references/std.md`.
 
 ## Matrix storage is column-major
 
-WGSL matrices are column-major in memory. Key implications:
-
-- **Constructor order.** `d.mat4x4f(c0, c1, c2, c3)` takes four columns. If you expected row-major (numpy/HLSL), you'll get a transpose.
-- **`M * v` applies `M` to `v`.** Compose right to left: `projection * view * model * position`.
-- **Shader element access.** `mat[i]` is not allowed - use `mat.columns[i]` for the i-th column, `mat.columns[c][r]` for an element. (Flat `mat[i]` works only on CPU-side instances, which is what makes wgpu-matrix interop possible - not inside `'use gpu'`.)
-- **`Float32Array` layouts** (raw byte writes):
+- `d.mat4x4f(c0, c1, c2, c3)` takes four columns. Row-major input (numpy/HLSL habits) comes out transposed.
+- `M * v` applies `M` to `v`. Compose right to left: `projection * view * model * position`.
+- In shaders, index with `mat.columns[i]` for the i-th column and `mat.columns[c][r]` for an element; `mat[i]` works only on CPU-side instances, not inside `'use gpu'`.
+- `Float32Array` layouts:
 
   | Schema | Floats | Layout |
   |---|---|---|
@@ -56,42 +37,13 @@ WGSL matrices are column-major in memory. Key implications:
   | `d.mat3x3f` | **12** (not 9) | Each column padded to 4 floats: `[c0.x, c0.y, c0.z, PAD, c1..., c2...]` |
   | `d.mat4x4f` | 16 | `[c0.xyzw, c1.xyzw, c2.xyzw, c3.xyzw]` - packed |
 
-  `mat3x3f`'s per-column padding to 16 bytes is a WGSL rule. Plain JS arrays (9 numbers) get padding added automatically; `TypedArray`/`ArrayBuffer` inputs must include it. `wgpu-matrix` follows all these conventions natively.
+  Plain JS arrays (9 numbers for a `mat3x3f`) get padding added automatically; `TypedArray`/`ArrayBuffer` inputs are copied verbatim and must include it. `wgpu-matrix` follows these conventions natively (its `mat3` has 12 slots).
 
----
+## CPU writes without per-frame allocations
 
-## Camera uniforms
+`d.vec3f(...)` and `d.mat4x4f(...)` allocate class instances (a matrix also allocates one vector per column). They are fine for setup-time data, small rarely-written uniforms and prototypes. Anything written every frame (render loops, particle systems, per-instance transforms) or large uses tuples or typed arrays.
 
-A `d.struct` with `view`, `proj` (and optionally their inverses) updated via `.patch()`. Pre-allocate CPU-side scratch buffers (`Float32Array` or `d.mat4x4f`) and pass them as `dst` to `wgpu-matrix` to avoid per-frame allocations.
-
-```ts
-const Camera = d.struct({
-  view: d.mat4x4f,
-  proj: d.mat4x4f,
-});
-
-const viewMat = new Float32Array(16);
-const projMat = new Float32Array(16);
-
-mat4.perspective(Math.PI / 4, aspect, 0.1, 1000, projMat);
-mat4.lookAt(eye, target, up, viewMat);
-
-const cameraUniform = root.createUniform(Camera, { view: viewMat, proj: projMat });
-
-// Per-frame: recompute into the same buffer, write only what changed
-mat4.lookAt(newEye, target, up, viewMat);
-cameraUniform.patch({ view: viewMat });
-```
-
-Add `viewInv`/`projInv` fields when shaders need to go from clip/screen back to world space (ray marching, screen-space effects). WGSL has no matrix inverse, so compute them on the CPU with `mat4.invert` once per update.
-
----
-
-## CPU-side data: avoid per-frame TypeGPU allocations
-
-`d.vec3f(...)` and `d.mat4x4f(...)` allocate class instances (a matrix also allocates one vector per column). Creating them per element or per frame in hot paths (render loops, particle systems, per-instance transforms) adds GC pressure.
-
-**Write-path speed (slowest to fastest):**
+Write paths, slowest to fastest:
 
 | Form | Example (`arrayOf(vec3f, N)`) | When to prefer |
 |---|---|---|
@@ -100,9 +52,9 @@ Add `viewInv`/`projInv` fields when shaders need to go from clip/screen back to 
 | Pre-allocated `Float32Array` | `f32[i * 4] = x; f32[i * 4 + 1] = y; ...` then `buffer.write(f32)` | Hot paths; matches WGSL layout directly |
 | The buffer's own host copy | a `Float32Array` over `buffer.arrayBuffer`, then `buffer.write(buffer.arrayBuffer)` | Maximum throughput: no copy on the CPU side |
 
-### Pre-allocated `Float32Array` + subarrays
+### Camera uniforms
 
-The cleanest fast path for struct-heavy uniforms:
+A struct of `view` and `proj`, plus `viewInv`/`projInv` when shaders go from clip or screen space back to world space (ray marching, screen-space effects). WGSL has no matrix inverse, so compute them with `mat4.invert` on each update. Back the struct with one `Float32Array`, one subarray per matrix, allocated once:
 
 ```ts
 const Camera = d.struct({
@@ -112,37 +64,33 @@ const Camera = d.struct({
 
 const cameraBuffer = root.createBuffer(Camera).$usage('uniform');
 
-// Single flat buffer, one view per matrix. Allocated ONCE.
 const raw     = new Float32Array(d.sizeOf(Camera) / 4); // 64 floats
 const view    = raw.subarray(0,  16);
 const proj    = raw.subarray(16, 32);
 const viewInv = raw.subarray(32, 48);
 const projInv = raw.subarray(48, 64);
 
-// Every frame - zero allocations:
 function updateCamera(eye: Float32Array, target: Float32Array, up: Float32Array, aspect: number) {
   mat4.lookAt(eye, target, up, view);
   mat4.invert(view, viewInv);
   mat4.perspective(Math.PI / 4, aspect, 0.1, 1000, proj);
   mat4.invert(proj, projInv);
-  cameraBuffer.write(raw.buffer); // bytes straight through - no serialization
+  cameraBuffer.write(raw.buffer);
 }
 ```
 
-For struct schemas, `.write()` accepts a record or an `ArrayBuffer` - pass `raw.buffer`, not the `Float32Array` view (vector/matrix/array schemas accept TypedArrays directly).
+- For struct schemas, `.write()` accepts a record or an `ArrayBuffer`: pass `raw.buffer`, not the `Float32Array` view (vector/matrix/array schemas accept TypedArrays directly).
+- To update one field, recompute into its array and `cameraBuffer.patch({ view })`.
+- `mat4x4f` subarrays `(0,16)`, `(16,32)`, ... align cleanly. Around `vec3f` or `mat3x3f` fields leave the WGSL padding (4 floats per `vec3f` and per `mat3x3f` column).
+- Take byte sizes and offsets from `d.sizeOf(Schema)` and `d.memoryLayoutOf(Schema, (s) => s.field).offset` rather than hardcoding them.
 
 `buffer.arrayBuffer` is the CPU-side copy that every `.write()` serializes into before uploading. Writing into it directly and passing it back skips the serialization and the copy:
 
 ```ts
 const host = new Float32Array(cameraBuffer.arrayBuffer); // create once
 mat4.lookAt(eye, target, up, host.subarray(0, 16));
-cameraBuffer.write(cameraBuffer.arrayBuffer);             // uploads in place
+cameraBuffer.write(cameraBuffer.arrayBuffer);
 ```
-
-Layout notes:
-- `mat4x4f` is 16 floats each, packed - subarrays `(0,16)`, `(16,32)`, etc. align cleanly.
-- `vec3f` or `mat3x3f`: leave WGSL padding (4 floats per `vec3f`, 4 per `mat3x3f` column). TypeGPU does **not** add padding for `TypedArray`/`ArrayBuffer` - it copies verbatim.
-- `d.sizeOf(Schema)` and `d.memoryLayoutOf(Schema, (s) => s.field).offset` give byte sizes and offsets - use those instead of hardcoded numbers.
 
 ### Struct-of-arrays (`common.writeSoA`)
 
@@ -160,7 +108,3 @@ common.writeSoA(particles, {
 
 - The buffer schema is `d.arrayOf(d.struct(...))`; fields are scalars, vectors, matrices, or fixed-size arrays of those (no nested structs). Every field needs an entry, typed with the field's scalar typed array (`Float32Array` for `f32` fields, `Uint32Array` for `u32`, ...).
 - The element count comes from the shortest field array; the third argument `{ startOffset, endOffset }` (bytes; `startOffset` on an element boundary) writes a slice, e.g. from `d.memoryLayoutOf(schema, (a) => a[first]).offset`.
-
-### When the trade-off flips
-
-TypeGPU instances are fine for setup-time data (initial buffer contents), small rarely-written uniforms, and prototypes. Switch to tuples/typed arrays when data is large, written every frame, or showing up in GC traces. Rule of thumb: *if it runs in `requestAnimationFrame`, it should not allocate TypeGPU wrappers.*

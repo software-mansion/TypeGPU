@@ -30,14 +30,14 @@ Interpolate in Oklab for perceptually even gradients: `oklabToRgb(std.mix(rgbToO
 
 ```ts
 const pipeline = root
-  .with(oklabGamutClipSlot, oklabGamutClip.preserveChroma)
+  .with(oklabGamutClipSlot, oklabGamutClip.adaptiveL0Cusp)
   .with(oklabGamutClipAlphaAccess, () => params.$.alpha)
   .createRenderPipeline({ vertex, fragment });
 ```
 
 ## Hex literals
 
-`hexToRgb(hex)`, `hexToRgba(hex)` and `hexToOklab(hex)` are `tgpu.comptime` functions: call them on the CPU or inside shaders with a constant argument, and the result is inlined. Accept `'#RRGGBB'`, `'#RRGGBBAA'` (hex strings, `#` optional) or a number (`0xRRGGBB`; `0xRRGGBBAA` for `hexToRgba`). Results are sRGB-encoded; wrap with `srgbToLinear` before lighting.
+`hexToRgb(hex)`, `hexToRgba(hex)` and `hexToOklab(hex)` are `tgpu.comptime` functions: call them on the CPU or inside shaders with a constant argument, and the result is inlined. Accept `'#RRGGBB'`, `'#RRGGBBAA'` (hex strings, `#` optional) or a number (`0xRRGGBB`; `0xRRGGBBAA` for `hexToRgba`). `hexToRgb` and `hexToRgba` return sRGB-encoded channels; wrap them with `srgbToLinear` before lighting. `hexToOklab` returns Oklab `(L, a, b)`.
 
 ```ts
 const background = hexToRgb('#E0E7FF'); // d.v3f, usable as a captured constant

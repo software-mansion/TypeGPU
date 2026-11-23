@@ -2,7 +2,7 @@
 
 Docs: https://docs.swmansion.com/TypeGPU/apis/pipelines.md (sections "Command encoders and passes", "Immediates").
 
-By default, `pipeline.draw()` and `pipeline.dispatchWorkgroups()` each record their own single-pipeline pass and submit it immediately. A frame with more than one pipeline records into one command encoder and submits once: **several pipelines in one pass** (shared attachments, e.g. scene + lights + sky into one MSAA target) and **several passes in one submission**.
+A bare `pipeline.draw()` or `dispatchWorkgroups()` records its own single-pipeline pass and submits it immediately. A frame records into one command encoder and submits once, with several passes per submission and several pipelines per pass when they share attachments (e.g. scene, lights and sky into one MSAA target).
 
 ## Recording a frame
 
@@ -29,18 +29,20 @@ pass.end();
 encoder.submit();
 ```
 
-`pipeline.with(encoder)` opens and ends a pass of its own for each draw or dispatch; use it for a pass that runs one pipeline (render pipelines still take `.withColorAttachment(...)`). Open a pass with `beginRenderPass` / `beginComputePass` when several pipelines or draws share it. In a shared pass the pass descriptor owns attachments and timestamp writes: `withColorAttachment`, `withDepthStencilAttachment` and `withTimestampWrites` on the pipeline are ignored there, with a warning.
+`pipeline.with(encoder)` opens and ends a pass of its own for each draw or dispatch; use it for a pass that runs one pipeline (render pipelines still take `.withColorAttachment(...)`). Open a pass with `beginRenderPass` / `beginComputePass` when several pipelines or draws share it. In a shared pass the pass descriptor owns attachments and timestamp writes: `withColorAttachment`, `withDepthStencilAttachment` and `withTimestampWrites` on the pipeline are ignored there, with a warning. Buffer `clear(encoder)` and `copyFrom(src, encoder)` record into the encoder too (`references/buffers.md`).
 
 Descriptor conveniences over raw `GPURenderPassDescriptor`:
 
 - Attachment `view` accepts TypeGPU textures, texture views, and canvas contexts, as well as raw `GPUTextureView`s.
-- `loadOp` / `storeOp` default to `'clear'` / `'store'`; depth defaults to `'clear'` / `'store'` with `depthClearValue: 1`, and stencil ops are filled in when the view's format has a stencil aspect. Give a raw stencil or depth-stencil `GPUTextureView` explicit ops.
-- A single color attachment doesn't need to be wrapped in an array.
+- `loadOp` / `storeOp` default to `'clear'` / `'store'`, here and in a pipeline's `withColorAttachment` / `withDepthStencilAttachment`; depth ops default the same, with `depthClearValue: 1`, and stencil ops are filled in when the view's format has a stencil aspect. Give a raw stencil or depth-stencil `GPUTextureView` explicit ops.
+- A single color attachment doesn't need to be wrapped in an array. Several are positional: list them in `@location` order, with `null` for an unused location.
+- Attachments on `'transient'` textures need `loadOp: 'clear'` and `storeOp: 'discard'` (and `depthLoadOp` / `depthStoreOp`, stencil likewise); the `'store'` default fails validation.
+- A pass reopened over earlier contents (a second pass drawing onto the same target) needs `loadOp: 'load'` to keep them.
 - `occlusionQuerySet` / `timestampWrites` accept TypeGPU query sets.
 
 ## Two equivalent execution styles
 
-`pipeline.with(pass).draw(...)` keeps the pipeline-centric API (all `with*` methods available). Alternatively the pass mirrors `GPURenderPassEncoder`, accepting TypeGPU resources:
+`pipeline.with(pass).draw(...)` keeps every `with*` method. Alternatively the pass mirrors `GPURenderPassEncoder`, accepting TypeGPU resources:
 
 ```ts
 pass.setPipeline(renderPipeline);
@@ -51,9 +53,9 @@ pass.draw(3);
 
 The render pass also has `setIndexBuffer(buffer, format)`, `setViewport`, `setScissorRect`, `setBlendConstant`, `setStencilReference`, `beginOcclusionQuery` / `endOcclusionQuery` and `executeBundles`, as in WebGPU.
 
-Both styles share one pass state, applied lazily at draw time and only when it changed since the previous draw. Precedence: state set on the pass (`pass.set*`) wins over state held by the pipeline (`pipeline.with*`), which wins over WebGPU defaults. Pass state persists across draws and pipeline switches until overwritten; pipeline-held state applies only to that pipeline's draws. Footgun: `pipeline.with(pass).draw(...)` sets the pass's current pipeline — a subsequent bare `pass.draw(...)` runs *that* pipeline, not one set earlier via `setPipeline`.
+Both styles share one pass state, applied lazily at draw time. It is applied as a whole: a draw after any change (another pipeline, bind group or buffer) re-sets the pipeline, every bind group and the vertex and index buffers, and consecutive draws with nothing changed set nothing. Precedence: state set on the pass (`pass.set*`) wins over state held by the pipeline (`pipeline.with*`), which wins over WebGPU defaults. Pass state persists across draws and pipeline switches until overwritten; pipeline-held state applies only to that pipeline's draws. `pipeline.with(pass).draw(...)` also makes that pipeline the pass's current one, so a later bare `pass.draw(...)` runs it rather than one set earlier with `setPipeline`.
 
-Draws through any `with(pass)` wrapper of one pipeline count as the same pipeline, so per-draw `with` calls re-apply only what changed:
+Repeated `pipeline.with(pass)` draws count as one pipeline, so nothing changes between them. A wrapper that also carries a bind group (`.with(pass).with(group)`) is a new pipeline each time it is made, so this per-object loop re-sets the full state on every draw, a few extra encoder calls per object:
 
 ```ts
 for (const object of objects) {
@@ -61,7 +63,7 @@ for (const object of objects) {
 }
 ```
 
-Each `with*` call allocates a small wrapper object; the GPU-side state is still set once.
+Each `with*` call allocates a small wrapper object.
 
 ## Compute passes
 
@@ -72,7 +74,7 @@ collide.with(pass).dispatchWorkgroups(Math.ceil(COUNT / 64));
 pass.end();
 ```
 
-Guarded compute pipelines (`createGuardedComputePipeline` / `dispatchThreads`) cannot record into passes or encoders — each `dispatchThreads` submits on its own, which is one more reason to write explicit compute entrypoints (`references/pipelines.md`).
+Guarded compute pipelines (`dispatchThreads`) cannot record into a pass (`references/pipelines.md`).
 
 ## Immediates (per-draw values without buffers)
 
@@ -100,10 +102,10 @@ for (const object of objects) {
 }
 ```
 
-- **Where values come from:** `pipeline.with(immediate, value)` holds a value on the pipeline, and `pass.setImmediates` overrides it. The variable's optional default (`immediateVar(schema, default)`) is the last resort. Drawing with no value throws `MissingImmediatesError`.
-- **Values are serialized when set.** Mutating the source object afterwards has no effect.
-- **Limits:** one immediate variable per shader, so group several values in a struct. No arrays, atomics or booleans. The size must be a multiple of 4 bytes and fit `maxImmediateSize` (64 bytes by default; request more via `tgpu.init({ device: { requiredLimits: { maxImmediateSize: 128 } } })` where supported).
-- **Fallback:** a single uniform written with `buffer.write` between draws does not work: queue writes are not recorded between draws, so every draw would see the last value. Use one buffer and bind group per distinct value, as above. When one variable holds either an immediate or a uniform, `isImmediateVar(x)` (exported from `typegpu`) tells them apart.
+- `pipeline.with(immediate, value)` holds a value on the pipeline, and `pass.setImmediates` overrides it. The variable's optional default (`immediateVar(schema, default)`) is the last resort. Drawing with no value throws `MissingImmediatesError`.
+- Values are serialized when set: mutating the source object afterwards has no effect.
+- One immediate variable per shader, so group several values in a struct. No arrays, atomics or booleans. The size must be a multiple of 4 bytes and fit `maxImmediateSize` (64 bytes by default; request more via `tgpu.init({ device: { requiredLimits: { maxImmediateSize: 128 } } })` where supported).
+- Fallback: a single uniform written with `buffer.write` between draws does not work: queue writes are not recorded between draws, so every draw would see the last value. Use one buffer and bind group per distinct value, as above. When one variable holds either an immediate or a uniform, `isImmediateVar(x)` (exported from `typegpu`) tells them apart.
 
 Test the fallback explicitly: a recent desktop Chrome usually takes the immediate path.
 
@@ -137,38 +139,27 @@ Pipelines also accept raw WebGPU encoders via `.with(...)`:
 
 Same logging caveat as `finish()`: TypeGPU can't process shader logs or perf callbacks for submissions it doesn't own.
 
-Escape hatch in the other direction: `root.unwrap(encoder)` / `root.unwrap(pass)` return the raw `GPUCommandEncoder` / pass encoder (e.g. for texture copies). Commands recorded raw are invisible to TypeGPU, so after unwrapping a pass, the next typed draw re-applies its full state.
-
-## Encoder-aware buffer ops
-
-`buffer.clear(encoder)` and `dst.copyFrom(src, encoder)` record into the given encoder instead of submitting immediately — use them to fold buffer maintenance into the same submission as your passes.
+Escape hatch in the other direction: `root.unwrap(encoder)` / `root.unwrap(pass)` return the raw `GPUCommandEncoder` / pass encoder (e.g. for texture copies). Commands recorded raw are invisible to TypeGPU, so after unwrapping a pass, every later typed draw in that pass re-applies its full state.
 
 ## Reusable operations in a caller's frame
 
-An operation that other code composes into its frame (a blur, a prefix sum, a simulation step) should create its pipelines and buffers once and record into whatever the caller passes in:
+An operation that other code composes into its frame (a blur, a prefix sum, a simulation step) creates its pipelines and buffers once and records into whatever the caller passes in:
 
 ```ts
-function createBlur(root: TgpuRoot, input: TgpuTexture, output: TgpuTexture) {
-  // create pipelines, bind groups and scratch textures once
-  return {
-    run(target?: { pass?: TgpuComputePass; encoder?: TgpuCommandEncoder }) {
-      // record into target.pass, or open a pass on target.encoder,
-      // or submit standalone work when neither is given
-    },
-    destroy() {
-      // destroy only what this operation allocated
-    },
-  };
-}
+function createBlur(root: TgpuRoot, input: TgpuTexture, output: TgpuTexture): {
+  run(target?: { pass?: TgpuComputePass; encoder?: TgpuCommandEncoder }): void;
+  destroy(): void;
+};
 ```
 
+- The factory creates pipelines, bind groups and scratch textures. `run` records into `target.pass`, opens a pass on `target.encoder`, or submits standalone work when neither is given. `destroy` frees only what the operation allocated.
 - Leave a supplied pass open and a supplied encoder unsubmitted. Never store the pass or encoder in the operation.
 - Borrowed buffers and textures (inputs, a caller-provided output) stay alive after `destroy()`.
 - Optional `initAsync()` lets callers prepare the pipelines under a loading screen; recording stays synchronous.
 
 ## Synchronization in compute work
 
-- A kernel with `std.workgroupBarrier()` needs every thread of the workgroup to reach it. Don't `return` out-of-range threads before the barrier; skip their loads and stores and feed an identity value instead.
+- A kernel with `std.workgroupBarrier()` needs every thread of the workgroup to reach it: keep out-of-range threads running through the barrier, skipping their loads and stores and feeding an identity value, instead of returning early.
 - Barriers don't synchronize separate workgroups. A phase that needs results from every workgroup is a separate dispatch; dispatches in one pass see each other's writes in order.
 - Updates that read neighbours need separate input and output storage. For ping-pong over `n` steps, track which buffer holds the result (it depends on whether `n` is odd). Two bindings of the same buffer still alias.
 - Keep GPU-produced counts on the GPU and feed them to indirect dispatch or draw (see `references/advanced.md`) instead of reading them back.

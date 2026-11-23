@@ -1,31 +1,31 @@
 # `@typegpu/sdf` - Signed Distance Functions and Operators
 
-Reach for these before hand-porting SDFs. All functions are typed `tgpu.fn`s, composable with `typegpu/std`. Docs: <https://docs.swmansion.com/TypeGPU/ecosystem/typegpu-sdf.md>.
+Use these before hand-porting SDFs. Docs: <https://docs.swmansion.com/TypeGPU/ecosystem/typegpu-sdf.md>.
 
 ```ts
-import * as sdf from '@typegpu/sdf';
-// or selectively:
-import { sdDisk, sdRoundedBox2d, opSmoothUnion } from '@typegpu/sdf';
+import * as sdf from '@typegpu/sdf'; // or named imports: { sdDisk, opSmoothUnion, ... }
 ```
+
+Every function is a `tgpu.fn` with pinned types: callable from `'use gpu'` code and other `tgpu.fn`s, and passable into slots, accessors or higher-order scene builders. They are not polymorphic: `d.vec2f` for 2D, `d.vec3f` for 3D. Non-vector args are `f32`, so JS `number` literals work.
 
 ## 2D primitives
 
-All take `point: vec2f`, return `f32`.
+All take `point: vec2f` and return `f32`, except `sdgHexagon2d`.
 
 | Function | Extra args | Notes |
 |---|---|---|
 | `sdDisk(point, radius)` | `radius: f32` | Filled circle |
-| `sdBox2d(point, size)` | `size: vec2f` | Axis-aligned rect; `size` is **half-extent** |
+| `sdBox2d(point, size)` | `size: vec2f` | Axis-aligned rect; `size` is half-extent |
 | `sdRoundedBox2d(point, size, r)` | `size: vec2f, r: f32` | Rounded rect; `size` is half-extent |
-| `sdLine(point, A, B)` | `A, B: vec2f` | **Unsigned** distance to segment `A->B` |
+| `sdLine(point, A, B)` | `A, B: vec2f` | Unsigned distance to segment `A->B` |
 | `sdBezier(point, A, B, C)` | `A, B, C: vec2f` | Exact unsigned distance to quadratic Bezier |
 | `sdBezierApprox(point, A, B, C)` | `A, B, C: vec2f` | Fast Bezier approx; cheaper, less accurate near cusps |
-| `sdPie(point, sc, radius)` | `sc: vec2f, radius: f32` | Circular sector; `sc = vec2f(sin(halfAngle), cos(halfAngle))` - **precompute on CPU** |
-| `sdArc(point, sc, radius)` | `sc: vec2f, radius: f32` | **Unsigned** zero-width arc, midpoint at `(0, radius)`, `sc` as in `sdPie`; subtract a half-width for a stroke |
+| `sdPie(point, sc, radius)` | `sc: vec2f, radius: f32` | Circular sector; `sc = vec2f(sin(halfAngle), cos(halfAngle))` - precompute on CPU |
+| `sdArc(point, sc, radius)` | `sc: vec2f, radius: f32` | Unsigned zero-width arc, midpoint at `(0, radius)`, `sc` as in `sdPie`; subtract a half-width for a stroke |
 | `sdHexagon2d(point, radius)` | `radius: f32` | Regular hexagon, flat edges at top and bottom; `radius` is the inradius (center to edge middle) |
 | `sdgHexagon2d(point, radius)` | `radius: f32` | Same hexagon, returns `vec3f(distance, gradient.xy)`; gradient undefined exactly on the edge |
 
-> `sdLine`/`sdBezier`/`sdBezierApprox`/`sdArc` return **unsigned** distance (no inside/outside for a curve). Draw AA strokes by comparing against half the stroke width.
+`sdLine`/`sdBezier`/`sdBezierApprox`/`sdArc` return unsigned distance (a curve has no inside). Draw AA strokes by comparing against half the stroke width.
 
 ## 3D primitives
 
@@ -39,10 +39,10 @@ All take `point: vec3f`, return `f32`.
 | `sdBoxFrame3d(point, size, thickness)` | `size: vec3f, thickness: f32` | Hollow frame (12 edges only) |
 | `sdLine3d(point, A, B)` | `A, B: vec3f` | Unsigned distance to 3D segment |
 | `sdCapsule(point, A, B, radius)` | `A, B: vec3f, radius: f32` | "Thick line segment" |
-| `sdPlane(point, normal, h)` | `normal: vec3f, h: f32` | Infinite plane; `normal` **must be normalized** |
+| `sdPlane(point, normal, h)` | `normal: vec3f, h: f32` | Infinite plane; `normal` must be normalized |
 | `sdCappedCylinder(point, r, h)` | `r, h: f32` | Along Y, flat caps at `y = ±h` |
 | `sdRhombus3d(point, la, lb, h, ra)` | `la, lb, h, ra: f32` | Rhombus in XZ (half-diagonals `la`, `lb`), extruded ±`h` along Y, rounded by `ra` |
-| `sdTriangle3d(point, a, b, c)` | `a, b, c: vec3f` | **Unsigned** distance to a filled zero-thickness triangle |
+| `sdTriangle3d(point, a, b, c)` | `a, b, c: vec3f` | Unsigned distance to a filled zero-thickness triangle |
 | `sdTorus(point, majorRadius, minorRadius)` | `majorRadius, minorRadius: f32` | Torus in the XZ plane; `majorRadius` to the tube center, `minorRadius` tube radius |
 | `sdCappedTorus(point, sc, majorRadius, minorRadius)` | `sc: vec2f`, radii `f32` | Arc of a torus in the XY plane, midpoint at `(0, majorRadius)`; `sc = vec2f(sin(angle / 2), cos(angle / 2))` |
 
@@ -59,13 +59,9 @@ All take `point: vec3f`, return `f32`.
 
 Intersection and sharp difference: use `std.max(d1, d2)` and `std.max(d1, -d2)` directly.
 
-## Calling from shaders
+## Anti-aliased masks
 
-Every function is a `tgpu.fn` with pinned types:
-- Callable from plain-callback `'use gpu'` and other `tgpu.fn`s.
-- First-class: pass into slots, accessors, or higher-order scene builders.
-- **Not polymorphic** - `d.vec2f` for 2D, `d.vec3f` for 3D. TypeScript catches most mismatches.
-- Non-vector args are plain `f32` - JS `number` literals work.
+The idiomatic 1-pixel AA mask from a 2D SDF in a fragment shader:
 
 ```ts
 const mask = std.smoothstep(
@@ -75,11 +71,9 @@ const mask = std.smoothstep(
 );
 ```
 
-`std.smoothstep(fwidth(uv.x), 0, d)` is the idiomatic 1-pixel AA mask from a 2D SDF in a fragment shader.
-
 ## Baking SDF fields into a texture
 
-When the same SDF is sampled many times per frame (AA + normals + shadows + AO all hitting the scene function) and the field changes at most once per frame, **bake into a texture in a compute pass and sample everywhere else**:
+When the same SDF is sampled many times per frame (AA, normals, shadows and AO all hitting the scene function) and the field changes at most once per frame, bake it into a texture in a compute pass and sample that everywhere else:
 
 ```ts
 const SIZE = d.vec2u(256, 128);
@@ -110,11 +104,10 @@ bakePipeline.with(encoder).dispatchWorkgroups(Math.ceil(SIZE.x / 8), Math.ceil(S
 encoder.submit();
 ```
 
-Notes:
-- **Signed format.** `r16float`/`rgba16float` preserves sign. `r8unorm` works only if you remap into `[0, 1]`.
-- **Resolution.** Bilinear is fine for most uses; raise resolution before anything else if you see stepping.
-- **Pack extra channels.** `rgba16float` can hold `(dist, progressAlongCurve, normalX, normalY)`.
-- **Re-bake only when source geometry changes.** Static fields: bake once at startup.
+- Use a signed format (`r16float`/`rgba16float`); `r8unorm` works only with the distance remapped into `[0, 1]`.
+- Bilinear sampling is fine for most uses; if you see stepping, raise the resolution first.
+- `rgba16float` can pack extra channels, e.g. `(dist, progressAlongCurve, normalX, normalY)`.
+- Re-bake only when the source geometry changes; bake static fields once at startup.
 
 ## Jump flooding — SDF texture from raster content
 
@@ -170,13 +163,12 @@ const fieldAt = tgpu.fn([d.vec3f, d.u32], d.f32)((point, count) => {
 });
 ```
 
-Two common forms:
-- **Skip-when-far.** `if (boundDist > cutoff) { continue; }` - the bound must be a true lower bound.
-- **Early ray-march termination.** Return the bound when far from geometry, exact distance only inside a broad region.
+- Skip when far: `if (boundDist > cutoff) { continue; }`; the bound must be a true lower bound.
+- Early ray-march termination: return the bound when far from geometry, the exact distance only inside a broad region.
 
 ## Further reading
 
 For SDFs the package doesn't ship (ellipse, 2D triangle, CSG over meshes):
-- **2D:** https://iquilezles.org/articles/distfunctions2d/
-- **3D:** https://iquilezles.org/articles/distfunctions/
-- **Smooth min:** https://iquilezles.org/articles/smin/
+- 2D: https://iquilezles.org/articles/distfunctions2d/
+- 3D: https://iquilezles.org/articles/distfunctions/
+- Smooth min: https://iquilezles.org/articles/smin/

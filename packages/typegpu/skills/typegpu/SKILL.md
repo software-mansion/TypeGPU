@@ -16,8 +16,6 @@ Read this file whole before writing TypeGPU code. Links are relative to this fil
 
 ## The shape of a program
 
-Resources, functions and pipelines are made once at setup; each frame writes the values that changed, records every pass into one command encoder and submits once.
-
 ```ts
 import { tgpu, d, std } from 'typegpu';
 
@@ -58,8 +56,7 @@ frame(1 / 60);
 const result = await particles.read(); // { position: v2f, velocity: v2f }[]
 ```
 
-- A shader reads a buffer through `.$`; TypeGPU binds it wherever it is used. Use bind group layouts for resources swapped between draws ([buffers](references/buffers.md)).
-- Operators on vectors and matrices work in every `'use gpu'` function. Making `tsover` the project's TypeScript lets the editor type-check them ([setup](references/setup.md)).
+- A shader reads a buffer through `.$`; TypeGPU binds it wherever it is used.
 - `pipeline.with(encoder)` records a pass of its own; open a pass with `encoder.beginRenderPass` / `beginComputePass` when several pipelines share it ([encoders](references/encoders.md)).
 
 ## Bind groups, slots and accessors
@@ -105,9 +102,9 @@ pipeline.with(bindGroup).withColorAttachment({ view: context }).draw(3);
 
 ## GPU code
 
-- Write each kernel as a `tgpu.computeFn` with `workgroupSize` and a bounds check, then `root.createComputePipeline` and `dispatchWorkgroups(Math.ceil(count / size))`. This is the default over guarded pipelines (`createGuardedComputePipeline` / `dispatchThreads`), which cannot record into an encoder.
+- Write each kernel as a `tgpu.computeFn` with `workgroupSize` and a bounds check, then `root.createComputePipeline` and `dispatchWorkgroups(Math.ceil(count / size))`. In a kernel with `std.workgroupBarrier()`, keep out-of-range threads running through the barrier instead of returning early ([encoders](references/encoders.md)). This is the default over guarded pipelines (`createGuardedComputePipeline` / `dispatchThreads`), which cannot record into an encoder.
 - Record each frame into one `root.createCommandEncoder()` and call `encoder.submit()` once. A bare `pipeline.draw()` or `dispatchWorkgroups()` submits on its own.
-- Make buffers, textures, bind groups and pipelines at setup; frames only write values and record. Compile ahead of the first frame with `pipeline.initAsync()` ([pipelines](references/pipelines.md)).
+- Make buffers, textures, bind groups and pipelines at setup; frames only write values and record. Compile large or numerous pipelines ahead of the first frame with `pipeline.initAsync()` ([pipelines](references/pipelines.md)).
 - Take all randomness and noise from `@typegpu/noise`: seed `randf` per thread (`randf.seed2(...)`), then `randf.sample()` and its distributions; sample `perlin2d` / `perlin3d` through a gradient cache: `perlin3d.staticCache({ root, size })` piped in with `root.pipe(cache.inject())`, or `dynamicCacheConfig()` when the size changes at runtime ([noise](references/noise.md)).
 - Keep values that change in buffers. Values captured from the outer scope are compiled into the shader as constants, and each different capture is a different pipeline.
 - WebGPU coordinates differ from OpenGL: clip-space z runs from 0 to 1, framebuffer and texture coordinates start at the top left, and matrices are column-major, composed as `projection * view * model * position` ([pipelines](references/pipelines.md), [matrices](references/matrices.md)).
@@ -117,13 +114,13 @@ pipeline.with(bindGroup).withColorAttachment({ view: context }).draw(3);
 
 These cause most build errors and wrong results. Details in [shaders](references/shaders.md) and [types](references/types.md).
 
-1. **Write arithmetic with operators**: `a * b`, `a + b`, `v *= 2`, `m * v`. `std.add` / `std.sub` / `std.mul` / `std.div` are the fallback for CPU code without `tsover`.
+1. **Write arithmetic with operators**: `a * b`, `a + b`, `v *= 2`, `m * v`. They work in every `'use gpu'` function; make `tsover` the project's TypeScript so the editor type-checks them ([setup](references/setup.md)). `std.add` / `std.sub` / `std.mul` / `std.div` are the fallback for CPU code without `tsover`.
 2. **Shift `u32` right with `>>>`**, and wrap a left-hand literal in `d.u32`: `d.u32(0x32) >>> corner`. `>>` is for signed integers.
 3. **Write GPU methods as properties**: `alive: (i: number) => { 'use gpu'; ... }`. The plugin compiles function declarations, function expressions and arrows; a shorthand method `alive(i) { ... }` is never compiled.
 4. **Vectors, matrices, structs and arrays are references.** `const a = b` aliases. Copy with the schema to get an independent value: `let a = d.vec3f(b)`, `MyStruct(s)`. Expression results (`b * 2`, constructor calls, function returns) are fresh values.
-5. **Write `d.f32(1)` where a float must come from a whole-number literal.** The parser reads `1.0` as `1`, an integer. `let sum = 0` declares an `i32`, so a later `sum += 0.5` is truncated to `sum += 0i`: write `let sum = d.f32(0)`. Fractional literals (`0.5`) are fine as they are.
-6. **`a / b` on scalars is `f32` division**, even for integers. Divide integer scalars with `std.intdiv(a, b)`. Integer vectors (`vec2i / vec2i`) divide as integers.
-7. **Use `std.*` for math**: `std.sin`, `std.mix`, `std.clamp`, `std.normalize`, texture, atomic and subgroup functions ([std](references/std.md)). Several `Math.*` functions compile too; `std` also types vectors and covers the whole WGSL set.
+5. **Declare a float from a whole number with `d.f32`.** `1.0` parses as the integer `1`, so `let sum = 0` declares an `i32` and a later `sum += 0.5` becomes `sum += 0i`: write `let sum = d.f32(0)`. Fractional literals (`0.5`) are fine.
+6. **`a / b` on scalars is floating-point division**: integers divide as `f32`, two `f16` stay `f16`. Divide integer scalars with `std.intdiv(a, b)`. Integer vectors (`vec2i / vec2i`) divide as integers.
+7. **Use `std.*` for math**: `std.sin`, `std.mix`, `std.clamp`, `std.normalize`, texture, atomic and subgroup functions ([std](references/std.md)). Several `Math.*` functions compile too; `std` also types vectors and wraps the WGSL builtins.
 8. **Initialise every variable** so its type is known: `let x = d.f32(0)`. Type annotations don't change the WGSL.
 9. **A runtime ternary is `select`**: both sides evaluate, so keep them cheap, side-effect-free scalars or vectors. Use `if` / `else` for structs, arrays and expensive branches. A condition known at compile time prunes the other branch.
 10. **Brace every `if` body**, including a single `return`.
@@ -174,5 +171,6 @@ Companion packages:
 - [color.md](references/color.md): `@typegpu/color` conversions, Oklab, hex constants, tonemapping.
 - [radiance-cascades.md](references/radiance-cascades.md): `@typegpu/radiance-cascades` 2D global illumination.
 - [three.md](references/three.md): `@typegpu/three`, for projects that already render with Three.js.
+- `@typegpu/gl` has no reference: `initWithGLFallback()` returns a WebGPU root, or an experimental WebGL 2 root when WebGPU is missing or fails to initialise; branch with `isGLRoot(root)`. The GL root draws render pipelines with uniforms and 2D textures; compute, storage buffers, bind groups and command encoders throw `WebGLFallbackUnsupportedError`.
 
 Pair TypeGPU with [`wgpu-matrix`](https://github.com/greggman/wgpu-matrix) for CPU-side matrix math; its functions accept TypeGPU vectors and matrices as `dst`.

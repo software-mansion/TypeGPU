@@ -1,8 +1,6 @@
 # Composing and configuring shaders
 
-How to structure shader code so it can be reused, specialized and bound to different resources. Language rules are in `references/shaders.md`.
-
-Docs: https://docs.swmansion.com/TypeGPU/apis/slots.md, https://docs.swmansion.com/TypeGPU/apis/accessors.md
+Reusing, specializing and rebinding shader code. Language rules are in `references/shaders.md`. Docs: https://docs.swmansion.com/TypeGPU/apis/slots.md, https://docs.swmansion.com/TypeGPU/apis/accessors.md
 
 ## Define shaders before allocating resources
 
@@ -26,9 +24,7 @@ function createPreview(root: TgpuRoot, format: GPUTextureFormat) {
 }
 ```
 
-The shader owns no GPU resources, so it can be resolved and tested without a device (see `references/debugging.md`). The function that allocates resources returns them together with their cleanup. Capturing fixed resources (`root.createUniform` and friends) directly in a shader is still fine when shader and resource belong to one local operation; don't wrap every definition in a factory just to pass a root around.
-
-Choose the tool by what varies:
+A shader that owns no resources resolves and tests without a device (see `references/debugging.md`); the function that allocates resources returns them with their cleanup. When shader and resource belong to one local operation, capture the resource (`root.createUniform` and friends) directly instead of wrapping the definition in a factory.
 
 | What varies | Use |
 |---|---|
@@ -39,7 +35,7 @@ Choose the tool by what varies:
 
 ## Slots
 
-`tgpu.slot<T>()` is a typed placeholder; fill with `.with(slot, value)` at root scope (before pipeline creation) or function scope — pipelines do not accept slots in `.with()`. Any type fits: GPU values, functions, callbacks. Slots are the idiomatic way to build configurable/reusable shaders.
+`tgpu.slot<T>()` is a typed placeholder for any value: GPU values, functions, callbacks; `tgpu.slot(value)` gives it a default. Fill it with `.with(slot, value)` on the root (before pipeline creation) or on a function; a pipeline's `.with()` takes no slots, and entrypoints (`computeFn`, `vertexFn`, `fragmentFn`) have no `.with`, so they get values from `root.with(...)` / `root.pipe(...)`.
 
 ```ts
 const distFnSlot = tgpu.slot<(pos: d.v3f) => number>();
@@ -49,22 +45,15 @@ const rayMarcher = tgpu.computeFn({
   in: { gid: d.builtin.globalInvocationId },
 })(({ gid }) => {
   'use gpu';
-  const dist = distFnSlot.$(d.vec3f(gid)); // call the injected function
+  const dist = distFnSlot.$(d.vec3f(gid));
 });
 
 root
   .with(distFnSlot, (pos) => {
     'use gpu';
-    return std.length(pos - d.vec3f(0, 0, -5)) - 1; // sphere SDF
+    return std.length(pos - d.vec3f(0, 0, -5)) - 1;
   })
   .createComputePipeline({ compute: rayMarcher });
-```
-
-Scalar/vector slot with a default:
-
-```ts
-const colorSlot = tgpu.slot(d.vec4f(1, 0, 0, 1));
-root.with(colorSlot, d.vec4f(0, 1, 0, 1)).createRenderPipeline({ /* ... */ });
 ```
 
 A `tgpu.fn` (shelled, or wrapping a `'use gpu'` callback) takes `fn.with(slot, value)` and `fn.pipe(transform)`, each returning a configured copy. Both also run inside `'use gpu'` code, so a shader can call a specialized variant in place:
@@ -82,26 +71,21 @@ const main = tgpu.fn([d.f32], d.f32)((x) => {
 });
 ```
 
-Each distinct set of bindings resolves to its own WGSL function. Entrypoints (`computeFn`, `vertexFn`, `fragmentFn`) have no `.with`; they get their values from `root.with(...)` / `root.pipe(...)`.
+Each distinct set of bindings resolves to its own WGSL function.
 
 ## Accessors
 
-`tgpu.accessor(schema, initial?)` is schema-aware - the value can be a buffer binding, a constant, a literal, or a `'use gpu'` function returning one. The shader is agnostic about how the value is sourced. If they can be cleanly used, they should be preferred over slots.
+`tgpu.accessor(schema, initial?)` holds a schema-typed value without the shader knowing its source: a buffer binding, a constant, a literal or a `'use gpu'` function returning one. Prefer it over a slot whenever the value has a schema.
 
 ```ts
 const colorAccess = tgpu.accessor(d.vec3f);
 
-// Fill with a uniform buffer:
 root.with(colorAccess, colorUniform).createComputePipeline({ compute: kernel });
-
-// Fill with a literal (inlined):
-root.with(colorAccess, d.vec3f(1, 0, 0)).createComputePipeline({ compute: kernel });
-
-// Fill with a GPU function:
+root.with(colorAccess, d.vec3f(1, 0, 0)).createComputePipeline({ compute: kernel }); // inlined
 root.with(colorAccess, () => { 'use gpu'; return computeColor(); }).createComputePipeline({ compute: kernel });
 ```
 
-A plain arrow without `'use gpu'` (`() => layout.$.color`, `() => particles.$[0].color`) runs during code generation and inlines the resource expression it returns; a `'use gpu'` function becomes a WGSL function call. Other accepted values: a bind group layout entry (`() => layout.$.entry`, a common default), a `tgpu.privateVar` / `tgpu.workgroupVar`, a `tgpu.const`, and texture views for texture schemas (`tgpu.accessor(d.texture2d(d.f32))`). A runtime-sized schema (`tgpu.accessor(d.arrayOf(d.f32))`) accepts an array of any length, including a JS array literal.
+A plain arrow without `'use gpu'` (`() => layout.$.color`, `() => particles.$[0].color`) runs during code generation and inlines the resource expression it returns; a `'use gpu'` function becomes a WGSL function call. Other accepted values: a bind group layout entry (`() => layout.$.entry`, a common default), a `tgpu.privateVar` / `tgpu.workgroupVar`, a `tgpu.const`, and texture views for texture schemas (`tgpu.accessor(d.texture2d(d.f32))`). A runtime-sized schema (`tgpu.accessor(d.arrayOf(d.f32))`) accepts a GPU array of any length, or a non-empty JS array literal, which fixes the length.
 
 Write access: `tgpu.mutableAccessor(schema, initial?)`. Fill it with something writable: a `root.createMutable` binding (or a field of one, `() => ctx.$.counter`), a mutable storage layout entry, a `tgpu.privateVar` / `tgpu.workgroupVar`, or a storage texture. Uniforms, readonly buffers, constants and function results throw at resolution; read those through `tgpu.accessor`.
 
@@ -114,7 +98,6 @@ const gain = tgpu.accessor(d.f32);
 const Params = d.struct({ gain: d.f32, offset: d.f32 });
 const params = root.createUniform(Params, { gain: 1, offset: 0 });
 const configured = root.pipe((cfg) => cfg.with(gain, () => params.$.gain));
-// Pipelines created from `configured` read gain.$ from the uniform.
 params.patch({ gain: 2 });
 ```
 
@@ -166,7 +149,7 @@ const Vector = tgpu.lazy(() => d.arrayOf(d.f32, width.$));
 
 ## Schema-typed producers
 
-When several operations share a source of values, pass the schema along with the GPU accessor function, so consumers keep the type:
+When several operations share a source of values, pass the schema along with the GPU accessor function so consumers keep the type:
 
 ```ts
 interface Source<S extends d.AnyWgslData> {
