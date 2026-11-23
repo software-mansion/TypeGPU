@@ -14,7 +14,7 @@ import { originalPositionFor, TraceMap, type EncodedSourceMap } from '@jridgewel
 import type { SourceMap } from 'rollup';
 
 export interface Options {
-  /** @default [/\.m?[jt]sx?$/] */
+  /** @default /\.[cm]?[jt]sx?(?:\?.*)?$/ */
   include?: FilterPattern;
 
   /** @default undefined */
@@ -173,7 +173,7 @@ export function initPluginState(state: PluginState, methods: TransformMethods): 
 export const earlyPruneRegex = [/["']use gpu["']/, /t(ype)?gpu/];
 
 export const defaultOptions = {
-  include: /\.m?[jt]sx?(?:\?.*)?$/,
+  include: /\.[cm]?[jt]sx?(?:\?.*)?$/,
   autoNamingEnabled: true,
   earlyPruning: true,
   unstable_obfuscate: false,
