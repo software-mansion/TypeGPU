@@ -171,7 +171,7 @@ patterns, and `exclude` are unsupported. By default, it skips files without `typ
 
 ```ts
 interface Options {
-  /** @default [/\.m?[jt]sx?$/] */
+  /** @default /\.m?[jt]sx?(?:\?.*)?$/ */
   include?: FilterPattern | undefined;
   /** @default undefined */
   exclude?: FilterPattern | undefined;
