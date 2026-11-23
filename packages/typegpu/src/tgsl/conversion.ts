@@ -22,16 +22,18 @@ import { invariant, WgslTypeError } from '../errors.ts';
 import { getName } from '../shared/meta.ts';
 import { safeStringify } from '../shared/stringify.ts';
 import { assertExhaustive } from '../shared/utilityTypes.ts';
+import { DEV } from '../shared/env.ts';
 import { logger } from '../tgpuLogger.ts';
 import type { ResolutionCtx } from '../types.ts';
 import { accessStructProp } from './accessStructProp.ts';
 import { stringifySnippet } from './stringifySnippet.ts';
 
-type ConversionAction = 'ref' | 'deref' | 'cast' | 'none';
+type ConversionAction = 'ref' | 'deref' | 'cast' | 'abstract-cast' | 'none';
 
 type ConversionRankInfo =
   | { rank: number; action: 'cast'; targetType: BaseData }
-  | { rank: number; action: Exclude<ConversionAction, 'cast'> };
+  | { rank: number; action: 'abstract-cast'; targetType: BaseData }
+  | { rank: number; action: Exclude<ConversionAction, 'cast' | 'abstract-cast'> };
 
 const INFINITE_RANK: ConversionRankInfo = {
   rank: Number.POSITIVE_INFINITY,
@@ -55,8 +57,8 @@ function getAutoConversionRank(src: BaseData, dest: BaseData): ConversionRankInf
   }
 
   if (trueSrc.type === 'abstractInt') {
-    if (trueDst.type === 'i32') return { rank: 3, action: 'none' };
-    if (trueDst.type === 'u32') return { rank: 4, action: 'none' };
+    if (trueDst.type === 'i32') return { rank: 3, action: 'abstract-cast', targetType: dest };
+    if (trueDst.type === 'u32') return { rank: 4, action: 'abstract-cast', targetType: dest };
     if (trueDst.type === 'abstractFloat') return { rank: 5, action: 'none' };
     if (trueDst.type === 'f32') return { rank: 6, action: 'none' };
     if (trueDst.type === 'f16') return { rank: 7, action: 'none' };
@@ -220,7 +222,7 @@ function findBestType(
         break;
       }
       details.push(conversion);
-      if (conversion.action === 'cast') {
+      if (conversion.action === 'cast' || conversion.action === 'abstract-cast') {
         destType = conversion.targetType;
       }
     }
@@ -235,7 +237,7 @@ function findBestType(
   const actions: ConversionResultAction[] = bestResult.details.map((detail, index) => ({
     sourceIndex: index,
     action: detail.action,
-    ...(detail.action === 'cast' && {
+    ...((detail.action === 'cast' || detail.action === 'abstract-cast') && {
       targetType: detail.targetType as U32 | F32 | I32 | F16,
     }),
   }));
@@ -273,6 +275,7 @@ function applyActionToSnippet(
   snippet: Snippet,
   action: ConversionResultAction,
   targetType: BaseData,
+  verbose: boolean,
 ): Snippet {
   if (action.action === 'none') {
     if (targetType === snippet.dataType) {
@@ -292,6 +295,17 @@ function applyActionToSnippet(
       );
     case 'deref':
       return derefSnippet(snippet);
+    case 'abstract-cast':
+      const converted = schemaCallWrapperGPU(ctx, targetType, snippet);
+
+      if (DEV && verbose && converted.value !== snippet.value) {
+        logger.warn(
+          'implicit-conversion',
+          `Implicit abstract conversion from ${stringifySnippet(snippet)}: ${safeStringify(snippet.dataType)} to ${safeStringify(targetType)} changes the value to ${stringifySnippet(converted)}. Use an explicit conversion if this behavior is intended.`,
+        );
+      }
+
+      return converted;
     case 'cast': {
       if (isWgslStruct(snippet.dataType) && isWgslStruct(targetType)) {
         const typeName = getName(snippet.dataType) ?? '<unnamed>';
@@ -408,7 +422,7 @@ export function convertToCommonType<T extends Snippet[]>(
     return undefined;
   }
 
-  if (verbose && conversion.hasImplicitConversions) {
+  if (DEV && verbose && conversion.hasImplicitConversions) {
     logger.warn(
       'implicit-conversion',
       `Implicit conversions from [\n${values
@@ -421,7 +435,7 @@ Consider using explicit conversions instead.`,
   return values.map((value, index) => {
     const action = conversion.actions[index];
     invariant(action, 'Action should not be undefined');
-    return applyActionToSnippet(ctx, value, action, conversion.targetType);
+    return applyActionToSnippet(ctx, value, action, conversion.targetType, verbose);
   }) as T;
 }
 

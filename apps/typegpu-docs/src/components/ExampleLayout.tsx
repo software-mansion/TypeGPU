@@ -89,7 +89,10 @@ function SideMenu({
         </button>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 pb-3" ref={scrollRef}>
+      <div
+        className="min-h-0 flex-1 overflow-y-auto px-4 pb-3 [scrollbar-gutter:stable]"
+        ref={scrollRef}
+      >
         <SearchableExampleList scrollContainerRef={scrollRef} />
       </div>
     </aside>

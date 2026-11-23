@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { tgpu } from 'typegpu';
-import { f32, vec2f, vec3f, vec4h } from 'typegpu/data';
+import { f32, vec2f, vec3f, vec4h, type v3f } from 'typegpu/data';
 import { mix } from 'typegpu/std';
 
 describe('mix', () => {
@@ -52,6 +52,36 @@ describe('mix', () => {
     const result = mix(v1, v2, factor);
     expect(result.x).toBeCloseTo(1.76);
     expect(result.y).toBeCloseTo(3.74);
+  });
+
+  it('can be called by helpers generic over scalars and vectors', () => {
+    const lerp = <T extends number | v3f>(a: T, b: T, t: number) => {
+      'use gpu';
+      return mix(a, b, t);
+    };
+    const blend = <T extends number | v3f>(a: T, b: T, t: T) => {
+      'use gpu';
+      return mix(a, b, t);
+    };
+
+    const main = () => {
+      'use gpu';
+      return lerp(vec3f(1), vec3f(2), 0.5) * blend(f32(0), f32(1), f32(0.5));
+    };
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn lerp(a: vec3f, b: vec3f, t: f32) -> vec3f {
+        return mix(a, b, t);
+      }
+
+      fn blend(a: f32, b: f32, t: f32) -> f32 {
+        return mix(a, b, t);
+      }
+
+      fn main() -> vec3f {
+        return (lerp(vec3f(1), vec3f(2), 0.5f) * blend(0f, 1f, 0.5f));
+      }"
+    `);
   });
 
   it('throws on invalid arguments', () => {
