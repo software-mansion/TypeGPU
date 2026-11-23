@@ -191,13 +191,6 @@ interface Options {
   unstable_obfuscate?: boolean | undefined;
 
   /**
-   * Keep the source map info so that resolve errors link to an appropriate source.
-   *
-   * @default false
-   */
-  unstable_sourceMaps?: boolean | undefined;
-
-  /**
    * Skipping files that don't contain 'typegpu', 'tgpu' or 'use gpu'.
    * In case this early pruning hinders transformation, you
    * can disable it.
@@ -220,10 +213,6 @@ It is only useful in a handful of custom scenarios, when the name cannot be retr
 
 The _unstable_obfuscate_ option shortens identifiers in the generated WGSL, see [Minifying & Obfuscating Shaders](/TypeGPU/advanced/minifying-shaders) for details.
 It requires `autoNamingEnabled: false`.
-
-The _unstable_sourceMaps_ option keeps the source location of each shader function, so that errors thrown while resolving
-a shader point to the original source. When another plugin transforms the code before `unplugin-typegpu`, the locations are mapped
-through its source map (supported by the _babel_ and _vite_/_rollup_ plugins). It cannot be combined with `unstable_obfuscate`.
 
 ## Further reading
 
