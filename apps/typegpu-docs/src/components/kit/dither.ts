@@ -74,20 +74,22 @@ function paint(canvas: HTMLCanvasElement, field: (x: number, y: number) => numbe
 }
 
 /**
- * The shapes of light the promos print, each from the pointer's lean: where across the canvas the
- * light sits, from 0 to 1.
+ * The shapes of light the promos print. The ones that sit behind text peak below the ramp's top
+ * two steps (the accent and its near-white ice), so the text over them stays readable.
+ *
+ * Each shape is built from the pointer's lean: where across the canvas the light sits, from 0 to 1.
  */
 const FIELDS = {
   /** A pool of light rising from the foot, as under Kit's footer. */
   horizon: (lean: number) => (x: number, y: number) => {
     const across = (x - lean) / 0.36;
-    return 0.86 * Math.exp(-across * across) * (1 - (2 * x - 1) ** 8) * y ** 1.8;
+    return 0.76 * Math.exp(-across * across) * (1 - (2 * x - 1) ** 8) * y ** 1.8;
   },
   /** A band of light that leaves the left side dark for the text over it. */
   band: (lean: number) => (x: number, y: number) => {
     const across = (x - lean) / 0.32;
     const middle = 2 * y - 1;
-    return 0.9 * Math.exp(-across * across) * (1 - middle ** 4) * clamp(x * 1.6 - 0.2);
+    return 0.76 * Math.exp(-across * across) * (1 - middle ** 4) * clamp(x * 1.6 - 0.2);
   },
   /** A rule of light under a link, as under the current section of Kit's header. */
   rail: (lean: number) => (x: number, y: number) => {

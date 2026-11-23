@@ -289,9 +289,12 @@ const storageKey =
     display: none;
   }
 
+  /* Backed like the command, so it reads wherever the light leans */
   .kit-promo__link {
     display: inline-flex;
     gap: 6px;
+    padding: 7px 12px;
+    background: color-mix(in srgb, var(--kit-ground) 80%, transparent);
     color: var(--kit-link);
     font: 500 13px/20px var(--kit-mono);
     text-decoration: none;
