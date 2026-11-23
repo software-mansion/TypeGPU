@@ -114,11 +114,12 @@ const renderPipeline = root
     },
   });
 
-let depthTexture = root.device.createTexture({
-  size: [canvas.width, canvas.height, 1],
-  format: 'depth24plus',
-  usage: GPUTextureUsage.RENDER_ATTACHMENT,
-});
+let depthTexture = root
+  .createTexture({
+    size: [canvas.width, canvas.height, 1],
+    format: 'depth24plus',
+  })
+  .$usage('render');
 
 function simulate() {
   computeCollisionsPipeline
@@ -146,7 +147,7 @@ function render() {
       clearValue: [0, 1, 0, 1], // background color
     })
     .withDepthStencilAttachment({
-      view: depthTexture.createView(),
+      view: depthTexture,
       depthClearValue: 1,
       depthLoadOp: 'clear',
       depthStoreOp: 'store',
@@ -259,11 +260,12 @@ const autoResizer = common.attachAutoResizer({
   canvas,
   onResize() {
     depthTexture.destroy();
-    depthTexture = root.device.createTexture({
-      size: [canvas.width, canvas.height, 1],
-      format: 'depth24plus',
-      usage: GPUTextureUsage.RENDER_ATTACHMENT,
-    });
+    depthTexture = root
+      .createTexture({
+        size: [canvas.width, canvas.height, 1],
+        format: 'depth24plus',
+      })
+      .$usage('render');
     render();
   },
 });
