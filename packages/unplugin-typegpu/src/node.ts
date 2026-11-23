@@ -47,10 +47,7 @@ export function extractSourceMapURL(source: string): string | undefined {
  * `deno run --import ./preload.mjs main.ts`).
  */
 export default function install(rawOptions?: Options): ModuleHooks {
-  const plugin = unpluginFactory(
-    { include: /\.[cm]?[jt]sx?$/, ...rawOptions },
-    { framework: 'unloader' },
-  );
+  const plugin = unpluginFactory(rawOptions, { framework: 'unloader' });
   const filter = createFilterForId(plugin.transform.filter.id);
   const transformContext = {
     warn: (message: string) => console.warn(`[unplugin-typegpu] ${message}`),
