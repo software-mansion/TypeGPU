@@ -2,6 +2,6 @@
   "title": "Matrix Multiplication (next)",
   "description": "Explores a newer tiled GPU matrix-multiplication implementation with configurable dimensions and workgroup behavior.",
   "category": "algorithms",
-  "tags": ["linear algebra"],
+  "tags": [],
   "coolFactor": 5
 }

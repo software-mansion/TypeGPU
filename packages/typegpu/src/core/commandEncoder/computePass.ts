@@ -21,6 +21,7 @@ import type { TgpuComputePipeline } from '../pipeline/computePipeline.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import { type TgpuPassTimestampWrites, unwrapTimestampWrites } from './attachments.ts';
 import type { TgpuCommandEncoder } from './commandEncoder.ts';
+import { setName, type TgpuNamable } from '../../shared/meta.ts';
 
 // ----------
 // Public API
@@ -31,6 +32,7 @@ import type { TgpuCommandEncoder } from './commandEncoder.ts';
  * Query sets accept TypeGPU query sets next to raw {@link GPUQuerySet}s.
  */
 export interface TgpuComputePassDescriptor {
+  /** @deprecated Use {@link $name} or rely on plugin auto-naming instead. */
   label?: string | undefined;
   timestampWrites?: TgpuPassTimestampWrites | undefined;
 }
@@ -52,7 +54,7 @@ export interface ComputePassInternals {
  *
  * Call `end()` when done recording.
  */
-export interface TgpuComputePass {
+export interface TgpuComputePass extends TgpuNamable {
   readonly [$internal]: ComputePassInternals;
   readonly resourceType: 'compute-pass';
 
@@ -201,5 +203,11 @@ class TgpuComputePassImpl implements TgpuComputePass {
 
   end(): void {
     this[$internal].rawPass.end();
+  }
+
+  $name(label: string) {
+    setName(this, label);
+    this[$internal].rawPass.label = label;
+    return this;
   }
 }

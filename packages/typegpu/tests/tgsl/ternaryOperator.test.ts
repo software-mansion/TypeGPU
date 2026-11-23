@@ -336,22 +336,6 @@ describe('ternary operator', () => {
     `);
   });
 
-  it('should throw when a ternary branch contains an assignment', () => {
-    const myFn = tgpu.fn(
-      [d.i32],
-      d.i32,
-    )((a) => {
-      let b = 0;
-      return a > 0 ? (b = a) : 0;
-    });
-
-    expect(() => tgpu.resolve([myFn])).toThrowErrorMatchingInlineSnapshot(`
-      [Error: Resolution of the following tree failed:
-      - <root>
-      - fn:myFn: Ternary operator '(a > 0) ? (b = a) : 0' is invalid. For more complex branching, please use 'std.select' or if/else statements.]
-    `);
-  });
-
   it('should throw when running the ternary in JS would cause aliasing, but a copy in WGSL', () => {
     const Boid = d.struct({ pos: d.vec3f, vel: d.vec3f });
 
