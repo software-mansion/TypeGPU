@@ -12,7 +12,7 @@ One schema (`d.*`) is at once a GPU type, a CPU buffer layout and a TypeScript t
 
 This skill targets TypeGPU `0.12`. The `.d.ts` files in `node_modules/typegpu` are the exact API of the installed version; most public functions carry TSDoc with examples.
 
-Read this file whole before writing TypeGPU code. Links are relative to this file. Every docs page has a Markdown copy: append `.md` to its URL, e.g. https://docs.swmansion.com/TypeGPU/apis/pipelines.md, and https://docs.swmansion.com/TypeGPU/llms.txt lists them all.
+Read this file whole before writing TypeGPU code. Links are relative to this file. Every docs page has a Markdown copy: replace the trailing `/` of its URL with `.md`, e.g. https://docs.swmansion.com/TypeGPU/apis/pipelines.md, and https://docs.swmansion.com/TypeGPU/llms.txt lists the guides.
 
 ## The shape of a program
 

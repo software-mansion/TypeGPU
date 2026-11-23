@@ -5,18 +5,29 @@ import { getWorkspaceVersion } from '../utils/pkg.ts';
 import { pmExec } from '../utils/pm.ts';
 import { confirmStep } from '../utils/prompts.ts';
 
-function skillVersion(cwd: string) {
-  const pkgDir = path.join(cwd, 'node_modules', 'typegpu');
-  if (fs.existsSync(path.join(pkgDir, 'skills', 'typegpu', 'SKILL.md'))) {
-    const { version } = JSON.parse(fs.readFileSync(path.join(pkgDir, 'package.json'), 'utf-8'));
-    return version as string;
+function findInstalledSkill(cwd: string) {
+  for (let dir = cwd; ; dir = path.dirname(dir)) {
+    const skillDir = path.join(dir, 'node_modules', 'typegpu', 'skills', 'typegpu');
+    if (fs.existsSync(path.join(skillDir, 'SKILL.md'))) {
+      return skillDir;
+    }
+    if (dir === path.dirname(dir)) {
+      return undefined;
+    }
   }
-  return getWorkspaceVersion('typegpu');
+}
+
+function skillSource(cwd: string) {
+  const skillDir = findInstalledSkill(cwd);
+  if (!skillDir) {
+    return ['software-mansion/TypeGPU#v' + getWorkspaceVersion('typegpu'), '-s', 'typegpu'];
+  }
+  const relative = path.relative(cwd, skillDir);
+  return [relative.startsWith('.') ? relative : `./${relative}`];
 }
 
 export function addAgentSkills(pm: Agent, options: { nonInteractive?: boolean } = {}) {
-  const source = `software-mansion/TypeGPU#v${skillVersion(process.cwd())}`;
-  const args = ['skills', 'add', source, '-s', 'typegpu'];
+  const args = ['skills', 'add', ...skillSource(process.cwd())];
   if (options.nonInteractive) {
     args.push('-y');
   }

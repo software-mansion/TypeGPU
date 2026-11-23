@@ -17,6 +17,7 @@ To add it by hand, paste this into `AGENTS.md`, and put `@AGENTS.md` in `CLAUDE.
 
 ```md
 <!-- BEGIN:typegpu-agent-rules -->
+
 # TypeGPU
 
 This project uses TypeGPU. Its API is newer than most models' training data.
@@ -25,16 +26,18 @@ and the references it names. They match the installed version, and the .d.ts fil
 node_modules/typegpu are the exact API.
 
 In 'use gpu' functions:
+
 - Vectors, matrices, structs and arrays are references. Copy them (d.vec3f(v)) before
   assigning to a let, or use const.
-- Write d.f32(1) where a float is needed. Scalar a / b is always f32; use std.intdiv
-  for integers. Shift u32 right with >>>.
-- Use std.* math, not Math.*.
+- Write d.f32(1) where a float is needed. Scalar a / b divides as floats; use
+  std.intdiv for integers. Shift u32 right with >>>.
+- Use `std.*` math, not `Math.*`.
 - Write GPU methods as properties (step: () => { 'use gpu'; ... }), not shorthand methods.
 - Values captured from the outer scope are baked in as constants. Use uniforms for
   anything that changes.
 
 After editing, run the type check and the linter (eslint-plugin-typegpu).
+
 <!-- END:typegpu-agent-rules -->
 ```
 
@@ -47,7 +50,13 @@ It covers schemas, functions, shaders, buffers, textures, pipelines and common e
 The instructions above point agents at it, so no further setup is needed.
 
 Some agents only discover skills in their own skill folders.
-To install the skill there, use the tag of your TypeGPU version:
+To install the skill there, copy it from `node_modules`:
+
+```sh
+npx skills add ./node_modules/typegpu/skills/typegpu
+```
+
+Without TypeGPU installed, use the tag of a TypeGPU version:
 
 <Code lang="sh" code={`npx skills add software-mansion/TypeGPU#v${version} -s typegpu`} />
 
@@ -82,8 +91,8 @@ Projects created with the CLI have both set up as the `types` and `check` script
 
 ## Docs as Markdown
 
-Every page of these docs is also available as Markdown at its URL with `.md` added, for example [`/TypeGPU/apis/buffers.md`](/TypeGPU/apis/buffers.md).
-[`llms.txt`](/TypeGPU/llms.txt) lists all of them in the order of the sidebar.
+Every page of these docs is also available as Markdown: replace the trailing `/` of its URL with `.md`, for example [`/TypeGPU/apis/buffers.md`](/TypeGPU/apis/buffers.md).
+[`llms.txt`](/TypeGPU/llms.txt) lists the guides in the order of the sidebar.
 
 ## TypeGPU MCP
 

@@ -67,13 +67,11 @@ function buildLlmsTxt({ description, name, preamble, prefix, readPage, sidebar }
   if (preamble) lines.push('', preamble.trim());
 
   for (const section of sidebarSections(sidebar)) {
-    const entries = section.items.flatMap(({ label, slug }) => {
-      const html = readPage(slug);
-      if (html === undefined) return [];
+    const entries = section.items.map(({ label, slug }) => {
       const detail = decode(
-        /<meta[^>]+name="description"[^>]+content="([^"]*)"/i.exec(html)?.[1] ?? '',
+        /<meta[^>]+name="description"[^>]+content="([^"]*)"/i.exec(readPage(slug))?.[1] ?? '',
       );
-      return [`- [${label}](${prefix}${slug}.md)${detail ? `: ${detail}` : ''}`];
+      return `- [${label}](${prefix}${slug}.md)${detail ? `: ${detail}` : ''}`;
     });
     if (entries.length) lines.push('', `## ${section.label}`, '', ...entries);
   }
@@ -91,7 +89,7 @@ function buildLlmsTxt({ description, name, preamble, prefix, readPage, sidebar }
 
 /**
  * @typedef {{ label: string, slug?: string, items?: { label: string, slug?: string }[] }} SidebarEntry
- * @param {{ description?: string, name?: string, preamble?: string, repository?: string, sidebar?: SidebarEntry[] }} [options]
+ * @param {{ description?: string, name?: string, preamble?: string, sidebar?: SidebarEntry[] }} [options]
  */
 export default function swmGeo({ description, name, preamble, sidebar = [] } = {}) {
   let site = 'https://docs.swmansion.com';
@@ -113,10 +111,7 @@ export default function swmGeo({ description, name, preamble, sidebar = [] } = {
             name,
             preamble,
             prefix: `${site}${base}`,
-            readPage: (slug) => {
-              const file = path.join(outDir, slug, 'index.html');
-              return fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : undefined;
-            },
+            readPage: (slug) => fs.readFileSync(path.join(outDir, slug, 'index.html'), 'utf8'),
             sidebar,
           }),
           'utf8',

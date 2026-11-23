@@ -1,4 +1,3 @@
-import fs from 'node:fs';
 import path from 'node:path';
 import * as p from '@clack/prompts';
 
@@ -9,7 +8,6 @@ import { getProjectName, isValidPackageName, getPackageName } from './utils/inpu
 import { detect, resolveCommand } from 'package-manager-detector';
 import { addAgentSkills, askForAgentSkills } from './steps/skills.ts';
 import { writeAgentRules } from './steps/agents.ts';
-import { PackageJsonSchema } from './utils/types.ts';
 import {
   DEFAULT_PROJECT_TEMPLATE,
   DEFAULT_PROJECT_DIR,
@@ -80,7 +78,7 @@ export async function createProject(cwd: string, options?: CreateProjectOptions)
     '../templates',
     `template-${projectTemplate}`,
   );
-  await scaffoldProject(
+  const pkg = await scaffoldProject(
     templateDir,
     root,
     packageName,
@@ -106,9 +104,6 @@ export async function createProject(cwd: string, options?: CreateProjectOptions)
     pmInstall(pm);
   }
 
-  const pkg = PackageJsonSchema.assert(
-    JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf-8')),
-  );
   writeAgentRules(root, pm, pkg);
 
   if (nonInteractive) {

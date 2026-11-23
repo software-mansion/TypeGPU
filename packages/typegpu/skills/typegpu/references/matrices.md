@@ -81,7 +81,7 @@ function updateCamera(eye: Float32Array, target: Float32Array, up: Float32Array,
 
 - For struct schemas, `.write()` accepts a record or an `ArrayBuffer`: pass `raw.buffer`, not the `Float32Array` view (vector/matrix/array schemas accept TypedArrays directly).
 - To update one field, recompute into its array and `cameraBuffer.patch({ view })`.
-- `mat4x4f` subarrays `(0,16)`, `(16,32)`, ... align cleanly. Around `vec3f` or `mat3x3f` fields leave the WGSL padding (4 floats per `vec3f` and per `mat3x3f` column).
+- `mat4x4f` subarrays `(0,16)`, `(16,32)`, ... align cleanly. Around `vec3f` and `mat3x3f` fields follow the WGSL layout: a `vec3f` takes 3 floats but aligns to 4, so a following `f32` fills its fourth slot, and each `mat3x3f` column takes 4 floats.
 - Take byte sizes and offsets from `d.sizeOf(Schema)` and `d.memoryLayoutOf(Schema, (s) => s.field).offset` rather than hardcoding them.
 
 `buffer.arrayBuffer` is the CPU-side copy that every `.write()` serializes into before uploading. Writing into it directly and passing it back skips the serialization and the copy:

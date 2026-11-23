@@ -55,7 +55,7 @@ const skill = await Bun.file(skillPath).text();
 const stampedSkill = skill
   .replace('\n  library: typegpu\n', `\n  library: typegpu\n  library_version: '${version}'\n`)
   .replace(
-    /^This skill targets TypeGPU .*$/m,
+    /^This skill targets TypeGPU `[^`]+`\./m,
     `This copy of the skill ships with TypeGPU \`${version}\` and matches its API.`,
   );
 if (!stampedSkill.includes('library_version') || !stampedSkill.includes('ships with TypeGPU')) {

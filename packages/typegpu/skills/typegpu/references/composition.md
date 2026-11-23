@@ -174,7 +174,7 @@ function mapSource<A extends d.AnyWgslData, B extends d.AnyWgslData>(
 }
 ```
 
-A mapped source allocates nothing; the work runs in each consumer. Materialize it into a storage buffer (one compute pass writing `at(i)` for every index) when several consumers read it, and expose the buffer through the same `Source` interface (`at: (i) => { 'use gpu'; return stored.$[i]; }`). The stored adapter sees later writes to that buffer; it is not a snapshot.
+A mapped source allocates nothing; the work runs in each consumer. Materialize it into a storage buffer (one compute pass writing `at(i)` for every index) when several consumers read it, and expose the buffer through the same `Source` interface (`at: (i) => { 'use gpu'; return std.copy(stored.$[i]); }`, since a function cannot return a buffer reference). The stored adapter sees later writes to that buffer; it is not a snapshot.
 
 To transform a record without modifying the input, copy it first:
 

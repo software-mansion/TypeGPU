@@ -64,11 +64,9 @@ Intersection and sharp difference: use `std.max(d1, d2)` and `std.max(d1, -d2)` 
 The idiomatic 1-pixel AA mask from a 2D SDF in a fragment shader:
 
 ```ts
-const mask = std.smoothstep(
-  std.fwidth(uv.x),
-  0,
-  sdf.sdRoundedBox2d(uv - 0.5, d.vec2f(0.3, 0.1), 0.02),
-);
+const dist = sdf.sdRoundedBox2d(uv - 0.5, d.vec2f(0.3, 0.1), 0.02);
+const edge = std.max(std.fwidth(dist), 0.001);
+const mask = 1 - std.smoothstep(-edge, edge, dist);
 ```
 
 ## Baking SDF fields into a texture

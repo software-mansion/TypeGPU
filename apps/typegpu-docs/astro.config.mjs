@@ -282,8 +282,8 @@ const agentPreamble = `TypeGPU ${version} is a TypeScript toolkit for WebGPU. It
 In 'use gpu' functions:
 
 - Vectors, matrices, structs and arrays are references. Copy them (d.vec3f(v)) before assigning to a let, or use const.
-- Write d.f32(1) where a float is needed. Scalar a / b is always f32; use std.intdiv for integers. Shift u32 right with >>>.
-- Use std.* math, not Math.*.
+- Write d.f32(1) where a float is needed. Scalar a / b divides as floats; use std.intdiv for integers. Shift u32 right with >>>.
+- Use \`std.*\` math, not \`Math.*\`.
 - Write GPU methods as properties (step: () => { 'use gpu'; ... }), not shorthand methods.
 - Values captured from the outer scope are baked in as constants. Use uniforms for anything that changes.`;
 
@@ -341,7 +341,6 @@ export default defineConfig({
     swmGeo({
       name: 'TypeGPU',
       description: 'Type-safe WebGPU toolkit',
-      repository: 'TypeGPU',
       preamble: agentPreamble,
       sidebar,
     }),

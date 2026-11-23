@@ -9,17 +9,20 @@ const BEGIN = '<!-- BEGIN:typegpu-agent-rules -->';
 const END = '<!-- END:typegpu-agent-rules -->';
 
 function checkStep(pm: Agent, pkg: PackageJson) {
-  const scripts = ['types', 'check'].filter((name) => pkg.scripts?.[name]);
-  const commands = scripts.map((name) => resolveCommand(pm, 'run', [name]));
-  if (commands.length === 0 || commands.some((cmd) => !cmd)) {
+  const commands = ['types', 'check']
+    .filter((name) => pkg.scripts?.[name])
+    .map((name) => resolveCommand(pm, 'run', [name]))
+    .filter((cmd) => cmd !== null);
+  if (commands.length === 0) {
     return 'After editing, run the type check and the linter (eslint-plugin-typegpu).';
   }
-  const formatted = commands.map((cmd) => `\`${cmd?.command} ${cmd?.args.join(' ')}\``);
+  const formatted = commands.map((cmd) => `\`${cmd.command} ${cmd.args.join(' ')}\``);
   return `After editing, run ${formatted.join(' and ')}.`;
 }
 
 function rulesBlock(pm: Agent, pkg: PackageJson) {
   return `${BEGIN}
+
 # TypeGPU
 
 This project uses TypeGPU. Its API is newer than most models' training data.
@@ -28,16 +31,18 @@ and the references it names. They match the installed version, and the .d.ts fil
 node_modules/typegpu are the exact API.
 
 In 'use gpu' functions:
+
 - Vectors, matrices, structs and arrays are references. Copy them (d.vec3f(v)) before
   assigning to a let, or use const.
-- Write d.f32(1) where a float is needed. Scalar a / b is always f32; use std.intdiv
-  for integers. Shift u32 right with >>>.
-- Use std.* math, not Math.*.
+- Write d.f32(1) where a float is needed. Scalar a / b divides as floats; use
+  std.intdiv for integers. Shift u32 right with >>>.
+- Use \`std.*\` math, not \`Math.*\`.
 - Write GPU methods as properties (step: () => { 'use gpu'; ... }), not shorthand methods.
 - Values captured from the outer scope are baked in as constants. Use uniforms for
   anything that changes.
 
 ${checkStep(pm, pkg)}
+
 ${END}`;
 }
 

@@ -10,6 +10,7 @@ import { cancelExit, confirmStep, failAndExit, rgbText } from './utils/prompts.t
 import { askForWebgpuTypes, setupWebgpuTypes } from './steps/webgpu-types.ts';
 import { addTypegpuPkgs, askForPkgs, ensureTypegpu, setupTypegpu } from './steps/typegpu.ts';
 import { askForVite, setupVite } from './steps/vite.ts';
+import { hasDependency } from './utils/pkg.ts';
 import { addAgentSkills, askForAgentSkills } from './steps/skills.ts';
 import { askForAgentRules, writeAgentRules } from './steps/agents.ts';
 import type { EnhanceProjectOptions } from './options.ts';
@@ -28,11 +29,10 @@ async function runViteFlow(
   if (options?.addons.length) {
     setupTypegpu(pm, pkg);
     addTypegpuPkgs(pm, pkg, options.addons);
-  } else {
-    if (!(await ensureTypegpu(pm, pkg))) {
-      return;
-    }
+  } else if (await ensureTypegpu(pm, pkg)) {
     await askForPkgs(pm, pkg);
+  } else if (!hasDependency(pkg, 'typegpu')) {
+    return;
   }
 
   await askForAgentRules(cwd, pm, pkg);
