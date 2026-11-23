@@ -18,6 +18,10 @@ TypeGPU offers two ways to employ timestamp queries:
 1. **High-level API** via the pipeline’s `.withPerformanceCallback()` method
 2. **Low-level API** using a `TgpuQuerySet`, which you can attach to a TypeGPU pipeline or a raw WebGPU command encoder
 
+:::tip
+To time every pass in a frame, TypeGPU Kit's [profiler](https://docs.swmansion.com/typegpu-kit/kit/profiler/) keeps one query set for all your passes and reads the timings back without stalling.
+:::
+
 ## Performance callbacks
 
 Rather than managing query sets yourself, you can measure shader dispatch times easily by chaining `.withPerformanceCallback()` onto a compute or render pipeline:

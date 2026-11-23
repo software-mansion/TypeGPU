@@ -1,0 +1,400 @@
+---
+// A link to TypeGPU Kit in Kit's own look: its dark grounds and blues, its pixel lockup, and light
+// printed through Bayer cells (see ./dither.ts). It stays dark in both themes, as Kit's site does.
+import KitLogo from './typegpu-kit-logo.svg';
+import { KIT_COMMAND, KIT_URL } from './links';
+
+interface Props {
+  /** `bar` is one line, for the top of a page. `card` is a block, for the flow of a page. */
+  variant?: 'bar' | 'card';
+  /** Where the link goes. */
+  href?: string;
+  /** The link's text. */
+  linkLabel?: string;
+  /** When set, the promo can be dismissed, and stays dismissed under this key. */
+  dismissKey?: string | undefined;
+  class?: string;
+}
+
+const {
+  variant = 'card',
+  href = KIT_URL,
+  linkLabel = variant === 'card' ? 'Get started' : 'Explore Kit',
+  dismissKey,
+  class: className,
+} = Astro.props;
+
+const storageKey =
+  dismissKey && `typegpu-docs.kit-promo.${dismissKey}.dismissed`;
+---
+
+<aside
+  class:list={['kit-promo', `kit-promo--${variant}`, 'not-content', className]}
+  aria-label="TypeGPU Kit"
+  data-kit-promo={storageKey}
+  data-pagefind-ignore
+>
+  <canvas
+    class="kit-promo__light"
+    data-kit-dither={variant === 'card' ? 'horizon' : 'band'}
+    data-kit-dither-cell={variant === 'card' ? 3 : 2}
+    aria-hidden="true"></canvas>
+
+  <a class="kit-promo__mark" href={KIT_URL} aria-label="TypeGPU Kit">
+    <KitLogo aria-hidden="true" />
+  </a>
+
+  <div class="kit-promo__words">
+    {
+      variant === 'card' && (
+        <p class="kit-promo__eyebrow">New from the TypeGPU team</p>
+      )
+    }
+    <p class="kit-promo__message">
+      <slot>
+        {
+          variant === 'card' ? (
+            <>
+              Building blocks for TypeGPU. Cameras, lighting, post-processing,
+              particles, text and more, interchangeable by design. Use what you
+              want and fill the gaps with your own code.
+            </>
+          ) : (
+            <>
+              <strong>TypeGPU Kit is out.</strong> Cameras, lighting,
+              post-processing and more, ready to drop into your TypeGPU code.
+            </>
+          )
+        }
+      </slot>
+    </p>
+  </div>
+
+  <div class="kit-promo__actions">
+    <button
+      type="button"
+      class="kit-promo__command"
+      data-kit-copy={KIT_COMMAND}
+      aria-label={`Copy "${KIT_COMMAND}"`}
+    >
+      <span class="kit-promo__prompt" aria-hidden="true">$</span>
+      <code>{KIT_COMMAND}</code>
+      <span class="kit-promo__copied" aria-live="polite"></span>
+    </button>
+    <a class="kit-promo__link" href={href}>
+      {linkLabel}
+      <span aria-hidden="true">→</span>
+    </a>
+  </div>
+
+  {
+    storageKey && (
+      <button
+        type="button"
+        class="kit-promo__dismiss"
+        data-kit-dismiss
+        aria-label="Dismiss"
+      >
+        <svg viewBox="0 0 10 10" width="10" height="10" aria-hidden="true">
+          <path
+            d="M1 1l8 8M9 1l-8 8"
+            stroke="currentColor"
+            stroke-width="1.5"
+          />
+        </svg>
+      </button>
+    )
+  }
+</aside>
+
+<script is:inline define:vars={{ storageKey: storageKey ?? '' }}>
+  // Hide a dismissed promo before it paints
+  try {
+    if (storageKey && localStorage.getItem(storageKey)) {
+      for (const el of document.querySelectorAll(
+        `[data-kit-promo="${storageKey}"]`,
+      )) {
+        el.hidden = true;
+      }
+    }
+  } catch {}
+</script>
+
+<script>
+  import { mountDithers } from './dither';
+
+  function init() {
+    mountDithers();
+
+    for (const button of document.querySelectorAll<HTMLButtonElement>(
+      '[data-kit-copy]',
+    )) {
+      if (button.dataset.kitCopyBound) continue;
+      button.dataset.kitCopyBound = '';
+      const status = button.querySelector<HTMLElement>('.kit-promo__copied');
+      button.addEventListener('click', async () => {
+        try {
+          await navigator.clipboard.writeText(button.dataset.kitCopy ?? '');
+          if (status) status.textContent = 'Copied';
+        } catch {
+          if (status) status.textContent = 'Copy failed';
+        }
+        setTimeout(() => {
+          if (status) status.textContent = '';
+        }, 1600);
+      });
+    }
+
+    for (const button of document.querySelectorAll<HTMLButtonElement>(
+      '[data-kit-dismiss]',
+    )) {
+      if (button.dataset.kitDismissBound) continue;
+      button.dataset.kitDismissBound = '';
+      button.addEventListener('click', () => {
+        const promo = button.closest<HTMLElement>('[data-kit-promo]');
+        if (!promo) return;
+        promo.hidden = true;
+        try {
+          localStorage.setItem(promo.dataset.kitPromo ?? '', '1');
+        } catch {}
+      });
+    }
+  }
+
+  init();
+  // Starlight pages navigate with Astro's client router, which swaps the page without reloading it
+  document.addEventListener('astro:page-load', init);
+</script>
+
+<style>
+  .kit-promo {
+    /* TypeGPU Kit's design tokens */
+    --kit-ground: #0a0d12;
+    --kit-ground-3: #14181f;
+    --kit-rule: #1f242d;
+    --kit-rule-strong: #313844;
+    --kit-text: #e9ecf2;
+    --kit-text-2: #c1c7d2;
+    --kit-muted: #929baa;
+    --kit-accent: #4d79ff;
+    --kit-accent-high: #dbf0ff;
+    --kit-link: #94b0ff;
+    --kit-mono:
+      'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+
+    position: relative;
+    isolation: isolate;
+    box-sizing: border-box;
+    overflow: hidden;
+    border: 1px solid var(--kit-rule);
+    border-radius: 0;
+    background: var(--kit-ground);
+    color: var(--kit-text-2);
+    color-scheme: dark;
+  }
+
+  .kit-promo[hidden] {
+    display: none;
+  }
+
+  .kit-promo p {
+    margin: 0;
+  }
+
+  .kit-promo__light {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    width: 100%;
+    height: 100%;
+    image-rendering: pixelated;
+    pointer-events: none;
+  }
+
+  .kit-promo__mark {
+    display: block;
+    flex: none;
+    line-height: 0;
+  }
+
+  .kit-promo__mark :global(svg) {
+    display: block;
+    width: auto;
+  }
+
+  .kit-promo__eyebrow {
+    color: var(--kit-muted);
+    font: 500 11px/16px var(--kit-mono);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .kit-promo__message :global(strong) {
+    color: var(--kit-text);
+    font-weight: 600;
+  }
+
+  .kit-promo__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 16px;
+  }
+
+  .kit-promo__command {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    padding: 6px 12px;
+    border: 1px solid var(--kit-rule-strong);
+    border-radius: 0;
+    background: color-mix(in srgb, var(--kit-ground) 80%, transparent);
+    color: var(--kit-text);
+    font: 400 13px/20px var(--kit-mono);
+    cursor: copy;
+    transition: border-color 0.12s;
+  }
+
+  .kit-promo__command:hover {
+    border-color: var(--kit-accent);
+  }
+
+  .kit-promo__command code {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    white-space: nowrap;
+  }
+
+  .kit-promo__prompt {
+    color: var(--kit-accent);
+  }
+
+  .kit-promo__copied {
+    position: absolute;
+    right: 8px;
+    color: var(--kit-accent-high);
+    font-size: 11px;
+    background: var(--kit-ground);
+  }
+
+  .kit-promo__copied:empty {
+    display: none;
+  }
+
+  .kit-promo__link {
+    display: inline-flex;
+    gap: 6px;
+    color: var(--kit-link);
+    font: 500 13px/20px var(--kit-mono);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .kit-promo__link:hover {
+    color: var(--kit-accent-high);
+  }
+
+  .kit-promo :focus-visible {
+    outline: 2px solid var(--kit-accent);
+    outline-offset: 2px;
+  }
+
+  .kit-promo__dismiss {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 28px;
+    height: 28px;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--kit-muted);
+    cursor: pointer;
+  }
+
+  .kit-promo__dismiss:hover {
+    color: var(--kit-text);
+  }
+
+  /* One line across the top of a page */
+  .kit-promo--bar {
+    display: flex;
+    align-items: center;
+    gap: 12px 20px;
+    padding: 10px 12px 10px 20px;
+    font-size: 14px;
+    line-height: 20px;
+  }
+
+  .kit-promo--bar .kit-promo__mark :global(svg) {
+    height: 22px;
+  }
+
+  .kit-promo--bar .kit-promo__words {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .kit-promo--bar .kit-promo__actions {
+    flex: none;
+  }
+
+  @media (max-width: 50rem) {
+    .kit-promo--bar {
+      flex-wrap: wrap;
+      padding: 12px 8px 12px 16px;
+    }
+
+    .kit-promo--bar .kit-promo__words {
+      flex-basis: calc(100% - 140px);
+    }
+
+    .kit-promo--bar .kit-promo__actions {
+      order: 3;
+      flex-basis: 100%;
+    }
+  }
+
+  /* A block in the flow of a page */
+  .kit-promo--card {
+    display: grid;
+    gap: 16px;
+    padding: 28px 28px 32px;
+    font-size: 16px;
+    line-height: 1.5;
+  }
+
+  .kit-promo--card .kit-promo__mark :global(svg) {
+    height: 31px;
+  }
+
+  .kit-promo--card .kit-promo__words {
+    display: grid;
+    gap: 6px;
+    max-width: 38rem;
+  }
+
+  .kit-promo--card .kit-promo__message {
+    color: var(--kit-text-2);
+  }
+
+  .kit-promo--card .kit-promo__actions {
+    margin-top: 8px;
+  }
+
+  @media (min-width: 50rem) {
+    .kit-promo--card {
+      padding: 36px 40px 48px;
+    }
+
+    .kit-promo--card .kit-promo__mark :global(svg) {
+      height: 46px;
+    }
+  }
+</style>

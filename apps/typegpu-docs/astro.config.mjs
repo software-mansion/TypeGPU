@@ -180,6 +180,11 @@ const sidebar = stripFalsy([
     label: 'Ecosystem',
     items: stripFalsy([
       {
+        label: 'TypeGPU Kit',
+        slug: 'ecosystem/typegpu-kit',
+        badge: { text: 'new' },
+      },
+      {
         label: '@typegpu/noise',
         slug: 'ecosystem/typegpu-noise',
       },
@@ -424,6 +429,7 @@ export default defineConfig({
       components: {
         Footer: './src/components/starlight/Footer.astro',
         Head: './src/components/starlight/Head.astro',
+        Banner: './src/components/starlight/Banner.astro',
         Header: './src/components/starlight/SiteHeader.astro',
         MobileMenuToggle: './src/components/starlight/MobileMenuToggle.astro',
         Sidebar: './src/components/starlight/Sidebar.astro',
