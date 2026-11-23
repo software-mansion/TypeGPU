@@ -197,8 +197,11 @@ const storageKey =
     display: none;
   }
 
+  /* Pages on PageLayout size every paragraph globally; the promo keeps its own type */
   .kit-promo p {
     margin: 0;
+    font-size: inherit;
+    line-height: inherit;
   }
 
   .kit-promo__light {
@@ -222,7 +225,7 @@ const storageKey =
     width: auto;
   }
 
-  .kit-promo__eyebrow {
+  .kit-promo .kit-promo__eyebrow {
     color: var(--kit-muted);
     font: 500 11px/16px var(--kit-mono);
     letter-spacing: 0.06em;
