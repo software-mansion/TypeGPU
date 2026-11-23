@@ -14,7 +14,11 @@ import { originalPositionFor, TraceMap, type EncodedSourceMap } from '@jridgewel
 import type { SourceMap } from 'rollup';
 
 export interface Options {
-  /** @default [/\.m?[jt]sx?$/] */
+  /**
+   * The Node.js and Deno hooks (`unplugin-typegpu/node`) default to `/\.[cm]?[jt]sx?$/` instead.
+   *
+   * @default /\.m?[jt]sx?(?:\?.*)?$/
+   */
   include?: FilterPattern | undefined;
 
   /** @default undefined */
@@ -32,6 +36,7 @@ export interface Options {
   /**
    * Obfuscate the generated AST.
    * This results in obfuscation of the generated WGSL, and in smaller bundle sizes.
+   * Requires `autoNamingEnabled: false`.
    *
    * @default false
    */
