@@ -207,8 +207,8 @@ function stringifyExpression(node: tinyest.Expression): string {
 
     let result = '`';
     quasis.forEach((quasi, i) => {
-      result += quasi;
-      if (i < expressions.length && expressions[i]) {
+      result += JSON.stringify(quasi).slice(1, -1).replaceAll('`', '\\`').replaceAll('${', '\\${');
+      if (i < expressions.length && expressions[i] !== undefined) {
         const expression = expressions[i];
         result += '${' + stringifyExpression(expression) + '}';
       }

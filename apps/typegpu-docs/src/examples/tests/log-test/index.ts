@@ -310,13 +310,31 @@ export const controls = defineControls({
         .dispatchThreads();
     },
   },
+  'Template literals with consecutive interpolations': {
+    onButtonClick: () => {
+      const helper = (n: number) => {
+        'use gpu';
+        return n;
+      };
+
+      return root
+        .createGuardedComputePipeline(() => {
+          'use gpu';
+          console.log(
+            // eslint-disable-next-line @typescript-eslint/no-unnecessary-template-expression
+            `Log with template literal: ${helper(1 + 2)}${helper(3 + 4)}${helper(5 + 6)}${'last'}`,
+          );
+        })
+        .dispatchThreads();
+    },
+  },
   'Template literals with complex content': {
     onButtonClick: () =>
       root
         .createGuardedComputePipeline(() => {
           'use gpu';
           console.log(
-            `Log with template literal: \`first\` \n new line \n another line with slash: \\`,
+            `Log with template literal \`and backticks\` \nNew line \nAnother line with a slash: \\`,
           );
         })
         .dispatchThreads(),

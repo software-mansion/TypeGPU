@@ -11,6 +11,7 @@ describe('noUnsupportedSyntax', () => {
       "const cls = new (class { #priv = 1; fn = () => { 'use gpu'; const a = this.#priv; } } )()",
       "const fn = () => { 'use gpu'; switch (x) { case 1: break; } }",
       "const fn = () => { 'use gpu'; const obj = { [key]: 1 }; }",
+      "const fn = () => { 'use gpu'; const x = `hello`; }",
     ],
     invalid: [
       {
