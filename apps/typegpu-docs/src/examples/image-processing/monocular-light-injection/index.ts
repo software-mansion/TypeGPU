@@ -259,7 +259,7 @@ async function initialize(): Promise<void> {
     }
     root = nextRoot;
     chooser = new SourceChooser(
-      nextRoot.device.features.has('shader-f16'),
+      nextRoot.enabledFeatures.has('shader-f16'),
       start,
       listenerController.signal,
     );

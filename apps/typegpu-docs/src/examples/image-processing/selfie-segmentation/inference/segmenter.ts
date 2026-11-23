@@ -1,5 +1,5 @@
 import { d } from 'typegpu';
-import type { TgpuRoot } from 'typegpu';
+import type { TgpuComputePass, TgpuRoot } from 'typegpu';
 import type { VideoFrameCrop } from '../frame.ts';
 import {
   type KernelHandle,
@@ -48,7 +48,7 @@ export class SelfieSegmenterInference {
   }
 
   encodeVideoFrame(
-    pass: GPUComputePassEncoder,
+    pass: TgpuComputePass,
     externalTexture: GPUExternalTexture,
     crop: VideoFrameCrop,
   ): void {
