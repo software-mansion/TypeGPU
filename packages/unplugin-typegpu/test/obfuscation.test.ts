@@ -470,7 +470,7 @@ describe('plugin obfuscation', () => {
     test('[ROLLUP]', async () => {
       expect(() =>
         rollupPlugin({
-          ...defaultOptions,
+          ...common.defaultOptions,
           autoNamingEnabled: false,
           unstable_obfuscate: true,
           unstable_sourceMaps: true,
