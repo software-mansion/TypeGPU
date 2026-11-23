@@ -9,18 +9,18 @@ import KitPromo from '../../components/kit/KitPromo.astro';
 
 <PageLayout title="Examples | TypeGPU">
   <SiteHeader />
-  <div class="kit-strip">
-    <KitPromo
-      variant="bar"
-      dismissKey="examples-strip"
-      href="https://docs.swmansion.com/typegpu-kit/examples/"
-      linkLabel="See Kit examples"
-    >
-      <strong>Building something bigger?</strong> TypeGPU Kit gives you cameras, lighting,
-      post-processing and more, ready to drop in.
-    </KitPromo>
-  </div>
   <ExampleLayout client:load>
+    <div class="kit-strip mx-auto box-border w-full max-w-5xl pb-4 md:px-8">
+      <KitPromo
+        variant="bar"
+        dismissKey="examples-strip"
+        href="https://docs.swmansion.com/typegpu-kit/examples/"
+        linkLabel="See Kit examples"
+      >
+        <strong>Building something bigger?</strong> TypeGPU Kit gives you cameras,
+        lighting, post-processing and more, ready to drop in.
+      </KitPromo>
+    </div>
     <ExamplePage client:only="react">
       <ExamplePageSkeleton slot="fallback" />
     </ExamplePage>
@@ -39,12 +39,8 @@ import KitPromo from '../../components/kit/KitPromo.astro';
   }
 
   :root[data-examples-fullscreen] [data-site-header],
-  :root[data-examples-fullscreen] .kit-strip {
+  :root[data-examples-fullscreen] .kit-strip,
+  .kit-strip:has(> [hidden]) {
     display: none;
-  }
-
-  .kit-strip .kit-promo {
-    border-inline: 0;
-    border-top: 0;
   }
 </style>

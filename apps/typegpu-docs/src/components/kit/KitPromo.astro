@@ -322,14 +322,20 @@ const storageKey =
     color: var(--kit-text);
   }
 
-  /* One line across the top of a page */
+  /* One line where it fits, wrapping by its own width rather than the viewport's, so it suits a
+     full-width bar and a narrower column alike */
   .kit-promo--bar {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 12px 20px;
-    padding: 10px 12px 10px 20px;
+    gap: 10px 20px;
+    padding: 10px 20px;
     font-size: 14px;
     line-height: 20px;
+  }
+
+  .kit-promo--bar[data-kit-promo] {
+    padding-right: 48px;
   }
 
   .kit-promo--bar .kit-promo__mark :global(svg) {
@@ -337,28 +343,18 @@ const storageKey =
   }
 
   .kit-promo--bar .kit-promo__words {
-    flex: 1;
+    flex: 1 1 16rem;
     min-width: 0;
   }
 
   .kit-promo--bar .kit-promo__actions {
-    flex: none;
+    flex: 0 0 auto;
   }
 
-  @media (max-width: 50rem) {
-    .kit-promo--bar {
-      flex-wrap: wrap;
-      padding: 12px 8px 12px 16px;
-    }
-
-    .kit-promo--bar .kit-promo__words {
-      flex-basis: calc(100% - 140px);
-    }
-
-    .kit-promo--bar .kit-promo__actions {
-      order: 3;
-      flex-basis: 100%;
-    }
+  .kit-promo--bar .kit-promo__dismiss {
+    position: absolute;
+    top: 10px;
+    right: 10px;
   }
 
   /* A block in the flow of a page */
