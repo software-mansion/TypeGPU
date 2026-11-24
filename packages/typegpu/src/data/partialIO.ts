@@ -1,12 +1,12 @@
 import { BufferWriter, getSystemEndianness } from 'typed-binary';
 import { getCompiledWriter } from './compiledIO.ts';
 import { writeData } from './dataIO.ts';
-import { isDisarray, isUnstruct } from './dataTypes.ts';
+import { isDisarray, isLooseDecorated, isUnstruct } from './dataTypes.ts';
 import { offsetsForProps } from './offsets.ts';
 import { sizeOf } from './sizeOf.ts';
 import { strideOf } from './schemaMemoryLayout.ts';
 import type * as wgsl from './wgslTypes.ts';
-import { isWgslArray, isWgslStruct, type BaseData } from './wgslTypes.ts';
+import { isDecorated, isWgslArray, isWgslStruct, type BaseData } from './wgslTypes.ts';
 import type { InferPatch } from '../shared/repr.ts';
 
 export interface WriteInstruction {
@@ -22,6 +22,10 @@ export interface WriteInstruction {
 export function convertPartialToPatch(schema: wgsl.BaseData, data: unknown): unknown {
   if (data === undefined || data === null) {
     return data;
+  }
+
+  if (isDecorated(schema) || isLooseDecorated(schema)) {
+    return convertPartialToPatch(schema.inner, data);
   }
 
   if (isWgslStruct(schema) || isUnstruct(schema)) {
