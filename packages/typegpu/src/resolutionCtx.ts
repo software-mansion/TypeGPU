@@ -935,7 +935,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
       setName(item, name);
       return callback();
     } finally {
-      if (oldName) {
+      if (oldName !== undefined) {
         setName(item, oldName);
       } else {
         clearName(item);
