@@ -2,7 +2,7 @@ import * as tinyest from 'tinyest';
 import { stitch } from '../core/resolve/stitch.ts';
 import { arrayOf } from '../data/array.ts';
 import { type AnyData, UnknownData, unptr } from '../data/dataTypes.ts';
-import { bool, i32, u32 } from '../data/numeric.ts';
+import { abstractInt, bool, i32, u32 } from '../data/numeric.ts';
 import { vec2u, vec3u, vec4u } from '../data/vector.ts';
 import {
   fallthroughCopyOrigin,
@@ -1300,6 +1300,23 @@ The generated shader will evaluate them in declaration order.`,
 
     if (bitShiftOps.includes(op)) {
       const lhsDataType = lhsExpr.dataType;
+
+      // Shifting a comptime-known abstract integer by a comptime-known amount
+      // is folded with JS semantics, the same way `+`, `-`, `*` and `/` are.
+      if (exprType === NODE.binaryExpr && lhsDataType.type === 'abstractInt') {
+        const knownShiftLhs = asComptime(lhsExpr)?.value;
+        const knownShiftRhs = asComptime(rhsExpr)?.value;
+        if (typeof knownShiftLhs === 'number' && typeof knownShiftRhs === 'number') {
+          const folded =
+            op === '<<'
+              ? knownShiftLhs << knownShiftRhs
+              : op === '>>'
+                ? knownShiftLhs >> knownShiftRhs
+                : knownShiftLhs >>> knownShiftRhs;
+          return snip(folded, abstractInt, /* origin */ 'constant', false);
+        }
+      }
+
       if (!wgsl.isInteger(lhsDataType) && !wgsl.isIntegerVec(lhsDataType)) {
         throw new WgslTypeError(
           `Expression: ${stringifyNode(expression)}\nLeft-hand side of '${op}' must be an integer or vector of integers.\nGot ${this.ctx.resolve(lhsDataType).value}.`,
