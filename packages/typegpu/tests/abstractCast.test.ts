@@ -214,4 +214,23 @@ describe('abstract numeric casts', () => {
 
     expect(consoleWarnSpy.mock.calls).toHaveLength(0);
   });
+
+  it('should not warn when converting non-foldable abstract int expressions', () => {
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const TEXELS = 16;
+
+    const fn = tgpu.fn([d.i32, d.u32])((a, b) => {
+      'use gpu';
+      const _x = a >= (TEXELS & 3);
+      const _y = b >= TEXELS % 3;
+    });
+
+    expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      "fn fn_1(a: i32, b: u32) {
+        let _x = (a >= (16 & 3));
+        let _y = (b >= (16 % 3));
+      }"
+    `);
+    expect(consoleWarnSpy).not.toHaveBeenCalled();
+  });
 });
