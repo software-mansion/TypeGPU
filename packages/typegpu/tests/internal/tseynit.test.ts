@@ -550,6 +550,7 @@ describe('ast to JS transformation', () => {
       ];
 
       expect(stringifyNode(pattern)).toBe('{ x, nested: { a: b } }');
+      expect(stringifyNode([N.objectPattern, []])).toBe('{}');
     });
   });
 });

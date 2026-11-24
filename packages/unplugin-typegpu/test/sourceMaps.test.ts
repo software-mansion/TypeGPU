@@ -14,7 +14,7 @@ import {
 } from './transform.ts';
 import { getEmbeddedTypegpuMetadata } from '../src/core/embeddedMetadata.ts';
 import type { MetadatableFunction } from '../src/core/common.ts';
-import { embedSourceMap } from 'tinyest';
+import { embedSourceMap, stripSourceMap } from 'tinyest';
 import { transpileBabelFn } from 'tinyest-for-wgsl';
 
 // Both plugins inject a `console.log()` in the first line.
@@ -168,10 +168,7 @@ describe('source maps', () => {
           v: 2,
           name: "fn",
           ast: {
-            params: [{
-              type: "i",
-              name: "argument"
-            }],
+            params: ["argument"],
             body: [-1, 5, 38, [0, [[-1, 7, 8, [13, [-1, 7, 14, [9, "variable"]], [-1, 7, 25, [5, "3"]]]], [-1, 8, 8, [10, [-1, 8, 15, [1, [-1, 8, 15, [1, [-1, 8, 15, [9, "external.n"]], "+", [-1, 8, 28, [9, "argument"]]]], "+", [-1, 8, 39, [9, "variable"]]]]]]]]]
           },
           externals: {
@@ -199,7 +196,7 @@ describe('source maps', () => {
               }), {
             v: 2,
             name: "fn",
-            ast: {"params":[{"type":"i","name":"argument"}],"body":[-1,5,38,[0,[[-1,7,8,[13,[-1,7,14,[9,"variable"]],[-1,7,25,[5,"3"]]]],[-1,8,8,[10,[-1,8,15,[1,[-1,8,15,[1,[-1,8,15,[9,"external.n"]],"+",[-1,8,28,[9,"argument"]]]],"+",[-1,8,39,[9,"variable"]]]]]]]]]},
+            ast: {"params":["argument"],"body":[-1,5,38,[0,[[-1,7,8,[13,[-1,7,14,[9,"variable"]],[-1,7,25,[5,"3"]]]],[-1,8,8,[10,[-1,8,15,[1,[-1,8,15,[1,[-1,8,15,[9,"external.n"]],"+",[-1,8,28,[9,"argument"]]]],"+",[-1,8,39,[9,"variable"]]]]]]]]]},
             externals: {"external.n":() => external.n}
           }) && $.f)({}));
 
@@ -237,6 +234,69 @@ describe('source maps', () => {
       expect(JSON.stringify(body)).toMatchInlineSnapshot(
         `"[-1,1,30,[0,[[-1,3,8,[13,[-1,3,14,[9,"a"]],[-1,3,18,[5,"1"]]]],[-1,4,8,[13,[-1,4,14,[9,"b"]],[-1,4,18,[107,true]]]],[-1,5,8,[13,[-1,5,14,[9,"c"]],[-1,5,18,[104,{"p":[-1,5,23,[5,"1"]],"q":[-1,5,29,[5,"1"]]}]]]]]]]"`,
       );
+    });
+  });
+
+  describe('assigns source maps for object destructuring', () => {
+    const code = `\
+      export const fn = ({ x }) => {
+        'use gpu';
+        const { a, b: renamed } = x;
+        return a + renamed;
+      };`;
+
+    test('[BABEL]', () => {
+      const transformed = babelTransform(code, { unstable_sourceMaps: true });
+      const body = extractEmbeddedBody(transformed);
+      const [stripped, sourceMap] = stripSourceMap(body as Parameters<typeof stripSourceMap>[0]);
+
+      expect(countMapped(transformed)).toBe(10);
+      expect(sourceMap.size).toBe(10);
+      expect(stripped).toStrictEqual([
+        0,
+        [
+          [
+            13,
+            [
+              108,
+              [
+                ['a', [9, 'a']],
+                ['b', [9, 'renamed']],
+              ],
+            ],
+            [9, 'x'],
+          ],
+          [10, [1, [9, 'a'], '+', [9, 'renamed']]],
+        ],
+      ]);
+      expectSourceMapsToMatch(code, transformed);
+    });
+
+    test('[ROLLUP]', async () => {
+      const transformed = await rollupTransform(code, { unstable_sourceMaps: true });
+      const body = extractEmbeddedBody(transformed);
+      const [stripped, sourceMap] = stripSourceMap(body as Parameters<typeof stripSourceMap>[0]);
+
+      expect(countMapped(transformed)).toBe(10);
+      expect(sourceMap.size).toBe(10);
+      expect(stripped).toStrictEqual([
+        0,
+        [
+          [
+            13,
+            [
+              108,
+              [
+                ['a', [9, 'a']],
+                ['b', [9, 'renamed']],
+              ],
+            ],
+            [9, 'x'],
+          ],
+          [10, [1, [9, 'a'], '+', [9, 'renamed']]],
+        ],
+      ]);
+      expectSourceMapsToMatch(code, transformed);
     });
   });
 

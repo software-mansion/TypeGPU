@@ -3063,19 +3063,17 @@ describe('WgslGenerator', () => {
       `);
     });
 
-    it('reads an external comptime object getter once per declaration', () => {
+    it('evaluates a comptime object source once per declaration', () => {
       let reads = 0;
-      const source = {
-        get value() {
-          reads++;
-          return { x: reads, y: reads };
-        },
-      };
+      const getValue = tgpu.comptime(() => {
+        reads++;
+        return { x: reads, y: reads };
+      });
 
       const fn = () => {
         'use gpu';
-        const { x, y } = source.value;
-        const { x: a, y: b } = source.value;
+        const { x, y } = getValue();
+        const { x: a, y: b } = getValue();
         return x + y + a + b;
       };
 

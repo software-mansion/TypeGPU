@@ -19,6 +19,10 @@ function stringifyBindingElement(binding: tinyest.BindingElement): string {
     return stringifyExpression(binding);
   }
 
+  if (binding[1].length === 0) {
+    return '{}';
+  }
+
   const props = binding[1].map(([name, element]) => {
     const str = stringifyBindingElement(element);
     return !tinyest.isObjectPattern(element) && name === str ? name : `${name}: ${str}`;

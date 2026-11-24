@@ -1040,7 +1040,8 @@ export class GlslGenerator extends WgslGenerator {
 
     // The aliased memory can change over time, so copying would alter the semantics.
     const hoisted: string[] = [];
-    const aliased = this._expression(this.#hoistIndexAccesses(eqNode, hoisted));
+    const hoistedNode = this.#hoistIndexAccesses(eqNode, hoisted);
+    const aliased = hoisted.length > 0 ? this._expression(hoistedNode) : eq;
 
     this.ctx.defineVariable(
       rawId,

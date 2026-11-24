@@ -200,6 +200,42 @@ describe('handle aliases', () => {
     `);
   });
 
+  it('aliases texture and sampler handles destructured from a bind group layout', () => {
+    function foo(uv: d.v2f) {
+      'use gpu';
+      const { uTexture: tex, uSampler: smp } = layout.$;
+      return std.textureSample(tex, smp, uv);
+    }
+
+    expect(tgpu.resolve([tgpu.fn([d.vec2f], d.vec4f)(foo)])).toMatchInlineSnapshot(`
+      "@group(0) @binding(0) var uTexture: texture_2d<f32>;
+
+      @group(0) @binding(1) var uSampler: sampler;
+
+      fn foo(uv: vec2f) -> vec4f {
+        return textureSample(uTexture, uSampler, uv);
+      }"
+    `);
+  });
+
+  it('rejects destructuring a handle into a let declaration', () => {
+    function foo() {
+      'use gpu';
+      let { uTexture: tex } = layout.$;
+      return std.textureLoad(tex, d.vec2i(0, 0), 0);
+    }
+
+    expect(() => tgpu.resolve([foo])).toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:foo
+      - fn*:foo(): 'let tex = layout.$.uTexture' is invalid, because textures and samplers cannot be assigned to 'let' variable declarations.
+      -----
+      - Try 'const tex = layout.$.uTexture' instead.
+      -----]
+    `);
+  });
+
   it('disallows textures in ternary', () => {
     function expensive() {
       'use gpu';

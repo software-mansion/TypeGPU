@@ -1486,6 +1486,40 @@ describe('GlslGenerator - object destructuring', () => {
     `);
   });
 
+  it('evaluates an external getter returning stored memory once when destructuring non-ephemeral fields', () => {
+    const Particle = d.struct({ pos: d.vec2i, vel: d.vec2i });
+    const particles = tgpu.privateVar(d.arrayOf(Particle, 2));
+    let reads = 0;
+    const view = {
+      get particles() {
+        reads++;
+        return particles.$;
+      },
+    };
+
+    const fn = () => {
+      'use gpu';
+      const { pos, vel } = view.particles[0]!;
+      pos.x += vel.x;
+      return pos.x;
+    };
+
+    expect(tgpu.resolve([fn], glOptions())).toMatchInlineSnapshot(`
+      "struct Particle {
+        ivec2 pos;
+        ivec2 vel;
+      };
+
+      Particle particles[2];
+
+      int fn_1() {
+        particles[0].pos.x += particles[0].vel.x;
+        return particles[0].pos.x;
+      }"
+    `);
+    expect(reads).toBe(1);
+  });
+
   it('hoists side-effecting index once when destructuring a d.ref', () => {
     const points = tgpu.privateVar(d.arrayOf(d.vec2i, 2));
     const calls = tgpu.privateVar(d.u32);

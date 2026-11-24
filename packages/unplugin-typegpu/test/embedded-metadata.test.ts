@@ -745,10 +745,7 @@ describe('getEmbeddedTypegpuMetadata', () => {
       expect(embedded?.v).toBe(2);
       // shelled functions are named by their shell at runtime, so the metadata name stays undefined
       expect(embedded?.name).toBeUndefined();
-      expect(embedded?.function?.ast.params).toStrictEqual([
-        { type: 'i', name: 'a' },
-        { type: 'i', name: 'b' },
-      ]);
+      expect(embedded?.function?.ast.params).toStrictEqual(['a', 'b']);
       expect(embedded?.function?.ast.body).toStrictEqual([
         0,
         [[10, [1, [1, 'a', '+', 'b'], '+', 'c']]],
