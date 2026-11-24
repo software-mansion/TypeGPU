@@ -21,15 +21,16 @@ const rgb = (hex: string): Rgb => [
 ];
 
 /**
- * Kit's ramp from its raised grounds through the rules to the accent at its brightest, with a clear
- * step below them. The hex values are Kit's design tokens (`--ground-2` … `--accent-high`).
+ * Kit's ramp from its raised grounds to the accent at its brightest, with a clear step below them.
+ * The hex values are Kit's design tokens (`--ground-2` … `--accent-high`), except the gray step,
+ * which is the docs' dark page background so the light fades into the page.
  */
 const RAMP: readonly (Rgb | null)[] = [
   null,
   rgb('#0e1118'),
   rgb('#14181f'),
   rgb('#1b1f28'),
-  rgb('#232736'), // the docs' dark page background, so the light fades into the page
+  rgb('#232736'),
   rgb('#3c528f'),
   rgb('#4d79ff'),
   rgb('#dbf0ff'),

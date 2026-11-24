@@ -110,7 +110,7 @@ const storageKey =
 </aside>
 
 <script is:inline define:vars={{ storageKey: storageKey ?? '' }}>
-  // Hide a dismissed promo before it paints
+  // Hide a dismissed promo before it paints, on a full page load
   try {
     if (storageKey && localStorage.getItem(storageKey)) {
       for (const el of document.querySelectorAll(
@@ -125,7 +125,24 @@ const storageKey =
 <script>
   import { mountDithers } from './dither';
 
+  /** Hides the promos dismissed earlier, on this page or another one. */
+  function hideDismissed() {
+    for (const promo of document.querySelectorAll<HTMLElement>(
+      '[data-kit-promo]',
+    )) {
+      try {
+        if (
+          promo.dataset.kitPromo &&
+          localStorage.getItem(promo.dataset.kitPromo)
+        ) {
+          promo.hidden = true;
+        }
+      } catch {}
+    }
+  }
+
   function init() {
+    hideDismissed();
     mountDithers();
 
     for (const button of document.querySelectorAll<HTMLButtonElement>(
@@ -164,7 +181,10 @@ const storageKey =
   }
 
   init();
-  // Starlight pages navigate with Astro's client router, which swaps the page without reloading it
+  // Starlight pages navigate with Astro's client router, which swaps the page without reloading it.
+  // It runs the inline script above only once, so a dismissed promo is hidden again right after the
+  // swap, before the new page shows.
+  document.addEventListener('astro:after-swap', hideDismissed);
   document.addEventListener('astro:page-load', init);
 </script>
 
