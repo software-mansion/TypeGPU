@@ -85,11 +85,10 @@ const FIELDS = {
     const across = (x - lean) / 0.36;
     return 0.76 * Math.exp(-across * across) * (1 - (2 * x - 1) ** 8) * y ** 1.8;
   },
-  /** A band of light that leaves the left side dark for the text over it. */
+  /** Light rising from the foot of a bar, leaving the left side dark for the text over it. */
   band: (lean: number) => (x: number, y: number) => {
     const across = (x - lean) / 0.32;
-    const middle = 2 * y - 1;
-    return 0.76 * Math.exp(-across * across) * (1 - middle ** 4) * clamp(x * 1.6 - 0.2);
+    return 0.76 * Math.exp(-across * across) * y ** 1.4 * clamp(x * 1.6 - 0.2);
   },
   /** A rule of light under a link, as under the current section of Kit's header. */
   rail: (lean: number) => (x: number, y: number) => {
