@@ -28,7 +28,12 @@ import type {
   BinaryOperator,
 } from 'typegpu/~internal';
 
-const consoleLogFallbackSnippet = snip('/* console.log() */', d.Void, /* origin */ 'runtime', /* possibleSideEffects */ false);
+const consoleLogFallbackSnippet = snip(
+  '/* console.log() */',
+  d.Void,
+  /* origin */ 'runtime',
+  /* possibleSideEffects */ false,
+);
 
 const vectorComparisonBuiltins: Partial<Record<BinaryOperator, string>> = {
   '==': 'equal',
