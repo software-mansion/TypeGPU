@@ -50,20 +50,16 @@ export class ResolutionError extends Error {
   readonly cause: unknown;
   readonly trace: unknown[];
   /**
-   * Trace entries, stringified when they were added to the trace. Names can be applied
-   * temporarily during resolution (e.g. bound functions), so they have to be captured
+   * Lines of the trace, stringified when their entries were added to the trace. Names can be
+   * applied temporarily during resolution (e.g. bound functions), so they have to be captured
    * before the error leaves the scope that applied them.
    */
-  readonly #renderedTrace: string[];
+  readonly #traceLines: string[];
 
-  constructor(cause: unknown, trace: unknown[], renderedTrace?: string[]) {
-    const rendered = renderedTrace ?? trace.map(renderTraceEntry);
-    let entries = rendered.map((entry) => `- ${entry}`);
-
+  constructor(cause: unknown, trace: unknown[], traceLines?: string[]) {
+    const lines = traceLines ?? trace.map(renderTraceLine);
     // Showing only the root and leaf nodes.
-    if (entries.length > 20) {
-      entries = [...entries.slice(0, 11), '...', ...entries.slice(-10)];
-    }
+    const entries = lines.length > 20 ? [...lines.slice(0, 11), '...', ...lines.slice(-10)] : lines;
 
     super(
       `Resolution of the following tree failed:\n${entries.join('\n')}: ${
@@ -73,7 +69,7 @@ export class ResolutionError extends Error {
 
     this.cause = cause;
     this.trace = trace;
-    this.#renderedTrace = rendered;
+    this.#traceLines = lines;
 
     // Set the prototype explicitly.
     Object.setPrototypeOf(this, ResolutionError.prototype);
@@ -83,13 +79,13 @@ export class ResolutionError extends Error {
     return new ResolutionError(
       this.cause,
       [ancestor, ...this.trace],
-      [renderTraceEntry(ancestor), ...this.#renderedTrace],
+      [renderTraceLine(ancestor), ...this.#traceLines],
     );
   }
 }
 
-function renderTraceEntry(ancestor: unknown): string {
-  return hasTinyestMetadata(ancestor) ? `fn*:${getName(ancestor)}` : String(ancestor);
+function renderTraceLine(ancestor: unknown): string {
+  return `- ${hasTinyestMetadata(ancestor) ? `fn*:${getName(ancestor)}` : String(ancestor)}`;
 }
 
 /**
