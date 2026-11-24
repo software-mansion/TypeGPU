@@ -2,7 +2,7 @@ import type * as babel from '@babel/types';
 import type * as acorn from 'acorn';
 import * as tinyest from 'tinyest';
 import type { JsNode } from './types.ts';
-import { parseBindingPattern } from './bindingPatterns.ts';
+import { parseBindingElement } from './bindingPatterns.ts';
 
 type FunctionNode =
   | acorn.ArrowFunctionExpression
@@ -81,7 +81,7 @@ function validateFunction(functionNode: FunctionNode): void {
   }
 }
 
-function parseParams(functionNode: FunctionNode): tinyest.BindingPattern[] {
+function parseParams(functionNode: FunctionNode): tinyest.FuncParameter[] {
   return (
     functionNode.params as (
       | babel.Identifier
@@ -89,11 +89,11 @@ function parseParams(functionNode: FunctionNode): tinyest.BindingPattern[] {
       | babel.ObjectPattern
       | acorn.ObjectPattern
     )[]
-  ).map(parseBindingPattern);
+  ).map(parseBindingElement);
 }
 
 export function extractFunctionParts(rootNode: JsNode): {
-  params: tinyest.BindingPattern[];
+  params: tinyest.FuncParameter[];
   body: acorn.BlockStatement | acorn.Expression | babel.BlockStatement | babel.Expression;
 } {
   const functionNode = unwrapToFunction(rootNode);

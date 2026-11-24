@@ -452,6 +452,15 @@ describe('noUnsupportedSyntax', () => {
         ],
       },
       {
+        code: "const fn = () => { 'use gpu'; let a = 0; [a] = arr; }",
+        errors: [
+          {
+            messageId: 'unexpected',
+            data: { snippet: '[a]', syntax: 'destructuring assignment' },
+          },
+        ],
+      },
+      {
         code: "const fn = () => { 'use gpu'; const [a] = arr; }",
         errors: [
           {

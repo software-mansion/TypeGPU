@@ -60,28 +60,10 @@ class Context {
   }
 }
 
-function obfuscateBindingPattern(
-  ctx: Context,
-  binding: tinyest.BindingPattern,
-): tinyest.BindingPattern {
-  if (!tinyest.isObjectPattern(binding)) {
-    return obf(ctx, binding);
-  }
-
-  // We cannot obfuscate destructured names, because WGSL generation relies on these names (e.g. `$instanceIndex`).
-  return [
-    tinyest.NodeTypeCatalog.objectPattern,
-    binding[1].map(([name, alias]): [name: string, alias: string] => [
-      name,
-      ctx.obfuscator.obfuscate(alias),
-    ]),
-  ];
-}
-
 export function obfuscate(fn: TranspilationResult): TranspilationResult {
   const ctx = new Context();
 
-  const params = fn.params.map((param) => obfuscateBindingPattern(ctx, param));
+  const params = fn.params.map((param) => obf(ctx, param));
 
   const body = obf(ctx, fn.body);
 
@@ -132,13 +114,13 @@ const visitors = {
   },
   let(ctx: Context, node: tinyest.Let) {
     return node.length === 2
-      ? [NODE.let, obfuscateBindingPattern(ctx, node[1])]
-      : [NODE.let, obfuscateBindingPattern(ctx, node[1]), obf(ctx, node[2])];
+      ? [NODE.let, obf(ctx, node[1])]
+      : [NODE.let, obf(ctx, node[1]), obf(ctx, node[2])];
   },
   const(ctx: Context, node: tinyest.Const) {
     return node.length === 2
-      ? [NODE.const, obfuscateBindingPattern(ctx, node[1])]
-      : [NODE.const, obfuscateBindingPattern(ctx, node[1]), obf(ctx, node[2])];
+      ? [NODE.const, obf(ctx, node[1])]
+      : [NODE.const, obf(ctx, node[1]), obf(ctx, node[2])];
   },
   for(ctx: Context, node: tinyest.For) {
     return [NODE.for, obf(ctx, node[1]), obf(ctx, node[2]), obf(ctx, node[3]), obf(ctx, node[4])];
@@ -211,8 +193,15 @@ const visitors = {
     }
     return [NODE.identifier, obf(ctx, node[1])];
   },
-  objectPattern(_ctx: Context, _node: tinyest.ObjectPattern) {
-    throw new Error('Object patterns are obfuscated through declaration bindings.');
+  objectPattern(ctx: Context, node: tinyest.ObjectPattern) {
+    // We cannot obfuscate destructured property names, because WGSL generation relies on them (e.g. `$instanceIndex`).
+    return [
+      NODE.objectPattern,
+      node[1].map(([name, binding]): [string, tinyest.BindingElement] => [
+        /* intentionally omitted */ name,
+        obf(ctx, binding),
+      ]),
+    ];
   },
 } as const satisfies {
   [N in keyof typeof NODE]: (

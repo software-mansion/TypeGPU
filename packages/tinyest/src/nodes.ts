@@ -69,15 +69,15 @@ export type Block = readonly [type: NodeTypeCatalog['block'], Statement[]];
  * Represents a let statement
  */
 export type Let =
-  | readonly [type: NodeTypeCatalog['let'], binding: BindingPattern]
-  | readonly [type: NodeTypeCatalog['let'], binding: BindingPattern, value: Expression];
+  | readonly [type: NodeTypeCatalog['let'], binding: BindingName]
+  | readonly [type: NodeTypeCatalog['let'], binding: BindingName, value: Expression];
 
 /**
  * Represents a const statement
  */
 export type Const =
-  | readonly [type: NodeTypeCatalog['const'], binding: BindingPattern]
-  | readonly [type: NodeTypeCatalog['const'], binding: BindingPattern, value: Expression];
+  | readonly [type: NodeTypeCatalog['const'], binding: BindingName]
+  | readonly [type: NodeTypeCatalog['const'], binding: BindingName, value: Expression];
 
 export type For = readonly [
   type: NodeTypeCatalog['for'],
@@ -282,15 +282,15 @@ export type Expression =
   | Call
   | Literal;
 
-export type AnyNode = Statement | Expression;
+export type AnyNode = Statement | Expression | BindingPattern;
 
-/** @deprecated Use {@link BindingPattern} instead */
+/** @deprecated Use {@link FuncParameter} instead */
 export const FuncParameterType = {
   identifier: 'i',
   destructuredObject: 'd',
 } as const;
 
-/** @deprecated Use {@link BindingPattern} instead */
+/** @deprecated Use {@link FuncParameter} instead */
 export type LegacyFuncParameter =
   | {
       type: typeof FuncParameterType.identifier;
@@ -306,18 +306,16 @@ export type LegacyFuncParameter =
 
 export type ObjectPattern = readonly [
   type: NodeTypeCatalog['objectPattern'],
-  props: readonly [name: string, alias: string][],
+  props: readonly [name: string, binding: BindingElement][],
 ];
-export type BindingPattern = Identifier | ObjectPattern;
-export const isObjectPattern = (binding: BindingPattern): binding is ObjectPattern =>
+
+export const isObjectPattern = (binding: BindingName): binding is ObjectPattern =>
   typeof binding !== 'string' && binding[0] === NodeTypeCatalog.objectPattern;
 
-/**
- * Transitional type
- * Remove this alias along with {@link LegacyFuncParameter} after the migration period,
- * when the metadata version is bumped and legacy FuncParameter support is dropped.
- */
-export type FuncParameter = LegacyFuncParameter | BindingPattern;
+export type BindingPattern = ObjectPattern;
+export type BindingName = Identifier | BindingPattern;
+export type BindingElement = BindingName;
+export type FuncParameter = BindingElement;
 
 /**
  * Map from an array/node to its source.

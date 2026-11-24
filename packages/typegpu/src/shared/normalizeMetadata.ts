@@ -1,5 +1,5 @@
 import type {
-  BindingPattern,
+  BindingElement,
   Block,
   FuncParameter,
   LegacyFuncParameter,
@@ -20,7 +20,7 @@ export interface RawMetadataV1 {
 export interface RawMetadataV2 {
   v: 2;
   name: string;
-  ast: { params: FuncParameter[]; body: Block | SourceMappedNode };
+  ast: { params: (FuncParameter | LegacyFuncParameter)[]; body: Block | SourceMappedNode };
   externals: { [key: string]: () => unknown };
 }
 
@@ -33,7 +33,7 @@ export type RawMetadata = RawMetadataV1 | RawMetadataV2;
  * Holds normalized function metadata required for WGSL generation
  */
 export interface Metadata {
-  ast: { params: BindingPattern[]; body: Block | SourceMappedNode };
+  ast: { params: FuncParameter[]; body: Block | SourceMappedNode };
   externals: () => Record<string, unknown>;
 }
 
@@ -76,7 +76,7 @@ export function normalizeMetadata(meta: RawMetadata): Metadata {
   throw new Error(`Unrecognized TypeGPU metadata format: ${safeStringify(meta)}`);
 }
 
-function normalizeParameter(param: FuncParameter): BindingPattern {
+function normalizeParameter(param: FuncParameter | LegacyFuncParameter): FuncParameter {
   // Only legacy parameters have a `type` property.
   if (typeof param === 'string' || !('type' in param)) {
     return param;
@@ -88,6 +88,6 @@ function normalizeParameter(param: FuncParameter): BindingPattern {
 
   return [
     NodeTypeCatalog.objectPattern,
-    param.props.map(({ name, alias }): [string, string] => [name, alias]),
+    param.props.map(({ name, alias }): [string, BindingElement] => [name, alias]),
   ];
 }

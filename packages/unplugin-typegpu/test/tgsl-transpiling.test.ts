@@ -386,3 +386,26 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
     `);
   });
 });
+
+describe('object destructuring transpilation', () => {
+  const code = `\
+    import { tgpu } from 'typegpu';
+
+    export const fn = ({ a, b: c }) => {
+      'use gpu';
+      const { x, y: z } = a;
+      return x + z + c;
+    };
+  `;
+
+  it('[BABEL] emits object pattern AST for params and declarations', () => {
+    expect(babelTransform(code)).toContain('params: [[108, [["a", "a"], ["b", "c"]]]]');
+    expect(babelTransform(code)).toContain('[13, [108, [["x", "x"], ["y", "z"]]], "a"]');
+  });
+
+  it('[ROLLUP] emits object pattern AST for params and declarations', async () => {
+    const transformed = await rollupTransform(code);
+    expect(transformed).toContain('"params":[[108,[["a","a"],["b","c"]]]]');
+    expect(transformed).toContain('[13,[108,[["x","x"],["y","z"]]],"a"]');
+  });
+});

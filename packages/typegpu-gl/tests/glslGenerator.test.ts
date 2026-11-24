@@ -1457,3 +1457,125 @@ describe('GlslGenerator - GL syntax', () => {
     });
   });
 });
+
+describe('GlslGenerator - object destructuring', () => {
+  it('destructures local structs and d.ref without copying', () => {
+    const Point = d.struct({ pos: d.vec2i, id: d.i32 });
+
+    const fn = () => {
+      'use gpu';
+      const point = Point({ pos: d.vec2i(1, 2), id: 6 });
+      const { pos, id } = d.ref(point);
+      const { $: whole } = d.ref(point);
+      pos.x += id;
+      return whole.pos.x;
+    };
+
+    expect(tgpu.resolve([fn], glOptions())).toMatchInlineSnapshot(`
+      "struct Point {
+        ivec2 pos;
+        int id;
+      };
+
+      int fn_1() {
+        Point point = Point(ivec2(1, 2), 6);
+        int id = point.id;
+        point.pos.x += id;
+        return point.pos.x;
+      }"
+    `);
+  });
+
+  it('hoists side-effecting index once when destructuring a d.ref', () => {
+    const points = tgpu.privateVar(d.arrayOf(d.vec2i, 2));
+    const calls = tgpu.privateVar(d.u32);
+    const nextIndex = () => {
+      'use gpu';
+      const index = calls.$;
+      calls.$++;
+      return index % 2;
+    };
+
+    const fn = () => {
+      'use gpu';
+      const { x, y } = d.ref(points.$[nextIndex()]!);
+      return x + y;
+    };
+
+    expect(tgpu.resolve([fn], glOptions())).toMatchInlineSnapshot(`
+      "uint calls;
+
+      uint nextIndex() {
+        uint index = calls;
+        calls++;
+        return (index % 2u);
+      }
+
+      ivec2 points[2];
+
+      int fn_1() {
+        uint idx = nextIndex();
+        int x = points[idx].x;
+        int y = points[idx].y;
+        return (x + y);
+      }"
+    `);
+  });
+
+  it('destructures rvalue structs with let, comptime selection, and switch cases', () => {
+    const Point = d.struct({ pos: d.vec2i, id: d.i32 });
+    const useFirst = tgpu.slot(true);
+    const makePoint = () => {
+      'use gpu';
+      return Point({ pos: d.vec2i(2, 3), id: 7 });
+    };
+
+    const fn = tgpu.fn(
+      [d.i32],
+      d.i32,
+    )((selector) => {
+      'use gpu';
+      let { pos, id } = makePoint();
+      const first = Point({ pos: d.vec2i(1, 2), id: 4 });
+      const second = Point({ pos: d.vec2i(5, 6), id: 8 });
+      const { pos: selected } = useFirst.$ ? first : second;
+      switch (selector) {
+        case 1: {
+          const { x } = selected;
+          return pos.x + id + x;
+        }
+        default: {
+          return pos.y + id;
+        }
+      }
+    });
+
+    expect(tgpu.resolve([fn], glOptions())).toMatchInlineSnapshot(`
+      "struct Point {
+        ivec2 pos;
+        int id;
+      };
+
+      Point makePoint() {
+        return Point(ivec2(2, 3), 7);
+      }
+
+      int fn_1(int selector) {
+        Point destructured = makePoint();
+        ivec2 pos = destructured.pos;
+        int id = destructured.id;
+        Point first = Point(ivec2(1, 2), 4);
+        Point second = Point(ivec2(5, 6), 8);
+        switch (selector) {
+          case 1:
+            {
+              int x = first.pos.x;
+              return ((pos.x + id) + x);
+            }
+          default:
+            return (pos.y + id);
+        }
+      }"
+    `);
+  });
+});

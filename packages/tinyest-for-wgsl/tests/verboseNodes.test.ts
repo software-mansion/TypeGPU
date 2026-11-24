@@ -62,6 +62,29 @@ describe('verbose nodes', () => {
   );
 
   it(
+    'uses nodes for destructuring declarations',
+    dualTest((p, transpileFn) => {
+      const { params, body, externalNames } = transpileFn(
+        p(`() => {
+          const { a, b: c } = obj;
+          return a + c;
+        }`),
+        { verboseNodes: true },
+      );
+
+      expect(params).toMatchInlineSnapshot(`[]`);
+      expect(JSON.stringify(body)).toMatchInlineSnapshot(
+        `"[0,[[13,[108,[["a",[9,"a"]],["b",[9,"c"]]]],[9,"obj"]],[10,[1,[9,"a"],"+",[9,"c"]]]]]"`,
+      );
+      expect(externalNames).toMatchInlineSnapshot(`
+        Map {
+          "obj" => "obj",
+        }
+      `);
+    }),
+  );
+
+  it(
     'uses nodes for let declarations',
     dualTest((p, transpileFn) => {
       const { params, body, externalNames } = transpileFn(

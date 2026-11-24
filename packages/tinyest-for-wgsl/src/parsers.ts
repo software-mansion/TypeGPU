@@ -17,21 +17,18 @@ import {
   transpileBabelObjectProperty,
 } from './transpilers.ts';
 import { extractFunctionParts } from './functionParts.ts';
+import { extractBoundNames } from './bindingPatterns.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
-function createContext(params: tinyest.BindingPattern[], opts: TranspilationOptions): Context {
+function createContext(params: tinyest.FuncParameter[], opts: TranspilationOptions): Context {
   return {
     externalNames: new Map(),
     ignoreExternalDepth: 0,
     visitedNodes: new Set(),
     stack: [
       {
-        declaredNames: params.flatMap((param) =>
-          tinyest.isObjectPattern(param)
-            ? param[1].map(([, alias]) => alias)
-            : tinyest.extractIdentifierString(param),
-        ),
+        declaredNames: params.flatMap(extractBoundNames),
       },
     ],
     generatedSourceMap: new Map(),

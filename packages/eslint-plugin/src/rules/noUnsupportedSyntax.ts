@@ -170,6 +170,35 @@ export const noUnsupportedSyntax = createRule({
         report(node, `'new' expression`);
       },
 
+      ObjectPattern(node) {
+        const gpuFunction = directives.getEnclosingTypegpuFunction();
+        if (!gpuFunction) {
+          return;
+        }
+
+        const parent = node.parent;
+        // The outer pattern reports unsupported nested destructuring
+        if (parent.type === 'Property' && parent.parent.type === 'ObjectPattern') {
+          return;
+        }
+
+        const isVariableDeclaration =
+          parent.type === 'VariableDeclarator' &&
+          parent.parent.type === 'VariableDeclaration' &&
+          (parent.parent.parent.type === 'BlockStatement' ||
+            parent.parent.parent.type === 'SwitchCase');
+        const isFunctionParameter = parent === gpuFunction;
+
+        if (
+          (isVariableDeclaration || isFunctionParameter) &&
+          isSupportedObjectBindingPattern(node)
+        ) {
+          return;
+        }
+
+        report(node, 'object destructuring');
+      },
+
       SequenceExpression(node) {
         if (!directives.getEnclosingTypegpuFunction()) {
           return;
@@ -250,35 +279,6 @@ export const noUnsupportedSyntax = createRule({
           return;
         }
         report(node, 'yield expression');
-      },
-
-      ObjectPattern(node) {
-        const gpuFunction = directives.getEnclosingTypegpuFunction();
-        if (!gpuFunction) {
-          return;
-        }
-
-        const parent = node.parent;
-        // The outer pattern reports unsupported nested destructuring
-        if (parent.type === 'Property' && parent.parent.type === 'ObjectPattern') {
-          return;
-        }
-
-        const isVariableDeclaration =
-          parent.type === 'VariableDeclarator' &&
-          parent.parent.type === 'VariableDeclaration' &&
-          (parent.parent.parent.type === 'BlockStatement' ||
-            parent.parent.parent.type === 'SwitchCase');
-        const isFunctionParameter = parent === gpuFunction;
-
-        if (
-          (isVariableDeclaration || isFunctionParameter) &&
-          isSupportedObjectBindingPattern(node)
-        ) {
-          return;
-        }
-
-        report(node, 'object destructuring');
       },
     };
   }),

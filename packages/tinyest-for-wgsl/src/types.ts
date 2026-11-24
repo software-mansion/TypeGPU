@@ -27,7 +27,7 @@ export type Context = {
 };
 
 export type TranspilationResult = {
-  params: tinyest.BindingPattern[];
+  params: tinyest.FuncParameter[];
   body: tinyest.Block;
   /**
    * All identifiers found in the function code that are not declared in the function itself.

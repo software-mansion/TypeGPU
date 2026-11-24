@@ -60,7 +60,7 @@ import type {
 } from './shaderGenerator.ts';
 import { resolveData } from '../core/resolve/resolveData.ts';
 import { createPtrFromOrigin, implicitFrom, ptrFn } from '../data/ptr.ts';
-import { _ref, RefOperator } from '../data/ref.ts';
+import { _ref, derefSnippet, RefOperator } from '../data/ref.ts';
 import { constant } from '../core/constant/tgpuConstant.ts';
 import { unroll, UnrollableIterable } from '../core/unroll/tgpuUnroll.ts';
 import { isGenericFn } from '../core/function/tgpuFn.ts';
@@ -237,6 +237,9 @@ const usageToVarTemplateMap: Record<VariableScope | BindableBufferUsage | 'immed
  * The block depth that we can expect when generating code in the function scope, not in any nested blocks.
  */
 const functionInitialBlockDepth = 2;
+
+// Prefixed with '#' so internal temp bindings cannot collide with user identifiers.
+const destructuringTemp = '#destructured';
 
 // Used for switch case.
 const switchDefault = snip('default', UnknownData, 'constant');
@@ -1469,41 +1472,130 @@ Try 'return ${typeStr}(${str});' instead.
 
   protected _objectDestructuringStatement(
     kind: 'let' | 'const',
-    props: readonly [name: string, alias: string][],
+    pattern: tinyest.ObjectPattern,
     eqNode: tinyest.Expression,
   ): ResolvedStatement {
-    let sourceNode: tinyest.Expression;
-    let temporaryDeclaration: ResolvedStatement | undefined;
-
     const eq = this._expression(eqNode);
-    if (!isId(eqNode) && asComptime(eq) === undefined) {
-      const temporaryId = `#destructured`;
-      temporaryDeclaration = this._constStatement([NODE.const, temporaryId, eqNode], eq);
-      sourceNode = temporaryId;
+    const props = pattern[1];
+
+    // Unwrap `d.ref(x)` so we destructure the referenced value directly (preserving `.$` access).
+    const refOp = eq.value instanceof RefOperator ? eq.value : undefined;
+    const isRef = refOp !== undefined;
+    const source = isRef ? derefSnippet(eq) : eq;
+
+    // User-facing AST node used for mutation tracking (`tryMarkModified`) and error messages.
+    const sourceNode = refOp
+      ? (getSourceNode(refOp.snippet) ?? eqNode)
+      : extractObject(eqNode) !== undefined
+        ? eqNode
+        : (getSourceNode(source) ?? eqNode);
+
+    const declarations: ResolvedStatement[] = [];
+    let target = source;
+    let targetNode = sourceNode;
+    let ownsFreshFields = false;
+
+    if (asComptime(source) !== undefined) {
+      // Comptime values (plain JS objects, comptime structs/vectors): read properties directly.
+    } else if (isStoredInMemory(source) && !source.possibleSideEffects) {
+      // Already in memory with no GPU side effects (locals, buffers, args, pure member/index
+      // accesses): read fields directly so we never copy large structs or add redundant temps.
+    } else if (props.length === 0 && !source.possibleSideEffects) {
+      // Empty pattern with no side effects needs no generated code.
     } else {
-      sourceNode = '#destructured_source';
-      this.ctx.setBlockExternals({ [sourceNode]: eq });
+      // Ephemeral or side-effecting source: evaluate once into a temporary `const` binding
+      // (a pointer for addressable memory with side effects, or a local value for rvalues).
+      if (source.dataType === UnknownData || wgsl.isVoid(source.dataType)) {
+        throw new WgslTypeError(
+          `'${kind} ${stringifyNode(pattern)} = ${stringifyNode(eqNode)}' is invalid, cannot determine WGSL type of '${stringifyNode(eqNode)}'`,
+        );
+      }
+
+      declarations.push(this._constStatement([NODE.const, destructuringTemp, sourceNode], source));
+      target = this._identifier(destructuringTemp);
+      targetNode = destructuringTemp;
+      ownsFreshFields = !isStoredInMemory(source);
     }
 
-    const propertyDeclarations = props.map(([name, alias]) => {
-      const propertyAccess: tinyest.MemberAccess = [NODE.memberAccess, sourceNode, name];
+    let claimedWhole = false;
+    const claimedNonEphemeralFields = new Set<string>();
 
-      return kind === 'const'
-        ? this._constStatement([NODE.const, alias, propertyAccess])
-        : this._letStatement([NODE.let, alias, propertyAccess]);
-    });
+    for (const [name, binding] of props) {
+      if (tinyest.isObjectPattern(binding)) {
+        throw new Error('Nested destructuring is not supported yet.');
+      }
 
-    const declarations = temporaryDeclaration
-      ? [temporaryDeclaration, ...propertyDeclarations]
-      : propertyDeclarations;
+      const isDirectDeref = isRef && name === '$';
+      // `derefSnippet` unwraps a WGSL pointer temp (`*destructured`) and is a no-op otherwise.
+      const fieldSnippet = isDirectDeref ? derefSnippet(target) : accessProp(target, name);
+      if (!fieldSnippet) {
+        throw new Error(`Property '${name}' not found on '${stringifyNode(eqNode)}'`);
+      }
+
+      const displayNode: tinyest.Expression = isDirectDeref
+        ? sourceNode
+        : [NODE.memberAccess, sourceNode, name];
+
+      if (kind === 'const') {
+        const fieldNode: tinyest.Expression = isDirectDeref
+          ? targetNode
+          : [NODE.memberAccess, targetNode, name];
+        declarations.push(
+          this._constStatement([NODE.const, binding, fieldNode], fieldSnippet, displayNode),
+        );
+        continue;
+      }
+
+      // A `let` binding can take ownership of each non-ephemeral field from a fresh rvalue once
+      // (matching `let a = makeStruct().a`), unless another binding in the same pattern aliases it.
+      let letValue = fieldSnippet;
+      if (
+        ownsFreshFields &&
+        isStoredInMemory(fieldSnippet) &&
+        !wgsl.isNaturallyEphemeral(fieldSnippet.dataType)
+      ) {
+        if (isDirectDeref) {
+          if (claimedWhole || claimedNonEphemeralFields.size > 0) {
+            throw new WgslTypeError(
+              `Cannot bind '$' together with another non-ephemeral binding in a 'let' destructuring, because the bindings would alias. Use 'const' instead, or copy the value explicitly.`,
+            );
+          }
+          claimedWhole = true;
+        } else {
+          if (claimedWhole) {
+            throw new WgslTypeError(
+              `Cannot bind both '$' and non-ephemeral field '${name}' in a 'let' destructuring, because they would alias. Use 'const' instead, or copy the value explicitly.`,
+            );
+          }
+          if (claimedNonEphemeralFields.has(name)) {
+            throw new WgslTypeError(
+              `Cannot bind non-ephemeral field '${name}' more than once in a 'let' destructuring, because the bindings would alias. Use 'const' instead, or copy the value explicitly.`,
+            );
+          }
+          claimedNonEphemeralFields.add(name);
+        }
+
+        letValue = snip(
+          fieldSnippet.value,
+          fieldSnippet.dataType,
+          'runtime',
+          fieldSnippet.possibleSideEffects,
+        );
+      }
+
+      declarations.push(this._letStatement([NODE.let, binding, displayNode], letValue));
+    }
 
     return {
-      code: declarations.map((declaration) => declaration.code).join('\n'),
-      definesInNearestScope: declarations.some((declaration) => declaration.code.length > 0),
+      code: declarations
+        .map((declaration) => declaration.code)
+        .filter(Boolean)
+        .join('\n'),
+      definesInNearestScope: declarations.some((declaration) => declaration.definesInNearestScope),
     };
   }
 
-  protected _letStatement(statement: tinyest.Let): ResolvedStatement {
+  protected _letStatement(statement: tinyest.Let, evaluatedEq?: Snippet): ResolvedStatement {
     const [_, binding, eqNode] = statement;
 
     if (eqNode === undefined) {
@@ -1513,11 +1605,11 @@ Try 'return ${typeStr}(${str});' instead.
     }
 
     if (!isId(binding)) {
-      return this._objectDestructuringStatement('let', binding[1], eqNode);
+      return this._objectDestructuringStatement('let', binding, eqNode);
     }
     const rawId = tinyest.extractIdentifierString(binding);
 
-    const eq = this._expression(eqNode);
+    const eq = evaluatedEq ?? this._expression(eqNode);
 
     if (eq.value instanceof RefOperator) {
       const rhsStr = stringifyNode(eqNode);
@@ -1590,7 +1682,11 @@ Try 'return ${typeStr}(${str});' instead.
     };
   }
 
-  protected _constStatement(statement: tinyest.Const, evaluatedEq?: Snippet): ResolvedStatement {
+  protected _constStatement(
+    statement: tinyest.Const,
+    evaluatedEq?: Snippet,
+    displayEqNode?: tinyest.Expression,
+  ): ResolvedStatement {
     const [_, binding, eqNode] = statement;
 
     if (eqNode === undefined) {
@@ -1600,7 +1696,7 @@ Try 'return ${typeStr}(${str});' instead.
     }
 
     if (!isId(binding)) {
-      return this._objectDestructuringStatement('const', binding[1], eqNode);
+      return this._objectDestructuringStatement('const', binding, eqNode);
     }
     const rawId = tinyest.extractIdentifierString(binding);
 
@@ -1609,7 +1705,7 @@ Try 'return ${typeStr}(${str});' instead.
     if (eq.value instanceof RefOperator) {
       // We're assigning a newly created `d.ref()`
       if (eq.value.addressable) {
-        const refStr = stringifyNode(eqNode);
+        const refStr = stringifyNode(displayEqNode ?? eqNode);
         throw new WgslTypeError(
           `'const ${rawId} = ${refStr}' is invalid, cannot store ${refStr} in a variable if it references another value. Copy the value passed into d.ref() instead, or inline ${refStr}.`,
         );
@@ -1637,7 +1733,7 @@ Try 'return ${typeStr}(${str});' instead.
     let definitionDataType = eq.dataType;
 
     if (definitionDataType === UnknownData || wgsl.isVoid(definitionDataType)) {
-      const rhsStr = stringifyNode(eqNode);
+      const rhsStr = stringifyNode(displayEqNode ?? eqNode);
       const declaration = `const ${rawId}`;
       throw new WgslTypeError(
         `'${declaration} = ${rhsStr}' is invalid, cannot determine WGSL type of '${rhsStr}'${schemaWrappingSuggestion(declaration, rhsStr, eq.value)}`,
@@ -1909,6 +2005,11 @@ ${this.ctx.pre}else ${alternate}`,
         throw new WgslTypeError('Only `for (const ... of ... )` loops are supported');
       }
 
+      const loopBinding = loopVar[1];
+      if (!isId(loopBinding)) {
+        throw new WgslTypeError('Object destructuring in for...of loops is not supported.');
+      }
+
       this.tryMarkModified(iterable); // overly-defensive, but let's not tempt fate
 
       let ctxIndent = false;
@@ -1920,11 +2021,6 @@ ${this.ctx.pre}else ${alternate}`,
         const shouldUnroll = iterableExpr.value instanceof UnrollableIterable;
         const iterableSnippet = shouldUnroll ? iterableExpr.value.snippet : iterableExpr;
         const range = forOfUtils.getRangeSnippets(this.ctx, iterableSnippet, shouldUnroll);
-        const loopBinding = loopVar[1];
-        if (!isId(loopBinding)) {
-          throw new WgslTypeError('Destructuring in for...of loops is not supported yet.');
-        }
-
         const originalLoopVarName = tinyest.extractIdentifierString(loopBinding);
         const blockified = blockifySingleStatement(body);
 

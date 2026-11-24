@@ -520,6 +520,20 @@ describe('transpileBabelFn and transpileAcornFn', () => {
   );
 
   it(
+    'rejects unsupported destructuring patterns in parameters',
+    dualTest((parse, transpileFn) => {
+      for (const pattern of ['{ nested: { value } }', '{ value = 1 }', '{ ...rest }']) {
+        expect(() => transpileFn(parse(`(${pattern}) => {}`))).toThrow(
+          'Only simple object destructuring is currently supported.',
+        );
+      }
+      expect(() => transpileFn(parse(`([value]) => {}`))).toThrow(
+        'Unsupported function parameter type(s): ArrayPattern',
+      );
+    }),
+  );
+
+  it(
     'rejects unsupported object destructuring patterns',
     dualTest((parse, transpileFn) => {
       const patterns = [
@@ -570,6 +584,15 @@ describe('transpileBabelFn and transpileAcornFn', () => {
         transpileFn(
           parse(`() => {
             for (const { value } of source) {}
+          }`),
+        ),
+      ).toThrow('Object destructuring in for...of loops is not supported.');
+
+      expect(() =>
+        transpileFn(
+          parse(`() => {
+            let value = 0;
+            for ({ value } of source) {}
           }`),
         ),
       ).toThrow('Object destructuring in for...of loops is not supported.');

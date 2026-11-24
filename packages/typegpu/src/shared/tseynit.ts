@@ -7,15 +7,22 @@ export function stringifyNode(node: tinyest.AnyNode): string {
     return stringifyExpression(node);
   }
 
+  if (node[0] === NODE.objectPattern) {
+    return stringifyBindingElement(node);
+  }
+
   return stringifyStatement(node, '');
 }
 
-function stringifyBindingPattern(binding: tinyest.BindingPattern): string {
+function stringifyBindingElement(binding: tinyest.BindingElement): string {
   if (!tinyest.isObjectPattern(binding)) {
     return stringifyExpression(binding);
   }
 
-  const props = binding[1].map(([name, alias]) => (name === alias ? name : `${name}: ${alias}`));
+  const props = binding[1].map(([name, element]) => {
+    const str = stringifyBindingElement(element);
+    return !tinyest.isObjectPattern(element) && name === str ? name : `${name}: ${str}`;
+  });
 
   return `{ ${props.join(', ')} }`;
 }
@@ -52,7 +59,7 @@ function stringifyStatement(
   }
 
   if (node[0] === NODE.let) {
-    const decl = `${initialIndent}let ${stringifyBindingPattern(node[1])}`;
+    const decl = `${initialIndent}let ${stringifyBindingElement(node[1])}`;
     if (node[2] !== undefined) {
       return `${decl} = ${stringifyExpression(node[2])};`;
     }
@@ -60,7 +67,7 @@ function stringifyStatement(
   }
 
   if (node[0] === NODE.const) {
-    const decl = `${initialIndent}const ${stringifyBindingPattern(node[1])}`;
+    const decl = `${initialIndent}const ${stringifyBindingElement(node[1])}`;
     if (node[2] !== undefined) {
       return `${decl} = ${stringifyExpression(node[2])};`;
     }
@@ -91,7 +98,7 @@ function stringifyStatement(
 
   if (node[0] === NODE.forOf) {
     const leftKind = node[1][0] === NODE.const ? 'const' : 'let';
-    const leftName = stringifyBindingPattern(node[1][1]);
+    const leftName = stringifyBindingElement(node[1][1]);
     const right = stringifyExpression(node[2]);
     const body = stringifyStatement(node[3], indent, true);
     return `${initialIndent}for (${leftKind} ${leftName} of ${right}) ${body}`;

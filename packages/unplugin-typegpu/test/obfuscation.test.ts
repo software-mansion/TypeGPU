@@ -1,4 +1,5 @@
 import type { ArrowFunctionExpression } from '@babel/types';
+import { NodeTypeCatalog } from 'tinyest';
 import { transpileBabelFn } from 'tinyest-for-wgsl';
 import { describe, expect, it, test } from 'vitest';
 import { obfuscate } from '../src/core/obfuscate.ts';
@@ -748,5 +749,40 @@ describe('obfuscate', () => {
     `);
 
     expect(externalNames).toMatchInlineSnapshot(`Map {}`);
+  });
+
+  it('obfuscates nested object patterns and verbose binding identifiers', () => {
+    const N = NodeTypeCatalog;
+    const { params, body } = obfuscate({
+      params: [
+        [N.objectPattern, [['outer', [N.objectPattern, [['inner', [N.identifier, 'secret']]]]]]],
+      ],
+      body: [
+        N.block,
+        [
+          [
+            N.const,
+            [
+              N.objectPattern,
+              [['nested', [N.objectPattern, [['field', [N.identifier, 'localField']]]]]],
+            ],
+            [N.identifier, 'secret'],
+          ],
+          [N.return, [N.identifier, 'localField']],
+        ],
+      ],
+      externalNames: new Map(),
+      sourceMap: new Map(),
+    });
+
+    expect(params).toStrictEqual([
+      [N.objectPattern, [['outer', [N.objectPattern, [['inner', [N.identifier, 'a']]]]]]],
+    ]);
+    expect(stringifyNode(body)).toMatchInlineSnapshot(`
+      "{
+        const { nested: { field: b } } = a;
+        return b;
+      }"
+    `);
   });
 });

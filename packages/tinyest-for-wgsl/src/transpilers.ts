@@ -2,7 +2,7 @@ import type * as acorn from 'acorn';
 import type * as babel from '@babel/types';
 import * as tinyest from 'tinyest';
 import type { Context, JsNode, Transpile, Transpilers } from './types.ts';
-import { parseBindingPattern } from './bindingPatterns.ts';
+import { extractBoundNames, parseObjectPattern } from './bindingPatterns.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -144,27 +144,33 @@ export const baseTranspilers = {
     ];
   },
 
+  ObjectPattern(ctx, node, transpile) {
+    return parseObjectPattern(node, (id) => {
+      ctx.ignoreExternalDepth++;
+      const binding = transpile(ctx, id) as tinyest.Identifier;
+      ctx.ignoreExternalDepth--;
+      return binding;
+    });
+  },
+
   VariableDeclaration(ctx, node, transpile) {
     if (node.declarations.length !== 1 || !node.declarations[0]) {
       throw new Error('Currently only one declaration in a statement is supported.');
     }
 
     const decl = node.declarations[0];
-    if (decl.id.type === 'VoidPattern') {
-      throw new Error('Void patterns are not supported.');
-    }
-
-    const pattern = parseBindingPattern(decl.id);
-    let binding: tinyest.BindingPattern;
-    if (!tinyest.isObjectPattern(pattern)) {
+    let binding: tinyest.BindingName;
+    if (decl.id.type === 'Identifier') {
       ctx.ignoreExternalDepth++;
       binding = transpile(ctx, decl.id) as tinyest.Identifier;
       ctx.ignoreExternalDepth--;
-      ctx.stack[ctx.stack.length - 1]?.declaredNames.push(tinyest.extractIdentifierString(binding));
+    } else if (decl.id.type === 'ObjectPattern') {
+      binding = transpile(ctx, decl.id) as tinyest.ObjectPattern;
     } else {
-      binding = pattern;
-      ctx.stack[ctx.stack.length - 1]?.declaredNames.push(...pattern[1].map(([, alias]) => alias));
+      throw new Error(`Unsupported binding pattern: ${decl.id.type}`);
     }
+
+    ctx.stack[ctx.stack.length - 1]?.declaredNames.push(...extractBoundNames(binding));
 
     const init = decl.init ? (transpile(ctx, decl.init) as tinyest.Expression) : undefined;
 
@@ -218,8 +224,9 @@ export const baseTranspilers = {
 
   ForOfStatement(ctx, node, transpile) {
     if (
-      node.left.type === 'VariableDeclaration' &&
-      node.left.declarations.some((declaration) => declaration.id.type === 'ObjectPattern')
+      node.left.type === 'ObjectPattern' ||
+      (node.left.type === 'VariableDeclaration' &&
+        node.left.declarations.some((declaration) => declaration.id.type === 'ObjectPattern'))
     ) {
       throw new Error('Object destructuring in for...of loops is not supported.');
     }

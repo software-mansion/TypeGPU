@@ -664,13 +664,20 @@ export class ResolutionCtxImpl implements ResolutionCtx {
         if (firstParam !== undefined && isObjectPattern(firstParam)) {
           // Route each destructured prop to a positional arg or struct field.
           for (const [name, alias] of firstParam[1]) {
+            if (isObjectPattern(alias)) {
+              throw new Error('Nested destructuring is not supported yet.');
+            }
+            const aliasName = extractIdentifierString(alias);
             const argInfo = positionalArgs.find((a) => a.schemaKey === name);
             if (argInfo) {
-              const arg = createArgument(this.makeUniqueIdentifier(alias, 'block'), argInfo.type);
+              const arg = createArgument(
+                this.makeUniqueIdentifier(aliasName, 'block'),
+                argInfo.type,
+              );
               args.push(arg);
-              scope.argAccess[alias] = arg.access;
+              scope.argAccess[aliasName] = arg.access;
             } else if (structArg) {
-              scope.argAccess[alias] = createArgumentPropAccess(structArg.access, name);
+              scope.argAccess[aliasName] = createArgumentPropAccess(structArg.access, name);
             }
           }
         } else if (firstParam !== undefined) {
@@ -684,7 +691,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
           }
           const router = new EntryInputRouter(structArg?.access, proxyEntries);
           scope.argAccess[extractIdentifierString(firstParam)] = () =>
-            snip('N/A', router, 'argument');
+            snip('N/A', router, 'argument', /* possibleSideEffects */ false);
         } else {
           // No first param: push positional args with schema key names.
           for (const a of positionalArgs) {
@@ -736,7 +743,11 @@ export class ResolutionCtxImpl implements ResolutionCtx {
             );
             args.push(objArg);
             for (const [name, alias] of astParam[1]) {
-              scope.argAccess[alias] = createArgumentPropAccess(objArg.access, name);
+              if (isObjectPattern(alias)) {
+                throw new Error('Nested destructuring is not supported yet.');
+              }
+              const aliasName = extractIdentifierString(alias);
+              scope.argAccess[aliasName] = createArgumentPropAccess(objArg.access, name);
             }
           } else {
             const paramName = extractIdentifierString(astParam);

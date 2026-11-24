@@ -539,5 +539,17 @@ describe('ast to JS transformation', () => {
 
       expect(stringifyNode(node)).toBe('const { position, velocity: vel } = particle;');
     });
+
+    it('handles standalone, verbose, and nested object patterns', () => {
+      const pattern: tinyest.ObjectPattern = [
+        N.objectPattern,
+        [
+          ['x', [N.identifier, 'x']],
+          ['nested', [N.objectPattern, [['a', [N.identifier, 'b']]]]],
+        ],
+      ];
+
+      expect(stringifyNode(pattern)).toBe('{ x, nested: { a: b } }');
+    });
   });
 });

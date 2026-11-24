@@ -462,4 +462,120 @@ describe('meta', () => {
       }"
     `);
   });
+
+  it('rejects nested object destructuring patterns in parameters and declarations', () => {
+    const Pair = d.struct({ inner: d.vec2i });
+
+    const paramImpl = (_arg: d.Infer<typeof Pair>) => 0;
+    assignMetadata(paramImpl, {
+      v: 2,
+      name: 'paramFn',
+      externals: {},
+      ast: {
+        params: [[NODE.objectPattern, [['inner', [NODE.objectPattern, [['x', 'x']]]]]]],
+        body: [NODE.block, [[NODE.return, 'x']]],
+      },
+    });
+    const paramFn = tgpu.fn([Pair], d.i32)(paramImpl);
+
+    expect(() => tgpu.resolve([paramFn])).toThrow('Nested destructuring is not supported yet.');
+
+    const declImpl = (_arg: d.Infer<typeof Pair>) => 0;
+    assignMetadata(declImpl, {
+      v: 2,
+      name: 'declFn',
+      externals: {},
+      ast: {
+        params: ['pair'],
+        body: [
+          NODE.block,
+          [
+            [
+              NODE.const,
+              [NODE.objectPattern, [['inner', [NODE.objectPattern, [['x', 'x']]]]]],
+              'pair',
+            ],
+            [NODE.return, 'x'],
+          ],
+        ],
+      },
+    });
+    const declFn = tgpu.fn([Pair], d.i32)(declImpl);
+
+    expect(() => tgpu.resolve([declFn])).toThrow('Nested destructuring is not supported yet.');
+  });
+
+  it('rejects nested object destructuring in entry function parameters', () => {
+    const entryImpl = (_input: { gid: d.v3u }) => undefined;
+    assignMetadata(entryImpl, {
+      v: 2,
+      name: 'entryFn',
+      externals: {},
+      ast: {
+        params: [[NODE.objectPattern, [['gid', [NODE.objectPattern, [['x', 'x']]]]]]],
+        body: [NODE.block, []],
+      },
+    });
+    const entry = tgpu.computeFn({
+      in: { gid: d.builtin.globalInvocationId },
+      workgroupSize: [1],
+    })(entryImpl);
+
+    expect(() => tgpu.resolve([entry])).toThrow('Nested destructuring is not supported yet.');
+  });
+
+  it('rejects object destructuring in for and for...of loop headers during generation', () => {
+    const forImpl = () => {};
+    assignMetadata(forImpl, {
+      v: 2,
+      name: 'forFn',
+      externals: {},
+      ast: {
+        params: [],
+        body: [
+          NODE.block,
+          [
+            [
+              NODE.for,
+              [
+                NODE.const,
+                [NODE.objectPattern, [['x', 'x']]],
+                [NODE.objectExpr, { x: [NODE.numericLiteral, '0'] }],
+              ],
+              null,
+              null,
+              [NODE.block, []],
+            ],
+          ],
+        ],
+      },
+    });
+    expect(() => tgpu.resolve([forImpl])).toThrow(
+      'Object destructuring in for loop initializers is not supported.',
+    );
+
+    const forOfImpl = () => {};
+    assignMetadata(forOfImpl, {
+      v: 2,
+      name: 'forOfFn',
+      externals: {},
+      ast: {
+        params: [],
+        body: [
+          NODE.block,
+          [
+            [
+              NODE.forOf,
+              [NODE.const, [NODE.objectPattern, [['x', 'x']]]],
+              [NODE.arrayExpr, []],
+              [NODE.block, []],
+            ],
+          ],
+        ],
+      },
+    });
+    expect(() => tgpu.resolve([forOfImpl])).toThrow(
+      'Object destructuring in for...of loops is not supported.',
+    );
+  });
 });
