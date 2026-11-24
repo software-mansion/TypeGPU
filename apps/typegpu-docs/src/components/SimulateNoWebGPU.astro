@@ -1,0 +1,13 @@
+---
+// With `?webgpu=off` in the URL, the page behaves as in a browser without WebGPU, so the fallbacks
+// can be checked without one. It runs first in <head>, before any script reads `navigator.gpu`.
+---
+
+<script is:inline>
+  if (new URLSearchParams(location.search).get('webgpu') === 'off') {
+    Object.defineProperty(navigator, 'gpu', {
+      value: undefined,
+      configurable: true,
+    });
+  }
+</script>
