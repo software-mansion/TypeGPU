@@ -389,8 +389,6 @@ describe('[ROLLUP] plugin for transpiling tgsl functions to tinyest', () => {
 
 describe('object destructuring transpilation', () => {
   const code = `\
-    import { tgpu } from 'typegpu';
-
     export const fn = ({ a, b: c }) => {
       'use gpu';
       const { x, y: z } = a;

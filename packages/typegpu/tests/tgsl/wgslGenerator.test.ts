@@ -2900,6 +2900,31 @@ describe('WgslGenerator', () => {
       `);
     });
 
+    it('destructures buffers directly from a bind group layout', () => {
+      const layout = tgpu.bindGroupLayout({
+        count: { uniform: d.u32 },
+        items: { storage: d.arrayOf(d.u32, 0), access: 'mutable' },
+      });
+
+      const fn = () => {
+        'use gpu';
+        const { count, items } = layout.$;
+        items[0] = count;
+      };
+
+      expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+        "@group(0) @binding(0) var<uniform> count_1: u32;
+
+        @group(0) @binding(1) var<storage, read_write> items_1: array<u32>;
+
+        fn fn_1() {
+          let count = count_1;
+          let items = (&items_1);
+          (*items)[0i] = count;
+        }"
+      `);
+    });
+
     it('promotes local and nested structs to var when aliasing a destructured field', () => {
       const Inner = d.struct({ pos: d.vec2i });
       const Outer = d.struct({ inner: Inner });
@@ -3743,10 +3768,9 @@ describe('WgslGenerator', () => {
         d.i32,
       )((selector, pair) => {
         switch (selector) {
-          case 1: {
+          case 1:
             const { a } = pair;
             return a;
-          }
           default: {
             const { b } = pair;
             return b;
@@ -3763,10 +3787,8 @@ describe('WgslGenerator', () => {
         fn fn_1(selector: i32, pair: Pair) -> i32 {
           switch selector {
             case 1i: {
-              {
-                let a = pair.a;
-                return a;
-              }
+              let a = pair.a;
+              return a;
             }
             case default: {
               {
