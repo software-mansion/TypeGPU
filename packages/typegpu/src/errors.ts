@@ -49,11 +49,16 @@ export function invariant(
 export class ResolutionError extends Error {
   readonly cause: unknown;
   readonly trace: unknown[];
+  /**
+   * Trace entries, stringified when they were added to the trace. Names can be applied
+   * temporarily during resolution (e.g. bound functions), so they have to be captured
+   * before the error leaves the scope that applied them.
+   */
+  readonly #renderedTrace: string[];
 
-  constructor(cause: unknown, trace: unknown[]) {
-    let entries = trace.map(
-      (ancestor) => `- ${hasTinyestMetadata(ancestor) ? `fn*:${getName(ancestor)}` : ancestor}`,
-    );
+  constructor(cause: unknown, trace: unknown[], renderedTrace?: string[]) {
+    const rendered = renderedTrace ?? trace.map(renderTraceEntry);
+    let entries = rendered.map((entry) => `- ${entry}`);
 
     // Showing only the root and leaf nodes.
     if (entries.length > 20) {
@@ -68,16 +73,23 @@ export class ResolutionError extends Error {
 
     this.cause = cause;
     this.trace = trace;
+    this.#renderedTrace = rendered;
 
     // Set the prototype explicitly.
     Object.setPrototypeOf(this, ResolutionError.prototype);
   }
 
   appendToTrace(ancestor: unknown): ResolutionError {
-    const newTrace = [ancestor, ...this.trace];
-
-    return new ResolutionError(this.cause, newTrace);
+    return new ResolutionError(
+      this.cause,
+      [ancestor, ...this.trace],
+      [renderTraceEntry(ancestor), ...this.#renderedTrace],
+    );
   }
+}
+
+function renderTraceEntry(ancestor: unknown): string {
+  return hasTinyestMetadata(ancestor) ? `fn*:${getName(ancestor)}` : String(ancestor);
 }
 
 /**

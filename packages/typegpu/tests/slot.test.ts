@@ -468,6 +468,9 @@ describe('tgpu.slot', () => {
     ][0]!;
     const bound = inner.with(valueSlot, 2).$name('bound');
 
+    // Naming the bound variant does not name the shared inner function
+    expect(tgpu.resolve([inner])).not.toContain('fn bound');
+
     const main = tgpu.fn(
       [],
       d.i32,
@@ -476,17 +479,10 @@ describe('tgpu.slot', () => {
       return bound();
     });
 
-    const mainUnbound = tgpu.fn(
-      [],
-      d.i32,
-    )(() => {
-      'use gpu';
-      return inner();
-    });
-
+    expect(tgpu.resolve([bound])).toContain('fn bound()');
     expect(tgpu.resolve([main])).toContain('fn bound()');
     expect(inner.toString()).toBe('fn*:<unnamed>');
-    expect(tgpu.resolve([mainUnbound])).not.toContain('fn bound');
+    expect(tgpu.resolve([inner])).not.toContain('fn bound');
   });
 
   it('allows comptime strings', () => {
