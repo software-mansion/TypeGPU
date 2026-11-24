@@ -206,5 +206,69 @@ describe('arrayBufferIO', () => {
       );
       expect([...new Uint32Array(buffer)]).toStrictEqual([3]);
     });
+
+    it('patches a struct decorated with size', () => {
+      const Schema = d.struct({ a: d.size(16, d.u32), b: d.size(8, d.u32), c: d.u32 });
+      const buffer = new ArrayBuffer(16 + 8 + 4);
+
+      patchArrayBuffer(buffer, Schema, { c: 1 });
+      expect([...new Uint32Array(buffer)]).toStrictEqual([0, 0, 0, 0, 0, 0, 1]);
+    });
+
+    it('patches a struct with runtime sized array', () => {
+      const Schema = d.struct({ a: d.vec4f, b: d.arrayOf(d.u32, 0) });
+      const buffer = new ArrayBuffer(32);
+
+      patchArrayBuffer(buffer, Schema, { b: { 1: 7 } });
+      expect([...new Uint32Array(buffer)]).toStrictEqual([0, 0, 0, 0, 0, 7, 0, 0]);
+
+      expect(() =>
+        patchArrayBuffer(buffer, Schema, { b: { 4: 7 } }),
+      ).toThrowErrorMatchingInlineSnapshot(
+        `[Error: Index 4 is out of bounds for an array of 4 elements.]`,
+      );
+    });
+
+    it('patches a struct with decorated runtime sized array', () => {
+      const Schema = d.struct({ a: d.u32, b: d.align(16, d.arrayOf(d.u32, 0)) });
+      const buffer = new ArrayBuffer(32);
+
+      patchArrayBuffer(buffer, Schema, { b: { 1: 7 } });
+      expect([...new Uint32Array(buffer)]).toStrictEqual([0, 0, 0, 0, 0, 7, 0, 0]);
+
+      expect(() => patchArrayBuffer(buffer, Schema, { b: { 4: 7 } })).toThrow(
+        'Index 4 is out of bounds for an array of 4 elements.',
+      );
+    });
+
+    it('keeps unpatched parts of arrays and structs', () => {
+      const Schema = d.struct({
+        arr: d.arrayOf(d.u32, 4),
+        inner: d.struct({ x: d.u32, y: d.u32 }),
+      });
+      const buffer = new ArrayBuffer(d.sizeOf(Schema));
+      writeToArrayBuffer(buffer, Schema, { arr: [1, 2, 3, 4], inner: { x: 5, y: 6 } });
+
+      patchArrayBuffer(buffer, Schema, { arr: { 1: 7 }, inner: { y: 8 } });
+      expect(readFromArrayBuffer(buffer, Schema)).toStrictEqual({
+        arr: [1, 7, 3, 4],
+        inner: { x: 5, y: 8 },
+      });
+    });
+
+    it('keeps unpatched parts of decorated arrays and structs', () => {
+      const Schema = d.struct({
+        arr: d.align(16, d.arrayOf(d.u32, 4)),
+        inner: d.align(16, d.struct({ x: d.u32, y: d.u32 })),
+      });
+      const buffer = new ArrayBuffer(d.sizeOf(Schema));
+      writeToArrayBuffer(buffer, Schema, { arr: [1, 2, 3, 4], inner: { x: 5, y: 6 } });
+
+      patchArrayBuffer(buffer, Schema, { arr: { 1: 7 }, inner: { y: 8 } });
+      expect(readFromArrayBuffer(buffer, Schema)).toStrictEqual({
+        arr: [1, 7, 3, 4],
+        inner: { x: 5, y: 8 },
+      });
+    });
   });
 });
