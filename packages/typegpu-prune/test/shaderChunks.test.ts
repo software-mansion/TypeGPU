@@ -34,11 +34,42 @@ describe('packShaders', () => {
     expect(packShaders(['fn a(){}', 'fn b(){}'])).toStrictEqual(['fn a(){}', 'fn b(){}']);
   });
 
+  it('ignores braces in comments', () => {
+    const commented = [
+      'fn a(){// {\nreturn;}',
+      'fn b(){/* } /* { */ } */return;}',
+      'fn c(){/* {',
+    ].map((comment) => [comment, ...shared, 'fn op(){}'].join(''));
+    const packed = packShaders(commented.slice(0, 2));
+    expect(packed).toStrictEqual({
+      chunks: expect.any(Array),
+      shaders: [
+        [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+        [10, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+      ],
+    });
+    expect(unpack(commented)).toStrictEqual(commented);
+  });
+
+  it('keeps splitting after a stray closing brace', () => {
+    const stray = ['}', '};'].map((text) => [text, ...shared].join(''));
+    expect(packShaders(stray)).toStrictEqual({
+      chunks: expect.any(Array),
+      shaders: [
+        [0, 1, 2, 3, 4, 5, 6, 7, 8],
+        [0, 9, 1, 2, 3, 4, 5, 6, 7, 8],
+      ],
+    });
+    expect(unpack(stray)).toStrictEqual(stray);
+  });
+
   it('round-trips any text', () => {
     const odd = [
       '',
       '\n\nfn a() {\n}\n\n',
       '}}};;{',
+      '/* unterminated { comment',
+      'fn a() { // }',
       'struct S {\n  a: f32,\n};\nvar<private> s: S;',
     ].map((text) => `${shared.join('\n')}${text}`);
     expect(unpack(odd)).toStrictEqual(odd);
