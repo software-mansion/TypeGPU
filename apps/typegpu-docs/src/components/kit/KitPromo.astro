@@ -131,7 +131,7 @@ const storageKey =
     for (const button of document.querySelectorAll<HTMLButtonElement>(
       '[data-kit-copy]',
     )) {
-      if (button.dataset.kitCopyBound) continue;
+      if ('kitCopyBound' in button.dataset) continue;
       button.dataset.kitCopyBound = '';
       const status = button.querySelector<HTMLElement>('.kit-promo__copied');
       button.addEventListener('click', async () => {
@@ -150,7 +150,7 @@ const storageKey =
     for (const button of document.querySelectorAll<HTMLButtonElement>(
       '[data-kit-dismiss]',
     )) {
-      if (button.dataset.kitDismissBound) continue;
+      if ('kitDismissBound' in button.dataset) continue;
       button.dataset.kitDismissBound = '';
       button.addEventListener('click', () => {
         const promo = button.closest<HTMLElement>('[data-kit-promo]');

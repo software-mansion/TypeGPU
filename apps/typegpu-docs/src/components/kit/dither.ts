@@ -149,7 +149,7 @@ function listen() {
 /** Paints every `[data-kit-dither]` element not yet painted, and keeps it painted as it resizes. */
 export function mountDithers(scope: ParentNode = document) {
   for (const element of scope.querySelectorAll<HTMLElement>('[data-kit-dither]')) {
-    if (element.dataset.kitDitherMounted) continue;
+    if ('kitDitherMounted' in element.dataset) continue;
     element.dataset.kitDitherMounted = '';
     const kind =
       (element.dataset.kitDither as DitherKind) in FIELDS
