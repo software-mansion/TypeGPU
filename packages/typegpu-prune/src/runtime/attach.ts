@@ -1,11 +1,5 @@
-import {
-  type AttachContext,
-  type Codec,
-  type ResourceRef,
-  type ShaderChunks,
-  type Tables,
-} from '../artifact.ts';
-import { hydrateCodec } from './codecs.ts';
+import type { AttachContext, Codec, ResourceRef, ShaderChunks, Tables } from '../artifact.ts';
+import { hydrateCodec, type RuntimeArrayCodec } from './codecs.ts';
 import {
   PrunedComputePipeline,
   PrunedGuardedComputePipeline,
@@ -106,6 +100,15 @@ function createContext(tables: RuntimeTables, shared: Shared, root: PrunedRoot):
 
   return {
     codec: (id) => at(tables.codecs, id),
+    arrayOf: (id) => {
+      const codec = at(tables.codecs, id) as Partial<RuntimeArrayCodec>;
+      if (!codec.ofLength) {
+        throw new Error(
+          `[@typegpu/prune] Precompiled codec #${id} is not of a runtime-sized array.`,
+        );
+      }
+      return codec.ofLength;
+    },
     buffer,
     sampler,
     layout: (id) => host.layoutObject(id),
