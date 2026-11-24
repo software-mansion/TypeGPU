@@ -1,7 +1,7 @@
 // TypeGPU Kit's dithered look for the promo surfaces that link to it. Ported from the Kit docs
 // site's painter (software-mansion/typegpu-kit, apps/typegpu-kit-docs/src/components/site/dither.ts):
-// a field from 0 to 1 is printed through Kit's colour ramp in 8×8 Bayer cells on a 2D canvas, so it
-// needs no GPU and redraws only when the field changes.
+// a field from 0 to 1 is printed through Kit's colour ramp in 8×8 Bayer cells into a background
+// image, so it needs no GPU and redraws only when the field changes.
 
 type Rgb = readonly [number, number, number];
 
@@ -37,14 +37,16 @@ const RAMP: readonly (Rgb | null)[] = [
 
 const clamp = (v: number) => Math.min(1, Math.max(0, v));
 
-/** Fills `canvas` at its layout size with `cell`-wide CSS-pixel cells, `field` giving each cell's ramp position. */
-function paint(canvas: HTMLCanvasElement, field: (x: number, y: number) => number, cell = 2) {
-  const { width, height } = canvas.getBoundingClientRect();
+/**
+ * Fills `element`'s background with `cell`-wide CSS-pixel cells, `field` giving each cell's ramp
+ * position. It paints a background image rather than a `<canvas>` on the page, so code that picks up
+ * the page's first canvas (as the live examples do) never finds it.
+ */
+function paint(element: HTMLElement, field: (x: number, y: number) => number, cell = 2) {
+  const { width, height } = element.getBoundingClientRect();
   if (!width || !height) return;
-  const ratio = Math.max(1, Math.round(devicePixelRatio));
-  const size = Math.max(1, Math.round(cell * ratio));
-  const columns = Math.max(1, Math.ceil((width * ratio) / size));
-  const rows = Math.max(1, Math.ceil((height * ratio) / size));
+  const columns = Math.max(1, Math.ceil(width / cell));
+  const rows = Math.max(1, Math.ceil(height / cell));
 
   const cells = new ImageData(columns, rows);
   const steps = RAMP.length - 1;
@@ -64,20 +66,15 @@ function paint(canvas: HTMLCanvasElement, field: (x: number, y: number) => numbe
   small.width = columns;
   small.height = rows;
   small.getContext('2d')?.putImageData(cells, 0, 0);
-  if (canvas.width !== columns * size) canvas.width = columns * size;
-  if (canvas.height !== rows * size) canvas.height = rows * size;
-  const context = canvas.getContext('2d');
-  if (!context) return;
-  context.clearRect(0, 0, canvas.width, canvas.height);
-  context.imageSmoothingEnabled = false;
-  context.drawImage(small, 0, 0, canvas.width, canvas.height);
+  element.style.backgroundImage = `url(${small.toDataURL()})`;
+  element.style.backgroundSize = `${columns * cell}px ${rows * cell}px`;
 }
 
 /**
  * The shapes of light the promos print. The ones that sit behind text peak below the ramp's top
  * two steps (the accent and its near-white ice), so the text over them stays readable.
  *
- * Each shape is built from the pointer's lean: where across the canvas the light sits, from 0 to 1.
+ * Each shape is built from the pointer's lean: where across the element the light sits, from 0 to 1.
  */
 const FIELDS = {
   /** A pool of light rising from the foot, as under Kit's footer. */
@@ -107,7 +104,7 @@ const REST: Record<DitherKind, { middle: number; reach: number }> = {
 };
 
 interface Mounted {
-  canvas: HTMLCanvasElement;
+  element: HTMLElement;
   kind: DitherKind;
   middle: number;
   target: number;
@@ -133,11 +130,11 @@ function listen() {
   listening = true;
   window.addEventListener('pointermove', (event) => {
     for (const entry of mounted) {
-      if (!entry.canvas.isConnected) {
+      if (!entry.element.isConnected) {
         mounted.delete(entry);
         continue;
       }
-      const box = entry.canvas.getBoundingClientRect();
+      const box = entry.element.getBoundingClientRect();
       const near = event.clientY > box.top - 160 && event.clientY < box.bottom + 160;
       const { middle, reach } = REST[entry.kind];
       const x = clamp((event.clientX - box.left) / box.width);
@@ -149,26 +146,26 @@ function listen() {
   });
 }
 
-/** Paints every `canvas[data-kit-dither]` not yet painted, and keeps it painted as it resizes. */
+/** Paints every `[data-kit-dither]` element not yet painted, and keeps it painted as it resizes. */
 export function mountDithers(scope: ParentNode = document) {
-  for (const canvas of scope.querySelectorAll<HTMLCanvasElement>('canvas[data-kit-dither]')) {
-    if (canvas.dataset.kitDitherMounted) continue;
-    canvas.dataset.kitDitherMounted = '';
+  for (const element of scope.querySelectorAll<HTMLElement>('[data-kit-dither]')) {
+    if (element.dataset.kitDitherMounted) continue;
+    element.dataset.kitDitherMounted = '';
     const kind =
-      (canvas.dataset.kitDither as DitherKind) in FIELDS
-        ? (canvas.dataset.kitDither as DitherKind)
+      (element.dataset.kitDither as DitherKind) in FIELDS
+        ? (element.dataset.kitDither as DitherKind)
         : 'horizon';
-    const cell = Number(canvas.dataset.kitDitherCell) || 2;
+    const cell = Number(element.dataset.kitDitherCell) || 2;
     const entry: Mounted = {
-      canvas,
+      element,
       kind,
       middle: REST[kind].middle,
       target: REST[kind].middle,
       frame: 0,
-      draw: () => paint(canvas, FIELDS[kind](entry.middle), cell),
+      draw: () => paint(element, FIELDS[kind](entry.middle), cell),
     };
     mounted.add(entry);
-    new ResizeObserver(() => entry.draw()).observe(canvas);
+    new ResizeObserver(() => entry.draw()).observe(element);
   }
   listen();
 }

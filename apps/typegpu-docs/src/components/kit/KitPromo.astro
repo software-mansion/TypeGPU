@@ -34,11 +34,13 @@ const storageKey =
   data-kit-promo={storageKey}
   data-pagefind-ignore
 >
-  <canvas
+  <div
     class="kit-promo__light"
     data-kit-dither={variant === 'card' ? 'horizon' : 'band'}
     data-kit-dither-cell={variant === 'card' ? 3 : 2}
-    aria-hidden="true"></canvas>
+    aria-hidden="true"
+  >
+  </div>
 
   <a class="kit-promo__mark" href={KIT_URL} aria-label="TypeGPU Kit">
     <KitLogo aria-hidden="true" />
@@ -210,6 +212,7 @@ const storageKey =
     z-index: -1;
     width: 100%;
     height: 100%;
+    background-repeat: no-repeat;
     image-rendering: pixelated;
     pointer-events: none;
   }
