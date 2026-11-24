@@ -24,15 +24,13 @@ export function convertPartialToPatch(schema: wgsl.BaseData, data: unknown): unk
     return data;
   }
 
-  if (isDecorated(schema) || isLooseDecorated(schema)) {
-    return convertPartialToPatch(schema.inner, data);
-  }
+  const inner = undecorate(schema);
 
-  if (isWgslStruct(schema) || isUnstruct(schema)) {
+  if (isWgslStruct(inner) || isUnstruct(inner)) {
     const result: Record<string, unknown> = {};
     const record = data as Record<string, unknown>;
-    for (const key of Object.keys(schema.propTypes)) {
-      const subSchema = schema.propTypes[key];
+    for (const key of Object.keys(inner.propTypes)) {
+      const subSchema = inner.propTypes[key];
       const value = record[key];
       if (value !== undefined && subSchema) {
         result[key] = convertPartialToPatch(subSchema, value);
@@ -41,8 +39,8 @@ export function convertPartialToPatch(schema: wgsl.BaseData, data: unknown): unk
     return result;
   }
 
-  if (isWgslArray(schema) || isDisarray(schema)) {
-    const arrSchema = schema as wgsl.WgslArray;
+  if (isWgslArray(inner) || isDisarray(inner)) {
+    const arrSchema = inner;
     const result: Record<number, unknown> = {};
     for (const { idx, value } of data as { idx: number; value: unknown }[]) {
       result[idx] = convertPartialToPatch(arrSchema.elementType, value);

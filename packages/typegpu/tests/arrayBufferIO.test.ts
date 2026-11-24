@@ -207,7 +207,7 @@ describe('arrayBufferIO', () => {
       expect([...new Uint32Array(buffer)]).toStrictEqual([3]);
     });
 
-    it('patches a struct decorated with size', () => {
+    it('patches a struct with decorated props', () => {
       const Schema = d.struct({ a: d.size(16, d.u32), b: d.size(8, d.u32), c: d.u32 });
       const buffer = new ArrayBuffer(16 + 8 + 4);
 
