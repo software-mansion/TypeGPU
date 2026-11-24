@@ -933,6 +933,18 @@ importers:
         specifier: workspace:^
         version: link:../unplugin-typegpu
     devDependencies:
+      '@typegpu/algorithm':
+        specifier: workspace:*
+        version: link:../typegpu-algorithm
+      '@typegpu/noise':
+        specifier: workspace:*
+        version: link:../typegpu-noise
+      '@typegpu/radiance-cascades':
+        specifier: workspace:*
+        version: link:../typegpu-radiance-cascades
+      '@typegpu/sdf':
+        specifier: workspace:*
+        version: link:../typegpu-sdf
       '@typegpu/tgpu-dev-cli':
         specifier: workspace:*
         version: link:../tgpu-dev-cli

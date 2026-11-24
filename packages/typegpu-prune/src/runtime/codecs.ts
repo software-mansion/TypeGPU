@@ -65,7 +65,7 @@ export function arrayCodec({ size, align, array }: ArrayCodecArtifact): Codec {
   const read: Reader = (input, offset, littleEndian = true) =>
     Array.from({ length: count }, (_, i) => get.call(input, offset + i * stride, littleEndian));
 
-  return { size, align, write, read };
+  return { size, align, write, read, elementCount: count };
 }
 
 /** A runtime-sized array codec: a codec of no elements, and the codec of any length of them */
@@ -94,20 +94,24 @@ function elementsCodec(element: Codec, count: number, stride: number, align: num
       Array.from({ length: count }, (_, i) =>
         readElement(input, offset + i * stride, littleEndian),
       ));
-  return { size: count * stride, align, write, read };
+  return { size: count * stride, align, write, read, elementCount: count };
 }
+
+/** Linked by `hydrateCodecs` once every codec exists */
+type Linkable = { elementType?: Codec | undefined };
 
 function runtimeArrayCodec({ align, runtimeArray }: RuntimeArrayCodecArtifact): RuntimeArrayCodec {
   const { element, stride } = runtimeArray;
+  const codec: RuntimeArrayCodec & Linkable = { size: 0, align, elementCount: 0, ofLength };
   const elementCodec = typeof element === 'string' ? undefined : hydrateCodec(element);
   const lengths = new Map<number, Codec>();
-  const ofLength = (length: number): Codec => {
+  function ofLength(length: number): Codec {
     if (!Number.isInteger(length) || length < 0) {
       throw new Error(`Cannot create array schema with invalid element count: ${length}.`);
     }
     let sized = lengths.get(length);
     if (!sized) {
-      sized =
+      const elements =
         typeof element === 'string'
           ? arrayCodec({
               size: length * stride,
@@ -115,15 +119,31 @@ function runtimeArrayCodec({ align, runtimeArray }: RuntimeArrayCodecArtifact): 
               array: { element, count: length, stride },
             })
           : elementsCodec(elementCodec as Codec, length, stride, align);
+      sized = { ...elements, elementType: codec.elementType };
       lengths.set(length, sized);
     }
     return sized;
-  };
-  return { size: 0, align, ofLength };
+  }
+  return codec;
+}
+
+/**
+ * Codecs as emitted, with runtime-sized arrays linked to the codecs of their elements, so that
+ * `elementType` of each length is the codec returned for the element schema
+ */
+export function hydrateCodecs(emitted: readonly CodecArtifact[]): Codec[] {
+  const codecs = emitted.map(hydrateCodec);
+  emitted.forEach((art, idx) => {
+    const elementType = 'runtimeArray' in art ? art.runtimeArray.elementType : undefined;
+    if (elementType !== undefined) {
+      (codecs[idx] as Linkable).elementType = codecs[elementType];
+    }
+  });
+  return codecs;
 }
 
 /** Codecs as emitted: generated ones as-is, array codecs built from their data */
-export function hydrateCodec(codec: CodecArtifact): Codec {
+function hydrateCodec(codec: CodecArtifact): Codec {
   if ('array' in codec) {
     return arrayCodec(codec);
   }
