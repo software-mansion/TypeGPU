@@ -29,7 +29,7 @@ const RAMP: readonly (Rgb | null)[] = [
   rgb('#0e1118'),
   rgb('#14181f'),
   rgb('#1b1f28'),
-  rgb('#313844'),
+  rgb('#232736'), // the docs' dark page background, so the light fades into the page
   rgb('#3c528f'),
   rgb('#4d79ff'),
   rgb('#dbf0ff'),
