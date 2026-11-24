@@ -295,7 +295,13 @@ function applyActionToSnippet(
       );
     case 'deref':
       return derefSnippet(snippet);
-    case 'abstract-cast':
+    case 'abstract-cast': {
+      if (typeof snippet.value === 'string') {
+        // Already WGSL code (e.g. a non-folded `16 >> 1u`). It's an abstract const-expression,
+        // which WGSL converts on its own, so there's no JS value to compare against.
+        return withDataType(targetType, snippet);
+      }
+
       const converted = schemaCallWrapperGPU(ctx, targetType, snippet);
 
       if (DEV && verbose && converted.value !== snippet.value) {
@@ -306,6 +312,7 @@ function applyActionToSnippet(
       }
 
       return converted;
+    }
     case 'cast': {
       if (isWgslStruct(snippet.dataType) && isWgslStruct(targetType)) {
         const typeName = getName(snippet.dataType) ?? '<unnamed>';
