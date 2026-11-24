@@ -1,13 +1,25 @@
 ---
-// With `?webgpu=off` in the URL, the page behaves as in a browser without WebGPU, so the fallbacks
-// can be checked without one. It runs first in <head>, before any script reads `navigator.gpu`.
+// With `?webgpu=off` in the URL, `navigator.gpu` is gone (`'gpu' in navigator` is false too), so the
+// WebGPU fallbacks can be checked in a browser that has it. The rest of the WebGPU API, such as the
+// `GPUBufferUsage` globals, stays. It runs first in <head>, before any script reads `navigator.gpu`.
 ---
 
 <script is:inline>
-  if (new URLSearchParams(location.search).get('webgpu') === 'off') {
-    Object.defineProperty(navigator, 'gpu', {
-      value: undefined,
-      configurable: true,
-    });
-  }
+  (() => {
+    const proto = Navigator.prototype;
+    const real = Object.getOwnPropertyDescriptor(proto, 'gpu');
+
+    function apply() {
+      const off = new URLSearchParams(location.search).get('webgpu') === 'off';
+      if (off) {
+        delete proto.gpu;
+      } else if (real && !('gpu' in proto)) {
+        Object.defineProperty(proto, 'gpu', real);
+      }
+    }
+
+    apply();
+    // Astro's client router runs this script once per full load, so follow the URL as it navigates
+    document.addEventListener('astro:after-swap', apply);
+  })();
 </script>
