@@ -224,7 +224,7 @@ function warnAboutUnreachableSubmission(core: object, what: string): void {
       'suspicious',
       core,
       what,
-      `${what} is ignored when recording into a raw GPUCommandEncoder, since there is no submission to report after. Use root.createCommandEncoder() instead.`,
+      `${what} is ignored when recording into a raw or wrapped GPUCommandEncoder, since there is no submission to report after. Use root.createCommandEncoder() without an existing encoder instead.`,
     );
   }
 }

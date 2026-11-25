@@ -717,6 +717,18 @@ export interface TgpuRoot extends Unwrapper, WithBinding {
   createCommandEncoder(descriptor?: GPUCommandEncoderDescriptor): TgpuCommandEncoder;
 
   /**
+   * Wraps an existing {@link GPUCommandEncoder}, so TypeGPU passes and pipelines record into it.
+   *
+   * @remarks
+   * Typed wrapper around a GPUCommandEncoder, for recording into an encoder that other code
+   * creates and submits. Shader `console.log` output and performance callbacks are read after
+   * a submission TypeGPU makes, so they are skipped, with a warning in development.
+   *
+   * @param gpuEncoder A vanilla WebGPU command encoder.
+   */
+  createCommandEncoder(gpuEncoder: GPUCommandEncoder): TgpuCommandEncoder;
+
+  /**
    * Creates a {@link TgpuRenderBundleEncoder} for recording draw commands into
    * a {@link GPURenderBundle}. Call `finish()` on the encoder to obtain the
    * bundle, replayable in a render pass via `pass.executeBundles`.
