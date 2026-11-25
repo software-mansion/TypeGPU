@@ -221,16 +221,6 @@ const sidebar = stripFalsy([
       },
     ]),
   },
-  DEV && {
-    label: 'Tutorials',
-    items: [
-      {
-        label: 'Game of life tutorial',
-        slug: 'tutorials/game-of-life',
-        badge: { text: 'dev', variant: 'note' },
-      },
-    ],
-  },
   {
     label: 'Tooling',
     items: stripFalsy([
