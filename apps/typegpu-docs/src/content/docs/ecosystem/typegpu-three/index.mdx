@@ -16,6 +16,10 @@ with a focus on composability, intuitive sharing of logic across modules and cus
 
 You can see a [direct comparison between TSL and TypeGPU here](#differences-between-tsl-and-typegpu).
 
+:::tip
+To use [TypeGPU Kit](/TypeGPU/ecosystem/typegpu-kit)'s modules next to three.js, see Kit's [Beside other renderers](https://docs.swmansion.com/typegpu-kit/recipes/other-renderers/) recipe. It shares one device between the two and passes buffers and textures between them.
+:::
+
 :::caution
 If your end user's device doesn't support WebGPU, Three.js enables a WebGL fallback. Currently, using @typegpu/three
 makes your app only work on WebGPU-enabled devices. If you need WebGL support, [bombard this issue with reactions

@@ -1,12 +1,12 @@
 ---
 import SwmLogomarkTopRightSvg from '../assets/swm-logomark-top-right.svg';
-import BookOpened from '../assets/hero/book-opened.svg';
 import CodeShowcase from '../components/CodeShowcase.astro';
 import CallToActionButton from '../components/CallToActionButton.astro';
 import GradientTitle from '../components/GradientTitle.astro';
 import SiteHeader from '../components/SiteHeader.astro';
 import Videos from '../components/Videos.astro';
 import PageLayout from '../layouts/PageLayout.astro';
+import { KIT_URL } from '../components/kit/links';
 import LandingExampleGrid from '../components/landing-examples/LandingExampleGrid.tsx';
 import { HeroEffect } from '../components/hero-effect/HeroEffect.tsx';
 import SecondaryButton from '../components/SecondaryButton.astro';
@@ -41,11 +41,17 @@ import {
 
       <div class="relative flex w-full max-w-[40rem] flex-col gap-5">
         <a
-          href="/TypeGPU/blog/typegpu-012/"
-          class="border-gradient-purple inline-flex items-center gap-2 self-start border-b-2 border-solid px-0 py-1.5 text-sm leading-normal text-inherit no-underline hover:border-b-current focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-current focus-visible:outline-solid [&_svg_path]:stroke-current"
+          href={KIT_URL}
+          class="kit-hero-link relative inline-flex items-center gap-2 self-start px-0 pt-1.5 pb-2.5 text-sm leading-normal text-inherit no-underline focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-current focus-visible:outline-solid"
         >
-          <BookOpened width="18" height="18" aria-hidden="true" />
-          What’s new in 0.12?
+          <span class="font-semibold">New:</span> TypeGPU Kit, building blocks for
+          TypeGPU
+          <span aria-hidden="true">→</span>
+          <span
+            class="pointer-events-none absolute inset-x-0 bottom-0 h-1.5 w-full bg-no-repeat [image-rendering:pixelated]"
+            data-kit-dither="rail"
+            data-kit-dither-cell="2"
+            aria-hidden="true"></span>
         </a>
         <h1
           class="dark:text-almost-white text-navy-100 text-[2.75rem] font-bold md:text-6xl"
@@ -248,3 +254,10 @@ import {
     </footer>
   </div>
 </PageLayout>
+
+<script>
+  import { mountDithers } from '../components/kit/dither';
+
+  // The rail under the hero's Kit link
+  mountDithers();
+</script>
