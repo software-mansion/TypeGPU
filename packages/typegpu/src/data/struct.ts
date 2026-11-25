@@ -3,9 +3,12 @@ import { validateProp } from '../nameUtils.ts';
 import { getName, setName } from '../shared/meta.ts';
 import { $gpuCallable, $gpuCallableStrictSignature, $internal } from '../shared/symbols.ts';
 import { tryConvertSnippet } from '../tgsl/conversion.ts';
+import { getCustomSize, undecorate } from './dataTypes.ts';
 import { schemaCallWrapper } from './schemaCallWrapper.ts';
+import { sizeOf } from './sizeOf.ts';
 import { fallthroughCopyOrigin, snip } from './snippet.ts';
 import type { AnyWgslData, BaseData, WgslStruct } from './wgslTypes.ts';
+import { isWgslArray, isWgslStruct } from './wgslTypes.ts';
 
 // ----------
 // Public API
@@ -48,10 +51,20 @@ export function INTERNAL_createStruct<TProps extends Record<string, BaseData>>(
   props: TProps,
   isAbstruct: boolean,
 ): WgslStruct<TProps> {
-  Object.keys(props).forEach((key) => {
+  Object.entries(props).forEach(([key, schema]) => {
     const result = validateProp(key);
     if (!result.success) {
       throw new Error(`Invalid property key '${key}'${result.error ? `: ${result.error}` : ''}`);
+    }
+
+    const inner = undecorate(schema);
+    if ((isWgslArray(inner) || isWgslStruct(inner)) && Number.isNaN(sizeOf(inner))) {
+      if (isWgslStruct(inner)) {
+        throw new Error(`Cannot nest runtime sized structs (property '${key}').`);
+      }
+      if (getCustomSize(schema) !== undefined) {
+        throw new Error(`Cannot apply @size to a runtime sized array (property '${key}').`);
+      }
     }
   });
 
