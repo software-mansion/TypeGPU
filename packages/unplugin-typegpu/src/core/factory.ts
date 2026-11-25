@@ -205,7 +205,7 @@ export const unpluginFactory = ((rawOptions, _meta) => {
         try {
           ast = parser.parse(
             code,
-            getBabelParserOptions(getLang(id.split('?')[0] ?? ''), {
+            getBabelParserOptions(getLang(id.replace(/\?.*$/, '')), {
               sourceType: 'module',
               allowReturnOutsideFunction: true,
             }),
