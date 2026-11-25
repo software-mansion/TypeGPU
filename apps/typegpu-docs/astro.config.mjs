@@ -225,11 +225,6 @@ const sidebar = stripFalsy([
     label: 'Tutorials',
     items: [
       {
-        label: 'From a Triangle to Simulating Boids: Step-by-step Tutorial',
-        slug: 'tutorials/triangle-to-boids',
-        badge: { text: 'dev', variant: 'note' },
-      },
-      {
         label: 'Game of life tutorial',
         slug: 'tutorials/game-of-life',
         badge: { text: 'dev', variant: 'note' },
