@@ -25,6 +25,7 @@ import {
 import { getName, makeDereferenceable, makeResolvable, setName, snip } from 'typegpu/~internal';
 
 import { WebGLFallbackUnsupportedError } from './errors.ts';
+import { CanvasPresenter } from './presenter.ts';
 import { GlslGenerator, CrossShaderStageState, getCrossShaderStageState } from './glslGenerator.ts';
 import { createStandInRoot } from './standInRoot.ts';
 import {
@@ -164,6 +165,7 @@ class TgpuWebGLRenderPipelineImpl implements TgpuWebGLRenderPipeline {
   #textureBindings: TextureBinding[];
   #colorAttachment: WebGLColorAttachment | null = null;
   #offscreen: OffscreenCanvas;
+  #presenter: CanvasPresenter;
   #vao: WebGLVertexArrayObject;
 
   constructor(
@@ -171,11 +173,13 @@ class TgpuWebGLRenderPipelineImpl implements TgpuWebGLRenderPipeline {
     program: WebGLProgram,
     crossShaderStageState: CrossShaderStageState,
     offscreen: OffscreenCanvas,
+    presenter: CanvasPresenter,
     vao: WebGLVertexArrayObject,
   ) {
     this.#gl = gl;
     this.#program = program;
     this.#offscreen = offscreen;
+    this.#presenter = presenter;
     this.#vao = vao;
 
     // Discover bindings from shader references, without retaining a root-wide uniform history.
@@ -230,9 +234,11 @@ class TgpuWebGLRenderPipelineImpl implements TgpuWebGLRenderPipeline {
 
     const target = this.#colorAttachment?.view;
     if (target && !(target instanceof WebGLTextureRenderView)) {
-      const canvas = target.canvas;
-      this.#offscreen.width = canvas.width;
-      this.#offscreen.height = canvas.height;
+      this.#presenter.beginDraw(target.canvas);
+    } else if (!target) {
+      // Drawing without an attachment still goes into the shared drawing buffer, which
+      // would overwrite an image that is yet to be presented.
+      this.#presenter.flush();
     }
 
     if (target instanceof WebGLTextureRenderView) {
@@ -283,12 +289,7 @@ class TgpuWebGLRenderPipelineImpl implements TgpuWebGLRenderPipeline {
     gl.bindVertexArray(null);
 
     if (target && !(target instanceof WebGLTextureRenderView)) {
-      const canvas = target.canvas as HTMLCanvasElement;
-      const bitmapCtx = canvas.getContext('bitmaprenderer');
-      if (bitmapCtx) {
-        const bitmap = this.#offscreen.transferToImageBitmap();
-        bitmapCtx.transferFromImageBitmap(bitmap);
-      }
+      this.#presenter.endDraw(target.canvas);
     }
 
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -392,6 +393,7 @@ class WebGLUniformImpl<TData extends d.AnyWgslData> implements WebGLUniform<TDat
 export class TgpuRootWebGL {
   #gl: WebGL2RenderingContext;
   #offscreen: OffscreenCanvas;
+  #presenter: CanvasPresenter;
   #buffers: WebGLBuffer[] = [];
   readonly #textures = new Set<WebGLTextureImpl>();
   // Native handles only, so the root doesn't keep sampler wrappers alive.
@@ -418,6 +420,7 @@ export class TgpuRootWebGL {
     const vao = gl.createVertexArray();
     if (!vao) throw new Error('Failed to create VAO');
     this.#vao = vao;
+    this.#presenter = CanvasPresenter.for(gl);
 
     // WGSL's 'flat' interpolation takes the value from the first vertex of a primitive,
     // while GL defaults to the last one. When the extension is missing, integer and
@@ -508,6 +511,7 @@ export class TgpuRootWebGL {
     canvas: HTMLCanvasElement | OffscreenCanvas;
     alphaMode?: string;
   }): WebGLRenderContext {
+    this.#presenter.register(options.canvas);
     return {
       canvas: options.canvas,
       alphaMode: options.alphaMode,
@@ -566,6 +570,7 @@ export class TgpuRootWebGL {
       program,
       crossShaderStageState,
       this.#offscreen,
+      this.#presenter,
       this.#vao,
     );
   }
@@ -591,6 +596,7 @@ export class TgpuRootWebGL {
   }
 
   destroy(): void {
+    this.#presenter.flush();
     if (this.#vao) {
       this.#gl.deleteVertexArray(this.#vao);
       this.#vao = undefined;
