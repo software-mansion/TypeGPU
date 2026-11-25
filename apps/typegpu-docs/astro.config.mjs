@@ -134,11 +134,6 @@ const sidebar = stripFalsy([
         badge: { text: 'new' },
       },
       DEV && {
-        label: 'Naming Convention',
-        slug: 'advanced/naming-convention',
-        badge: { text: 'dev', variant: 'note' },
-      },
-      DEV && {
         label: 'Explaining the Magic',
         slug: 'advanced/explaining-the-magic',
         badge: { text: 'dev', variant: 'note' },
