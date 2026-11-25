@@ -572,11 +572,20 @@ describe('TgpuCommandEncoder', () => {
     });
     const encoder = root.createCommandEncoder(root.device.createCommandEncoder());
 
-    root.createComputePipeline({ compute: entryFn }).with(encoder).dispatchWorkgroups(1);
+    const pipeline = root.createComputePipeline({ compute: entryFn });
+
+    pipeline.with(encoder).dispatchWorkgroups(1);
+    const pass = encoder.beginComputePass();
+    pipeline.with(pass).dispatchWorkgroups(1);
+    pass.end();
 
     expect(consoleWarnSpy).toHaveBeenCalledWith(
       '⚠️ [suspicious] ',
       'Shader console.log output is ignored when recording into a raw or wrapped GPUCommandEncoder, since there is no submission to report after. Use root.createCommandEncoder() without an existing encoder instead.',
+    );
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      '⚠️ [suspicious] ',
+      'Shader console.log output is ignored when dispatching into a compute pass of a raw or wrapped GPUCommandEncoder, since there is no submission to read it back after.',
     );
   });
 
