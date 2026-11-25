@@ -43,7 +43,7 @@ Unsupported syntax (`var`, prefix `++i`, destructuring declarations, arrow funct
 | Message contains | Cause | Fix |
 |---|---|---|
 | `references cannot be assigned` | A vector, matrix, struct or array variable was assigned to a `let` or reassigned | Copy with its schema (`d.vec3f(v)`, `MyStruct(s)`) or use `const`. See `references/shaders.md` |
-| `textures and samplers cannot be assigned to 'let'` | A texture or sampler was stored in a `let` | Use `const`, which aliases the handle. See `references/shaders.md` |
+| `textures and samplers cannot be assigned to 'let'` | A texture or sampler was stored in a `let` | Pass the texture or sampler straight into the call. See `references/shaders.md` |
 | `non-pointer arguments cannot be mutated` | A function wrote to its parameter | Return the new value, or take a pointer (`d.ref<T>`, `d.ptrFn`). See `references/shaders.md` |
 | `uniform buffers cannot be mutated`, `readonly buffers cannot be mutated`, `immediate variables cannot be mutated`, `textures and samplers cannot be mutated`, `the left side is a constant`, `the left side is immutable` | A write to a uniform, readonly buffer, immediate, handle, `tgpu.const`, captured JS value or temporary | Use a mutable buffer, `tgpu.privateVar`, or a local copy |
 | `cannot take a reference to a scalar value` | `d.ref(x)` on an existing scalar | Copy it, `d.ref(d.f32(x))`, or declare the scalar as `const x = d.ref(0)` |

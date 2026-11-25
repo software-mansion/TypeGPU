@@ -128,15 +128,7 @@ A whole-number literal declares an integer (`let sum = 0` and `let x = 1.0` are 
 
 ## Textures and samplers
 
-Pass them straight into the call, `std.textureSample(layout.$.sampledTex, layout.$.sampler, uv)`, or give them a local name with `const`:
-
-```ts
-const tex = layout.$.sampledTex;
-const smp = layout.$.sampler;
-return std.textureSample(tex, smp, uv); // emits textureSample(sampledTex, sampler, uv)
-```
-
-A `const` holding a texture or sampler (laid-out, fixed like `sampler.$` / `view.$`, or a handle parameter) is a compile-time alias: no WGSL declaration is emitted and every use resolves to the original handle. `let` is rejected, since handles can't be reassigned. Destructuring (`const { sampledTex } = layout.$`) isn't supported. Stage and uniformity rules for sampling: `references/textures.md`.
+Pass them straight into the call, `std.textureSample(layout.$.sampledTex, layout.$.sampler, uv)`. Destructuring them (`const { sampledTex } = layout.$`) isn't supported. Stage and uniformity rules for sampling: `references/textures.md`.
 
 ---
 
