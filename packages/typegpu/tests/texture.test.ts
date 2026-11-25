@@ -216,6 +216,31 @@ describe('TgpuTexture', () => {
     >();
   });
 
+  it('wraps an existing GPUTexture without creating or destroying one', ({ root, device }) => {
+    const rawTexture = root.device.createTexture({
+      size: [64, 32],
+      format: 'rgba16float',
+      usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.RENDER_ATTACHMENT,
+    });
+    device.mock.createTexture.mockClear();
+
+    const texture = root
+      .createTexture({ size: [64, 32], format: 'rgba16float' }, rawTexture)
+      .$usage('sampled', 'render');
+
+    expectTypeOf(texture).toEqualTypeOf<
+      TgpuTexture<{ size: [64, 32]; format: 'rgba16float' }> & SampledFlag & RenderFlag
+    >();
+    expect(root.unwrap(texture)).toBe(rawTexture);
+
+    root.unwrap(texture.createView(d.texture2d(d.f32)));
+    expect(rawTexture.createView).toHaveBeenCalledOnce();
+
+    texture.destroy();
+    expect(rawTexture.destroy).not.toHaveBeenCalled();
+    expect(device.mock.createTexture).not.toHaveBeenCalled();
+  });
+
   it('creates transient textures with the exact WebGPU usage bits', ({ root, device }) => {
     const texture = root
       .createTexture({

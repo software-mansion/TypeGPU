@@ -502,10 +502,11 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
       TViewFormats,
       TDimension
     >,
+    gpuTexture?: GPUTexture,
   ): TgpuTexture<
     CreateTextureResult<TSize, TFormat, TMipLevelCount, TSampleCount, TViewFormats, TDimension>
   > {
-    const texture = INTERNAL_createTexture(props, this);
+    const texture = INTERNAL_createTexture(props, this, gpuTexture);
     // oxlint-disable-next-line typescript/no-explicit-any -- too much type wrangling
     return texture as any;
   }
