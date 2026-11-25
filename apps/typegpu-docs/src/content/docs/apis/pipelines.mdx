@@ -737,6 +737,18 @@ Whenever something is not covered by the typed API, the underlying WebGPU resour
 
 Raw `GPUCommandEncoder`s and pass encoders can also be passed to `pipeline.with(...)` directly, with the same limitations, since TypeGPU cannot know when they are submitted, nor what state has been set on them.
 
+To record typed passes into an encoder that other code creates and submits, such as a render graph, wrap it with `root.createCommandEncoder(gpuEncoder)`.
+The wrapped encoder has the same limitations: TypeGPU does not see its submission, so shader logs and performance callbacks are skipped, with a warning in development.
+
+```ts
+const encoder = root.createCommandEncoder(gpuEncoder);
+
+const pass = encoder.beginRenderPass({ colorAttachments: [{ view: targetView }] });
+pipeline.with(pass).draw(3);
+pass.end();
+// Whoever created `gpuEncoder` finishes and submits it.
+```
+
 It is also possible to access the underlying WebGPU resources for the TypeGPU pipelines, by calling `root.unwrap(pipeline)`.
 That way, they can be used with a regular WebGPU API, though this also requires unwrapping all the necessary resources.
 

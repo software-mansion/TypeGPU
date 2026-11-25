@@ -224,7 +224,7 @@ function warnAboutUnreachableSubmission(core: object, what: string): void {
       'suspicious',
       core,
       what,
-      `${what} is ignored when recording into a raw GPUCommandEncoder, since there is no submission to report after. Use root.createCommandEncoder() instead.`,
+      `${what} is ignored when recording into a raw or wrapped GPUCommandEncoder, since there is no submission to report after. Use root.createCommandEncoder() without an existing encoder instead.`,
     );
   }
 }
@@ -264,12 +264,12 @@ export function finalizeOwnEncoder(
 const PassKindWording = {
   render: {
     into: 'drawing into a render pass',
-    intoRaw: 'drawing into a raw render pass',
+    intoRaw: 'drawing into a render pass of a raw or wrapped GPUCommandEncoder',
     begin: 'beginRenderPass',
   },
   compute: {
     into: 'dispatching into a compute pass',
-    intoRaw: 'dispatching into a raw compute pass',
+    intoRaw: 'dispatching into a compute pass of a raw or wrapped GPUCommandEncoder',
     begin: 'beginComputePass',
   },
 } as const;
@@ -308,7 +308,7 @@ function reportIgnoredPriors(
         'suspicious',
         core,
         'logs',
-        `Shader console.log output is ignored when ${wording.intoRaw} encoder, since there is no submission to read it back after.`,
+        `Shader console.log output is ignored when ${wording.intoRaw}, since there is no submission to read it back after.`,
       );
     }
   }

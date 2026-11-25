@@ -136,8 +136,9 @@ Pipelines also accept raw WebGPU encoders via `.with(...)`:
 - `pipeline.with(gpuCommandEncoder)` — TypeGPU opens and ends the needed pass; you finish/submit the encoder.
 - `pipeline.with(gpuRenderPass | gpuComputePass)` — state is applied to the existing pass without ending it; you end it.
 - `pipeline.with(gpuRenderBundleEncoder)` — records draws into the bundle; you finish it.
+- `root.createCommandEncoder(gpuCommandEncoder)` — wraps an encoder other code creates and submits (e.g. a render graph node), so typed passes (`beginRenderPass` / `beginComputePass`) and buffer `clear`/`copyFrom` record into it; you finish/submit it.
 
-Same logging caveat as `finish()`: TypeGPU can't process shader logs or perf callbacks for submissions it doesn't own.
+Same logging caveat as `finish()`: TypeGPU can't process shader logs or perf callbacks for submissions it doesn't own, and warns in development when they are dropped.
 
 Escape hatch in the other direction: `root.unwrap(encoder)` / `root.unwrap(pass)` return the raw `GPUCommandEncoder` / pass encoder (e.g. for texture copies). Commands recorded raw are invisible to TypeGPU, so after unwrapping a pass, every later typed draw in that pass re-applies its full state.
 

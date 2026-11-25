@@ -35,11 +35,13 @@ import {
   type TgpuRenderPipeline,
 } from '../pipeline/renderPipeline.ts';
 import {
+  isGPUCommandEncoder,
   isTgpuCommandEncoder,
   isTgpuComputePass,
   isTgpuRenderCommands,
 } from '../pipeline/typeGuards.ts';
 import {
+  INTERNAL_adoptCommandEncoder,
   INTERNAL_createCommandEncoder,
   type TgpuCommandEncoder,
 } from '../commandEncoder/commandEncoder.ts';
@@ -599,8 +601,13 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
     throw new Error(`Unknown resource type: ${safeStringify(resource)}`);
   }
 
-  createCommandEncoder(descriptor?: GPUCommandEncoderDescriptor): TgpuCommandEncoder {
-    return INTERNAL_createCommandEncoder(this, descriptor);
+  createCommandEncoder(
+    descriptorOrEncoder?: GPUCommandEncoderDescriptor | GPUCommandEncoder,
+  ): TgpuCommandEncoder {
+    if (isGPUCommandEncoder(descriptorOrEncoder)) {
+      return INTERNAL_adoptCommandEncoder(this, descriptorOrEncoder);
+    }
+    return INTERNAL_createCommandEncoder(this, descriptorOrEncoder);
   }
 
   createRenderBundleEncoder(descriptor: GPURenderBundleEncoderDescriptor): TgpuRenderBundleEncoder {
