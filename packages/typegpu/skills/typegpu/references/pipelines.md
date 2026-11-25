@@ -121,7 +121,7 @@ Compact formats cut vertex bandwidth inside `d.unstruct({...})`:
 - `d.float16`, `d.uint8`, `d.uint16`, `d.sint8`, `d.sint16` and the normalized `d.unorm8`, `d.unorm16`, `d.snorm8`, `d.snorm16` (integers read as floats in `[0, 1]` or `[-1, 1]`) with `x2` and `x4` variants only.
 - `d.unorm8x4_bgra`, `d.unorm10_10_10_2`.
 
-Compact-format buffers are restricted to `'vertex'` usage. To share memory with storage, use buffer reinterpretation (`references/advanced.md`).
+Compact-format buffers can't take `'storage'` or `'uniform'` usage. To share memory with storage, use buffer reinterpretation (`references/advanced.md`).
 
 ---
 

@@ -58,13 +58,13 @@ const buf = root.createBuffer(d.arrayOf(Particle, 1000)).$usage('storage');
 const uBuf = root.createBuffer(Config, { time: 1, scale: 2.0 }).$usage('uniform');
 
 // Initializer callback, run while the buffer is still mapped (cheapest CPU path):
-const buf = root.createBuffer(Schema, (mappedBuffer) => {
+const chunked = root.createBuffer(Schema, (mappedBuffer) => {
   mappedBuffer.write([10, 20], { startOffset: firstChunk.offset });
   mappedBuffer.write([30, 40], { startOffset: secondChunk.offset });
 });
 
 // Wrap an existing GPUBuffer (you own its lifecycle and flags):
-const buf = root.createBuffer(d.u32, existingGPUBuffer);
+const wrapped = root.createBuffer(d.u32, existingGPUBuffer);
 ```
 
 ### Usage flags
@@ -112,7 +112,7 @@ planetBuffer.patch({
 });
 ```
 
-An array field takes a sparse `{ index: value }` object, a plain array (writes entries from index 0, as many as given) or a TypedArray (bytes verbatim). Sparse indices out of range throw. Uploads must start and end on 4-byte boundaries, so patching a single `d.u16` element throws: patch neighbouring pairs or write the whole array.
+An array field takes a sparse `{ index: value }` object, a plain array (writes entries from index 0, as many as given) or a TypedArray (bytes verbatim). Sparse indices out of range throw. Uploads must start and end on 4-byte boundaries, so patching a single `d.u16` element throws (except the last element of an odd-length array, which is padded to the boundary): patch 4-byte-aligned pairs (`{ 0: a, 1: b }`) or write the whole array.
 
 **`common.writeSoA(buffer, { field: Float32Array, ... })`** scatters separate packed per-field arrays into the GPU's AoS layout with correct padding. Use it when CPU data is already field-separated (particles, simulations, loaded models); examples in `references/matrices.md`, the model-loading pattern in `references/pipelines.md`.
 

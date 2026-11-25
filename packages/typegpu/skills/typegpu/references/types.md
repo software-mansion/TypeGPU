@@ -100,7 +100,7 @@ Return dedicated types. Use these as function parameter types:
 ```ts
 import { type TgpuUniform, type TgpuMutable, type TgpuReadonly } from 'typegpu';
 
-const config: TgpuUniform<typeof Config> = root.createUniform(Config, { time: 0 });
+const config: TgpuUniform<typeof Config> = root.createUniform(Config, { time: 0, scale: 1 }); // an initial value sets every field
 const particles: TgpuMutable<typeof ParticleArray> = root.createMutable(ParticleArray);
 const lut: TgpuReadonly<typeof LutArray> = root.createReadonly(LutArray);
 ```

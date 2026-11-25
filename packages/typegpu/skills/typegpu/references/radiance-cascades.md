@@ -79,6 +79,8 @@ for clear and `0` for opaque. `maxRaySteps` (default 64) and `stepSafety`
 
 ## Record into the frame
 
+The holographic runner records into a pass you opened:
+
 ```ts
 const encoder = root.createCommandEncoder();
 const pass = encoder.beginComputePass();

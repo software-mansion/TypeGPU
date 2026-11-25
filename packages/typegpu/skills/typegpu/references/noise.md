@@ -89,7 +89,7 @@ const main = tgpu.fragmentFn({
 });
 ```
 
-Uncached, `sample` recomputes lattice gradients per call. Precompute them into a cache and inject it into the pipeline that samples; shader code stays unchanged. The docs report up to 10x speedups, largest with many samples per thread (FBM, warping, derivatives). Use `staticCache` when the size is known up front; the dynamic one adds a bind group and a size uniform read per lookup.
+Uncached, `sample` recomputes lattice gradients per call, reseeding the thread's `randf` state at every lattice corner: later `randf` draws no longer follow the thread's seed, so draw before sampling, re-seed after it, or use a cache (cached sampling leaves `randf` alone). Precompute them into a cache and inject it into the pipeline that samples; shader code stays unchanged. The docs report up to 10x speedups, largest with many samples per thread (FBM, warping, derivatives). Use `staticCache` when the size is known up front; the dynamic one adds a bind group and a size uniform read per lookup.
 
 ### Static cache (fixed size)
 

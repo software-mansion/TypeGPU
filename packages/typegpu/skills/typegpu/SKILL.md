@@ -122,10 +122,9 @@ These cause most build errors and wrong results. Details in [shaders](references
 6. **`a / b` on scalars is floating-point division**: integers divide as `f32`, two `f16` stay `f16`. Divide integer scalars with `std.intdiv(a, b)`. Integer vectors (`vec2i / vec2i`) divide as integers.
 7. **Use `std.*` for math**: `std.sin`, `std.mix`, `std.clamp`, `std.normalize`, texture, atomic and subgroup functions ([std](references/std.md)). Several `Math.*` functions compile too; `std` also types vectors and wraps the WGSL builtins.
 8. **Initialise every variable** so its type is known: `let x = d.f32(0)`. Type annotations don't change the WGSL.
-9. **A runtime ternary is `select`**: both sides evaluate, so keep them cheap, side-effect-free scalars or vectors. Use `if` / `else` for structs, arrays and expensive branches. A condition known at compile time prunes the other branch.
-10. **Brace every `if` body**, including a single `return`.
-11. **Fragment colour outputs have 4 components**: `d.vec4f` for float and unorm targets, even `r8unorm` or `rg16float`, and `d.vec4u` / `d.vec4i` for integer targets (these need a `tgpu.fragmentFn` shell).
-12. **Pass textures and samplers straight into calls**: `std.textureSample(layout.$.tex, layout.$.samp, uv)`. Keep them out of variables.
+9. **A runtime ternary is `select`**: both sides evaluate, so keep them cheap, side-effect-free scalars or vector values (copy a vector variable or field first: `d.vec3f(v)`). Use `if` / `else` for structs, arrays and expensive branches. A condition known at compile time prunes the other branch.
+10. **Fragment colour outputs have 4 components**: `d.vec4f` for float and unorm targets, even `r8unorm` or `rg16float`, and `d.vec4u` / `d.vec4i` for integer targets (these need a `tgpu.fragmentFn` shell).
+11. **Alias textures and samplers with `const`, never `let`**: `const tex = layout.$.tex` is a compile-time alias that emits no declaration; `let tex = layout.$.tex` throws.
 
 ## Checking the result
 

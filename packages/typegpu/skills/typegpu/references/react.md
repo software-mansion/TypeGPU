@@ -121,7 +121,7 @@ Clear the Metro cache after changing the babel config (`npx expo start --clear`)
 
 A worklets version without `runOnUISync`, `createShareable` and `registerCustomSerializable` is ignored and frames run on the RN thread. While active:
 
-- Every `useFrame` callback starts with the `'worklet'` directive and runs on the UI thread; a plain callback throws. `<Root disableWorklets>` runs plain callbacks on the RN thread instead (fixed on mount).
+- Every `useFrame` callback starts with the `'worklet'` directive and runs on the UI thread; a plain callback throws. `<Root disableWorklets>` runs plain callbacks on the RN thread instead. Set it on mount: `useConfigureContext` keeps the mode it mounted with, so flipping the prop later needs a remount.
 - `ctxRef.current` is readable only inside the worklet; reading it on the RN thread (e.g. in `onResize`) throws.
 
 ```tsx

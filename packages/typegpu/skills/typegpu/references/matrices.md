@@ -28,7 +28,7 @@ To build matrices inside shaders, `std` has `identity2/3/4`, `translation4`, `sc
 
 - `d.mat4x4f(c0, c1, c2, c3)` takes four columns. Row-major input (numpy/HLSL habits) comes out transposed.
 - `M * v` applies `M` to `v`. Compose right to left: `projection * view * model * position`.
-- In shaders, index with `mat.columns[i]` for the i-th column and `mat.columns[c][r]` for an element; `mat[i]` works only on CPU-side instances, not inside `'use gpu'`.
+- In shaders, index with `mat.columns[i]` for the i-th column and `mat.columns[c][r]` for an element; `.columns` works on CPU-side instances too. There `mat[i]` is the i-th float of the padded column-major layout below (not a column), and it throws inside `'use gpu'`.
 - `Float32Array` layouts:
 
   | Schema | Floats | Layout |

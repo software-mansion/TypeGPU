@@ -102,13 +102,13 @@ Views expose a texture (or a subset) to shaders or render passes. A sampled or s
 texture.createView()                                         // schema from the texture's dimension, format and sampleCount
 texture.createView(d.texture2d(d.u32))                       // sampled
 texture.createView(d.textureDepth2d())                       // depth
-texture.createView(d.textureStorage2d('rgba8unorm', 'read-write')) // storage
+texture.createView(d.textureStorage2d('rgba8unorm', 'read-only'))  // storage
 texture.createView('render', { baseMipLevel: 2, mipLevelCount: 1 }) // render attachment: one mip or layer
 ```
 
 - Sampled: `d.texture1d`, `d.texture2d`, `d.texture2dArray`, `d.textureCube`, `d.textureCubeArray`, `d.texture3d`, `d.textureMultisampled2d`, each taking `d.f32` (the default), `d.u32` or `d.i32`.
 - Depth: `d.textureDepth2d`, `d.textureDepth2dArray`, `d.textureDepthCube`, `d.textureDepthCubeArray`, `d.textureDepthMultisampled2d`.
-- Storage: `d.textureStorage1d`, `d.textureStorage2d`, `d.textureStorage2dArray`, `d.textureStorage3d`, taking a format and `'write-only'` (the default), `'read-only'` or `'read-write'`.
+- Storage: `d.textureStorage1d`, `d.textureStorage2d`, `d.textureStorage2dArray`, `d.textureStorage3d`, taking a format and `'write-only'` (the default), `'read-only'` or `'read-write'`. TypeGPU doesn't check the pairing: WebGPU allows `'read-write'` only on `r32float`, `r32uint` and `r32sint` unless the device has `texture-formats-tier2`.
 
 ### View descriptor (subset of texture)
 

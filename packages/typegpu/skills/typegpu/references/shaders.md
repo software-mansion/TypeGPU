@@ -75,11 +75,11 @@ const getGradient = tgpu.fn([d.f32], d.vec3f)`(t) {
 ### Ternaries
 
 - A comptime-known condition (captured JS value, slot, `comptime` result; equality and inequality comparisons) prunes the dead branch from WGSL.
-- A runtime condition lowers to `select(falseVal, trueVal, cond)`, as does an explicit `std.select`. Both branches evaluate, so they must be side-effect-free (no assignments, increments, effectful calls) scalars or vectors, not structs, arrays or matrices. Use `if`/`else` for anything heavier.
+- A runtime condition lowers to `select(falseVal, trueVal, cond)`, as does an explicit `std.select`. Both branches evaluate, so they must be side-effect-free (no assignments, increments, effectful calls) scalars or vectors, not structs, arrays or matrices. A vector branch must be a fresh value: copy a named vector (variable, struct field, buffer value) first, `cond ? d.vec3f(boid.pos) : d.vec3f(boid.vel)`. Use `if`/`else` for anything heavier.
 
 ### `&&` and `||`
 
-With a comptime-known left-hand side (a slot, simple accessor, or captured external), JS short-circuit semantics apply at compile time and the dead side is pruned. Otherwise both operands must be booleans and compile to WGSL's strictly-boolean `&&`/`||`, so `maybeVec || fallback` fails at runtime; use `std.select` or `if`.
+With a comptime-known left-hand side (a slot, simple accessor, or captured external), JS short-circuit semantics apply at compile time and the dead side is pruned. Otherwise both operands must be booleans and compile to WGSL's strictly-boolean `&&`/`||`, so `maybeVec || fallback` throws when the shader is generated; use `std.select` or `if`.
 
 ### `switch`
 
@@ -128,7 +128,7 @@ A whole-number literal declares an integer (`let sum = 0` and `let x = 1.0` are 
 
 ## Textures and samplers
 
-Pass them straight into the call, `std.textureSample(layout.$.sampledTex, layout.$.sampler, uv)`, and keep them out of variables (not `const myTex = layout.$.sampledTex`). Stage and uniformity rules for sampling: `references/textures.md`.
+Pass them straight into the call, `std.textureSample(layout.$.sampledTex, layout.$.sampler, uv)`, or alias them with `const` (`const myTex = layout.$.sampledTex`): the alias is resolved at compile time and emits no declaration. `let` throws, since a handle can't be reassigned. Stage and uniformity rules for sampling: `references/textures.md`.
 
 ---
 
@@ -280,7 +280,7 @@ Access via `sharedAccum.$`, `threadState.$`, `PI_OVER_2.$`. Workgroup vars start
 
 Scalars (`d.f32`, `number`, `boolean`) are values. Vectors, matrices, structs and arrays are references: a variable holding a `d.vec3f` is a handle to a memory location, and writing a component (`v.x = 1`) mutates that location.
 
-A named reference (local variable, struct field, array element, function parameter) can be aliased with `const` or copied with its schema constructor, but it can't bind to `let` or be assigned with `=`. The same holds for returning a parameter, a buffer or variable value, or a field of one; returning a local is fine:
+A named reference (local variable, struct field, array element, function parameter) can be aliased with `const` or copied with its schema constructor, but it can't bind to `let` or be assigned with `=`. Returning a reference-typed parameter is rejected the same way, in plain `'use gpu'` functions and `tgpu.fn` shells alike. A plain function also can't return a reference-typed buffer or variable value, or a field or element of one; a `tgpu.fn` shell with a declared return type copies those on return. Scalars and locals return fine:
 
 ```ts
 let endPoint = startPoint;           // "references cannot be assigned"
@@ -289,7 +289,7 @@ const endPoint = startPoint;         // alias: same memory
 
 outColor = d.vec3f(spriteRgb);       // not: outColor = spriteRgb
 return d.vec3f(baseColor);           // when baseColor is a parameter
-return Particle(particles.$[i]);     // not: return particles.$[i]
+return Particle(particles.$[i]);     // not: return particles.$[i] (fine in a tgpu.fn shell)
 ```
 
 Expression results (constructor calls, arithmetic, function returns, literals) aren't named storage, so `let`, assignment, arguments and returns all take them: `p = input.uv * 2 + d.vec2f(1, 0)`. Copy with the schema (`d.vec2f(v)`, `d.mat4x4f(m)`, `MyStruct(other)`), or `std.copy(v)` when the schema is generic.

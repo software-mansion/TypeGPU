@@ -30,7 +30,7 @@ test('preview shader resolves', () => {
 
 Outside vitest, a plain Node.js (22.15+) or Deno (2.8+) script can resolve shaders through the plugin's module hooks: a preload file with `import install from 'unplugin-typegpu/node'; install();`, then `node --import ./preload.mjs scripts/print-wgsl.ts` (Deno also needs `--allow-env`). Run it with `NODE_ENV=development`: TypeGPU treats an unset `NODE_ENV` as production and drops its conversion and layout warnings. Vitest sets `test`, which keeps them.
 
-Shaders that capture fixed resources (`root.createUniform` and friends) need a root to create those resources, but resolving them never touches the device: a root from `tgpu.initFromDevice({ device })` with a stub device is enough. Shaders defined without a root, reading layouts, slots and accessors, resolve anywhere; see `references/composition.md`.
+Shaders that capture fixed resources (`root.createUniform` and friends) need a root to create those resources, but resolving them never touches the device: a root from `tgpu.initFromDevice({ device })` with a stub device is enough. Creating the resources reads WebGPU flag globals, which Node.js lacks: define `GPUBufferUsage` on `globalThis` before creating buffers or resolving anything tied to a root, and `GPUTextureUsage` before creating textures. Shaders defined without a root, reading layouts, slots and accessors, resolve anywhere; see `references/composition.md`.
 
 A shader that resolves has valid TypeGPU semantics. WGSL validation and pipeline creation happen on the device: run the app (or a browser test) to confirm those, and look at the output.
 
@@ -55,7 +55,7 @@ Unsupported syntax (`var`, prefix `++i`, destructuring declarations, arrow funct
 | `Expression statements like '...;' are forbidden in WGSL` | A bare value, arithmetic, logical, array or object expression used as a statement | Assign or use the result, or remove the statement |
 | `because of the Finite Math Assumption` | `Infinity` or `NaN` converted with a numeric schema (`d.f32(Infinity)`) | Use a finite sentinel (`3.4e38`) or a flag |
 | `Unsupported data types: ...`, `Call '...' is invalid, the function expected ...` | Wrong argument count or types for a `std` function or `tgpu.fn` | Check the signature in `references/std.md` or the function's `.d.ts` |
-| `Cannot access ... need to be part of a compute dispatch, draw call or simulation`, `.$ is inaccessible during normal JS execution` | A function reading a buffer, accessor or variable was called as plain JS | Run it in a pipeline; on the CPU use `.write()` / `.read()` |
+| `Cannot access ... need to be part of a compute dispatch, draw call or simulation`, `.$ is inaccessible during normal JS execution`, `relies on GPU resources and cannot be accessed outside of a compute dispatch or draw call`, `TypeGPU variables are inaccessible during normal JS execution` | A function reading a buffer, accessor or variable was called as plain JS | Run it in a pipeline; on the CPU use a buffer's `.write()` / `.read()`, or `tgpu['~unstable'].simulate` for code that reads variables |
 
 Errors thrown when drawing, dispatching or creating a bind group, not during resolution: `Missing bind groups for layouts: '...'` (`MissingBindGroupsError`, add `.with(bindGroup)`, built from the layout object the shader reads), `Missing vertex buffers for layouts: '...'` (`MissingVertexBuffersError`, add `.with(vertexLayout, buffer)`), `Missing value for immediate variable '...'` (`MissingImmediatesError`), `Buffer '...' is not bindable as a uniform` (`NotUniformError`, add `.$usage('uniform')`). `ResolutionError`, `MissingSlotValueError` and these four classes are exported from `typegpu` for `instanceof` checks.
 
@@ -63,7 +63,7 @@ Errors thrown when drawing, dispatching or creating a bind group, not during res
 
 Resolve a pipeline or function to check what a specialization emits (e.g. that an excluded term leaves no bindings behind, see `references/composition.md`), or compare variants with a snapshot test (`expect(tgpu.resolve([fn])).toMatchSnapshot()`).
 
-`console.log` inside `'use gpu'` functions of a pipeline prints once the submission finishes and the log buffer is read back (see `references/shaders.md`); `tgpu.resolve` alone ignores it. Remove it before measuring performance.
+`console.log` inside `'use gpu'` functions of a pipeline prints once the submission finishes and the log buffer is read back (see `references/shaders.md`); `tgpu.resolve` alone never prints: without a root the call is dropped with a warning, and resolving a pipeline emits the logging code but nothing reads the log buffer back. Remove it before measuring performance.
 
 ## Isolating a wrong image
 

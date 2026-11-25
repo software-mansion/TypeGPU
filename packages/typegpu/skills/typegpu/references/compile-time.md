@@ -97,8 +97,8 @@ for (const i of tgpu.unroll(std.range(FBM_OCTAVES))) {
 |---|---|---|
 | Inline primitive array | `tgpu.unroll([1, 2, 3])` | Each element inlined as a literal |
 | `std.range(n)` | `tgpu.unroll(std.range(N))` | Same category as primitive array |
-| Inline array of complex values | `tgpu.unroll([b1, b2])` | A constructor with runtime arguments inside the literal throws: store it in a `const` first. A `const` that aliases a buffer or array element (`const b1 = values[0]`) throws too: copy it (`d.vec2f(values[0])`) or write `values[0]` in the literal |
-| Vector | `tgpu.unroll(d.vec3f(v))` | Iterates components: `v[0u]`, `v[1u]`, ... |
+| Inline array of complex values | `tgpu.unroll([b1, b2])` | A struct or array constructed inside the literal (`[Boid()]`, even without arguments), or a vector built from runtime values, throws: store it in a `const` first. A `const` that aliases a buffer or array element (`const b1 = values[0]`) throws too: copy it (`d.vec2f(values[0])`) or write `values[0]` in the literal |
+| Vector | `tgpu.unroll(d.vec3f(v))` | Iterates components: `v.x`, `v.y`, ... |
 | Array of keys | `const keys = Object.keys(obj) as (keyof typeof obj)[]` or `['a', 'b'] as const`, declared outside the shader; `tgpu.unroll(keys)` | Iterate `obj[key]`; each access folded at compile time. Works on entry function inputs too (`input[key]`). An inline string array inside the shader is rejected |
 | Iterable in a variable | `const arr = [1,2,3]; tgpu.unroll(arr)` | Indexed access into WGSL `array<...>` - still unrolled |
 | Buffers / accessors / `const` / `comptime` | `tgpu.unroll(acc.$)` | Works whenever length is known at compile time |

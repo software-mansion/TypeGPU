@@ -2,7 +2,7 @@
 
 `std` (`import { std } from 'typegpu'`) wraps the [WGSL built-in functions](https://www.w3.org/TR/WGSL/#builtin-functions), whose documentation applies, plus TypeGPU additions. The listing covers every export of `typegpu/std`.
 
-Inside `'use gpu'`, `Math.abs`, `sign`, `floor`, `ceil`, `trunc`, `sqrt`, `exp`, `log`, `log2`, `pow`, `min`, `max`, the trig and hyperbolic functions, `atan2`, `clz32` and `fround` lower to their `std` equivalents, and `Math.PI` and other constants inline. Other `Math` functions throw: use `std.round` (WGSL rounds half to even), and `@typegpu/noise` instead of `Math.random`.
+Inside `'use gpu'`, `Math.abs`, `sign`, `floor`, `ceil`, `trunc`, `sqrt`, `exp`, `log`, `log2`, `pow`, `min`, `max`, the trig and hyperbolic functions, `atan2` and `clz32` lower to their `std` equivalents, `Math.fround(x)` becomes a `d.f32(x)` cast, and `Math.PI` and other constants inline. Other `Math` functions throw: use `std.round` (WGSL rounds half to even), and `@typegpu/noise` instead of `Math.random`.
 
 **Math**
 ```ts
@@ -17,7 +17,7 @@ std.mix(a, b, t)              // linear interpolation
 std.smoothstep(edge0, edge1, x)
 std.step(edge, x)
 std.select(falseVal, trueVal, cond)
-std.isCloseTo(a, b, precision?) // |a - b| <= precision (0.01 default), scalar or vector
+std.isCloseTo(a, b, precision?) // |a - b| <= precision (0.01 default), scalar or vector; called on the CPU: strict <, floats only
 std.fma(a, b, c)  std.modf(x)  std.frexp(x)  std.ldexp(x, e)  std.quantizeToF16(x)
 std.copy(x)                   // schema-agnostic deep copy (works when exact schema is generic)
 std.bitcast(d.u32, d.f32)(x)  // reinterpret bits; any scalar/vector pair of equal size
