@@ -1,12 +1,12 @@
 import { BufferWriter, getSystemEndianness } from 'typed-binary';
 import { getCompiledWriter } from './compiledIO.ts';
 import { writeData } from './dataIO.ts';
-import { isDisarray, isLooseDecorated, isUnstruct, undecorate } from './dataTypes.ts';
+import { isDisarray, isUnstruct, undecorate } from './dataTypes.ts';
 import { offsetsForProps } from './offsets.ts';
 import { sizeOf } from './sizeOf.ts';
 import { strideOf } from './schemaMemoryLayout.ts';
 import type * as wgsl from './wgslTypes.ts';
-import { isDecorated, isWgslArray, isWgslStruct, type BaseData } from './wgslTypes.ts';
+import { isWgslArray, isWgslStruct, type BaseData } from './wgslTypes.ts';
 import type { InferPatch } from '../shared/repr.ts';
 
 export interface WriteInstruction {
@@ -40,10 +40,9 @@ export function convertPartialToPatch(schema: wgsl.BaseData, data: unknown): unk
   }
 
   if (isWgslArray(inner) || isDisarray(inner)) {
-    const arrSchema = inner;
     const result: Record<number, unknown> = {};
     for (const { idx, value } of data as { idx: number; value: unknown }[]) {
-      result[idx] = convertPartialToPatch(arrSchema.elementType, value);
+      result[idx] = convertPartialToPatch(inner.elementType, value);
     }
     return result;
   }
@@ -106,8 +105,16 @@ export function getPatchInstructions<TData extends wgsl.BaseData>(
       const elementSize = strideOf(inner);
       const elementPadding = elementSize - sizeOf(inner.elementType);
 
+      const elementCount =
+        isWgslArray(inner) && inner.elementCount === 0
+          ? Math.max(
+              0,
+              Math.floor((buf.byteLength - offset - sizeOf(inner.elementType)) / elementSize) + 1,
+            )
+          : inner.elementCount;
+
       if (ArrayBuffer.isView(value)) {
-        const copyLen = Math.min(value.byteLength, inner.elementCount * elementSize);
+        const copyLen = Math.min(value.byteLength, elementCount * elementSize);
         pendingWrites.push(() => {
           new Uint8Array(buf, offset, copyLen).set(
             new Uint8Array(value.buffer, value.byteOffset, copyLen),
@@ -118,21 +125,11 @@ export function getPatchInstructions<TData extends wgsl.BaseData>(
       }
 
       if (Array.isArray(value)) {
-        for (let i = 0; i < Math.min(inner.elementCount, value.length); i++) {
+        for (let i = 0; i < Math.min(elementCount, value.length); i++) {
           collect(inner.elementType, value[i], offset + i * elementSize, elementPadding);
         }
         return;
       }
-
-      // Runtime-sized arrays are bounded by how many elements fit in the target buffer.
-      // Disarrays always occupy exactly `sizeOf` bytes, so an empty one keeps a bound of 0.
-      const elementCount =
-        isWgslArray(inner) && inner.elementCount === 0
-          ? Math.max(
-              0,
-              Math.floor((buf.byteLength - offset - sizeOf(inner.elementType)) / elementSize) + 1,
-            )
-          : inner.elementCount;
 
       const sparse = value as Record<string, unknown>;
       for (const key of Object.keys(sparse)) {

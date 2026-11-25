@@ -270,5 +270,21 @@ describe('arrayBufferIO', () => {
         inner: { x: 5, y: 8 },
       });
     });
+
+    it('patches a runtime-sized array from a plain array', () => {
+      const Schema = d.struct({ a: d.u32, b: d.align(16, d.arrayOf(d.u32, 0)) });
+      const buffer = new ArrayBuffer(32);
+
+      patchArrayBuffer(buffer, Schema, { b: [1, 2, 3] });
+      expect([...new Uint32Array(buffer)]).toStrictEqual([0, 0, 0, 0, 1, 2, 3, 0]);
+    });
+
+    it('patches a runtime-sized array from a TypedArray', () => {
+      const Schema = d.struct({ a: d.u32, b: d.align(16, d.arrayOf(d.u32, 0)) });
+      const buffer = new ArrayBuffer(32);
+
+      patchArrayBuffer(buffer, Schema, { b: new Uint32Array([1, 2, 3]) });
+      expect([...new Uint32Array(buffer)]).toStrictEqual([0, 0, 0, 0, 1, 2, 3, 0]);
+    });
   });
 });
