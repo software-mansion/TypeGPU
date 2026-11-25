@@ -113,6 +113,31 @@ const texture = root
 This is an escape hatch. It replaces the flags TypeGPU would normally infer and marks the texture as usable through sampled, storage, and render APIs. Use it responsibly, do not call `.$usage(...)` after it, and make sure the resulting `GPUTextureDescriptor` is valid.
 ::::
 
+### Wrapping an existing texture
+
+Instead of letting TypeGPU create the texture, you can pass a raw WebGPU texture as the second argument to `root.createTexture` and use it through TypeGPU's APIs. The props describe the texture, and give the typed texture its type.
+
+```ts twoslash
+import { tgpu, d } from 'typegpu';
+const root = await tgpu.init();
+// ---cut---
+const rawTexture = root.device.createTexture({
+  size: [256, 256],
+  format: 'rgba16float',
+  usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.RENDER_ATTACHMENT,
+});
+
+const texture = root
+  .createTexture({ size: [256, 256], format: 'rgba16float' }, rawTexture)
+  .$usage('sampled', 'render');
+
+const view = texture.createView(d.texture2d(d.f32));
+```
+
+::::caution[WebGPU Interoperability]
+Since the texture is already created, you are responsible for its lifecycle and for making the props match it. The usage flags come from the raw texture, so `.$usage(...)` only marks the typed texture as usable in that way, `.$overrideFlags(...)` throws, and `destroy()` leaves the raw texture alive.
+::::
+
 ## Writing to a texture
 
 The `.write()` method accepts a variety of data sources. Here's a quick overview of the available options:
@@ -367,7 +392,8 @@ const texture = root.createTexture({ size: [512, 512], format: 'rgba8unorm' }).$
 texture.clear([0, 0.5, 0, 1]);
 ```
 
-Call `.destroy()` when the texture is no longer needed. This releases the underlying `GPUTexture`; subsequent operations on the TypeGPU texture are invalid.
+Call `.destroy()` when the texture is no longer needed; subsequent operations on the TypeGPU texture are invalid.
+TypeGPU releases a texture that it created itself; if the TypeGPU wrapper was created around an existing `GPUTexture`, the external texture remains owned by its original caller.
 
 ## Texture views
 
