@@ -236,6 +236,10 @@ describe('TgpuTexture', () => {
     root.unwrap(texture.createView(d.texture2d(d.f32)));
     expect(rawTexture.createView).toHaveBeenCalledOnce();
 
+    expect(() => texture.$overrideFlags(GPUTextureUsage.STORAGE_BINDING)).toThrow(
+      'Cannot override flags of a texture that is not managed by TypeGPU.',
+    );
+
     texture.destroy();
     expect(rawTexture.destroy).not.toHaveBeenCalled();
     expect(device.mock.createTexture).not.toHaveBeenCalled();

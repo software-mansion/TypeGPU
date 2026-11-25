@@ -13,6 +13,9 @@ const tex = root.createTexture({
   sampleCount?:   number,                    // default: 1 (4 for MSAA)
   viewFormats?:   GPUTextureFormat[],        // sRGB variants
 });
+
+// Wrap an existing GPUTexture (you own its lifecycle and flags; props are not checked):
+const wrapped = root.createTexture({ size: [width, height], format: 'rgba8unorm' }, existingGPUTexture);
 ```
 
 ## Usage flags
@@ -28,6 +31,8 @@ const tex = root.createTexture({
 Multiple: `.$usage('sampled', 'render')`.
 
 Escape hatch: `.$overrideFlags(GPUTextureUsage...)` replaces the inferred flags with raw WebGPU ones and marks the texture usable as sampled, storage and render (`$usage` after it throws).
+
+A wrapped `GPUTexture` keeps its own flags: `$usage` only marks the typed texture as usable that way, and `$overrideFlags` throws.
 
 ---
 
@@ -90,7 +95,7 @@ texture.clear(mipLevel);        // zeros, one mip level
 texture.clear([0, 0.5, 0, 1]);  // fill with a color ('render' usage), optional mip level after it
 ```
 
-Texture `write`, `copyFrom`, `clear` and `generateMipmaps` go to the queue immediately, ahead of any encoder still being recorded; none takes a command encoder. **Cleanup:** `texture.destroy()`.
+Texture `write`, `copyFrom`, `clear` and `generateMipmaps` go to the queue immediately, ahead of any encoder still being recorded; none takes a command encoder. **Cleanup:** `texture.destroy()` (a texture wrapping an existing `GPUTexture` leaves it alive).
 
 ---
 

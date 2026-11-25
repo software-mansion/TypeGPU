@@ -412,6 +412,9 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
   }
 
   $overrideFlags(flags: GPUTextureUsageFlags): this & StorageFlag & SampledFlag & RenderFlag {
+    if (!this.#ownTexture) {
+      throw new Error('Cannot override flags of a texture that is not managed by TypeGPU.');
+    }
     const soul = this[$soul];
     soul.flags = flags;
     soul.flagsOverridden = true;

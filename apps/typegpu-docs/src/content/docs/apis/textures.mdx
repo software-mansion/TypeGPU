@@ -135,7 +135,7 @@ const view = texture.createView(d.texture2d(d.f32));
 ```
 
 ::::caution[WebGPU Interoperability]
-Since the texture is already created, you are responsible for its lifecycle and for making the props match it. The usage flags come from the raw texture, so `.$usage(...)` only marks the typed texture as usable in that way, and `destroy()` leaves the raw texture alive.
+Since the texture is already created, you are responsible for its lifecycle and for making the props match it. The usage flags come from the raw texture, so `.$usage(...)` only marks the typed texture as usable in that way, `.$overrideFlags(...)` throws, and `destroy()` leaves the raw texture alive.
 ::::
 
 ## Writing to a texture
@@ -392,7 +392,8 @@ const texture = root.createTexture({ size: [512, 512], format: 'rgba8unorm' }).$
 texture.clear([0, 0.5, 0, 1]);
 ```
 
-Call `.destroy()` when the texture is no longer needed. This releases the underlying `GPUTexture`; subsequent operations on the TypeGPU texture are invalid.
+Call `.destroy()` when the texture is no longer needed; subsequent operations on the TypeGPU texture are invalid.
+TypeGPU releases a texture that it created itself; if the TypeGPU wrapper was created around an existing `GPUTexture`, the external texture remains owned by its original caller.
 
 ## Texture views
 
