@@ -543,6 +543,52 @@ describe('TgpuCommandEncoder', () => {
     );
   });
 
+  it('records into a wrapped GPUCommandEncoder and leaves submitting to its owner', ({
+    root,
+    commandEncoder,
+    renderPassEncoder,
+  }) => {
+    const pipeline = root
+      .createRenderPipeline({ vertex: mainVertex, fragment: mainFragment })
+      .with(root.createBindGroup(layout, { foo: root.createBuffer(d.f32).$usage('uniform') }));
+    const rawEncoder = root.device.createCommandEncoder();
+
+    const encoder = root.createCommandEncoder(rawEncoder);
+    const pass = encoder.beginRenderPass({ colorAttachments: [] });
+    pipeline.with(pass).draw(3);
+    pass.end();
+
+    expect(root.unwrap(encoder)).toBe(rawEncoder);
+    expect(rawEncoder).toBe(commandEncoder);
+    expect(root.device.createCommandEncoder).toHaveBeenCalledTimes(1);
+    expect(renderPassEncoder.draw).toHaveBeenCalledTimes(1);
+    expect(root.device.queue.submit).not.toHaveBeenCalled();
+  });
+
+  it('warns that shader console.log output is dropped in a wrapped encoder', ({ root }) => {
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const entryFn = tgpu.computeFn({ workgroupSize: [1] })(() => {
+      console.log(1);
+    });
+    const encoder = root.createCommandEncoder(root.device.createCommandEncoder());
+
+    const pipeline = root.createComputePipeline({ compute: entryFn });
+
+    pipeline.with(encoder).dispatchWorkgroups(1);
+    const pass = encoder.beginComputePass();
+    pipeline.with(pass).dispatchWorkgroups(1);
+    pass.end();
+
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      '⚠️ [suspicious] ',
+      'Shader console.log output is ignored when recording into a raw or wrapped GPUCommandEncoder, since there is no submission to report after. Use root.createCommandEncoder() without an existing encoder instead.',
+    );
+    expect(consoleWarnSpy).toHaveBeenCalledWith(
+      '⚠️ [suspicious] ',
+      'Shader console.log output is ignored when dispatching into a compute pass of a raw or wrapped GPUCommandEncoder, since there is no submission to read it back after.',
+    );
+  });
+
   it('unwraps to raw WebGPU objects', ({ root, commandEncoder, renderPassEncoder }) => {
     const encoder = root.createCommandEncoder();
     const renderPass = encoder.beginRenderPass({ colorAttachments: [] });

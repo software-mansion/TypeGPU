@@ -35,11 +35,13 @@ import {
   type TgpuRenderPipeline,
 } from '../pipeline/renderPipeline.ts';
 import {
+  isGPUCommandEncoder,
   isTgpuCommandEncoder,
   isTgpuComputePass,
   isTgpuRenderCommands,
 } from '../pipeline/typeGuards.ts';
 import {
+  INTERNAL_adoptCommandEncoder,
   INTERNAL_createCommandEncoder,
   type TgpuCommandEncoder,
 } from '../commandEncoder/commandEncoder.ts';
@@ -502,10 +504,11 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
       TViewFormats,
       TDimension
     >,
+    gpuTexture?: GPUTexture,
   ): TgpuTexture<
     CreateTextureResult<TSize, TFormat, TMipLevelCount, TSampleCount, TViewFormats, TDimension>
   > {
-    const texture = INTERNAL_createTexture(props, this);
+    const texture = INTERNAL_createTexture(props, this, gpuTexture);
     // oxlint-disable-next-line typescript/no-explicit-any -- too much type wrangling
     return texture as any;
   }
@@ -598,8 +601,13 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
     throw new Error(`Unknown resource type: ${safeStringify(resource)}`);
   }
 
-  createCommandEncoder(descriptor?: GPUCommandEncoderDescriptor): TgpuCommandEncoder {
-    return INTERNAL_createCommandEncoder(this, descriptor);
+  createCommandEncoder(
+    descriptorOrEncoder?: GPUCommandEncoderDescriptor | GPUCommandEncoder,
+  ): TgpuCommandEncoder {
+    if (isGPUCommandEncoder(descriptorOrEncoder)) {
+      return INTERNAL_adoptCommandEncoder(this, descriptorOrEncoder);
+    }
+    return INTERNAL_createCommandEncoder(this, descriptorOrEncoder);
   }
 
   createRenderBundleEncoder(descriptor: GPURenderBundleEncoderDescriptor): TgpuRenderBundleEncoder {

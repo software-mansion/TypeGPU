@@ -149,7 +149,7 @@ describe('TgpuComputePipeline', () => {
 
     expect(consoleWarnSpy).toHaveBeenCalledWith(
       '⚠️ [suspicious] ',
-      'Shader console.log output is ignored when dispatching into a raw compute pass encoder, since there is no submission to read it back after.',
+      'Shader console.log output is ignored when dispatching into a compute pass of a raw or wrapped GPUCommandEncoder, since there is no submission to read it back after.',
     );
   });
 
@@ -341,7 +341,7 @@ describe('TgpuComputePipeline', () => {
 
     expect(consoleWarnSpy).toHaveBeenCalledWith(
       '⚠️ [suspicious] ',
-      'The performance callback is ignored when recording into a raw GPUCommandEncoder, since there is no submission to report after. Use root.createCommandEncoder() instead.',
+      'The performance callback is ignored when recording into a raw or wrapped GPUCommandEncoder, since there is no submission to report after. Use root.createCommandEncoder() without an existing encoder instead.',
     );
   });
 

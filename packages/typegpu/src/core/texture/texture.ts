@@ -300,6 +300,24 @@ export function isTextureView(value: unknown): value is TgpuTextureView {
   );
 }
 
+/**
+ * Overrides a texture's flags without checking who owns it, so a texture restored from a
+ * snapshot over its raw `GPUTexture` keeps the flags it was created with.
+ */
+export function INTERNAL_overrideTextureFlags(
+  // Any texture, typed loosely since the class and its interface types do not overlap
+  texture: object,
+  flags: GPUTextureUsageFlags,
+): void {
+  const impl = texture as TgpuTextureImpl<TextureProps>;
+  const soul = impl[$soul];
+  soul.flags = flags;
+  soul.flagsOverridden = true;
+  impl.usableAsSampled = true;
+  impl.usableAsStorage = true;
+  impl.usableAsRender = true;
+}
+
 // --------------
 // Implementation
 // --------------
@@ -412,12 +430,10 @@ class TgpuTextureImpl<TProps extends TextureProps> implements TgpuTexture<TProps
   }
 
   $overrideFlags(flags: GPUTextureUsageFlags): this & StorageFlag & SampledFlag & RenderFlag {
-    const soul = this[$soul];
-    soul.flags = flags;
-    soul.flagsOverridden = true;
-    this.usableAsSampled = true;
-    this.usableAsStorage = true;
-    this.usableAsRender = true;
+    if (!this.#ownTexture) {
+      throw new Error('Cannot override flags of a texture that is not managed by TypeGPU.');
+    }
+    INTERNAL_overrideTextureFlags(this, flags);
     return this as this & StorageFlag & SampledFlag & RenderFlag;
   }
 

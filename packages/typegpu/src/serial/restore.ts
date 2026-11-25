@@ -35,6 +35,7 @@ import type {
 } from '../core/slot/slotTypes.ts';
 import {
   INTERNAL_createTexture,
+  INTERNAL_overrideTextureFlags,
   INTERNAL_restoreTextureView,
   type TgpuTextureSoul,
   type TgpuTextureViewSoul,
@@ -106,7 +107,7 @@ export const soulRestorers = {
       soul.raw,
     );
     if (soul.flagsOverridden) {
-      texture.$overrideFlags(soul.flags);
+      INTERNAL_overrideTextureFlags(texture, soul.flags);
     } else if (soul.usages.length > 0) {
       texture.$usage(...(soul.usages as AllowedUsages<TextureProps>[]));
     }
