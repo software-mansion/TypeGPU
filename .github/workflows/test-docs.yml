@@ -35,3 +35,21 @@ jobs:
 
       - name: Build docs
         run: pnpm run --filter typegpu-docs build
+
+  check-doc-dates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The full history is needed to find docs pages changed relative to the base branch
+          fetch-depth: 0
+
+      - name: Use Node.js 24.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.x
+
+      - name: Check docs `lastUpdated` dates
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.ref || github.event.merge_group.base_ref || github.ref_name }}
+        run: node apps/typegpu-docs/scripts/doc-dates/cli.ts check --base "origin/${BASE_REF#refs/heads/}"
