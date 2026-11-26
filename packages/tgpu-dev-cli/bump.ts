@@ -16,6 +16,8 @@ const RELEASED_WITH_ANY_PACKAGE = ['@typegpu/cli'];
 
 /**
  * The package whose version names the bump PR (`bump: typegpu 0.12.10 (+more)`).
+ * In a minor release, every package on the same minor line as this one
+ * (e.g. 0.12.x) moves to its next minor version (e.g. 0.13.0).
  */
 const MAIN_PACKAGE = 'typegpu';
 
@@ -140,6 +142,56 @@ async function main() {
   }
 
   /**
+   * @returns The version of `pkg` at `base`.
+   */
+  async function getReleasedVersion(pkg: WorkspacePackage): Promise<string | undefined> {
+    const baseSource = await readFileAtRef(base, `packages/${pkg.dirname}/package.json`);
+    return baseSource ? JSON.parse(baseSource).version : undefined;
+  }
+
+  /**
+   * A minor release moves every public package on the main package's minor line
+   * (e.g. 0.12.x) to the next minor version (e.g. 0.13.0), changed or not, so the
+   * ecosystem stays aligned. Packages with their own version line (e.g. `tinyest`)
+   * are left to the usual rules.
+   */
+  async function alignWithMainPackage() {
+    const mainPkg = byName.get(MAIN_PACKAGE);
+    const mainReleased = mainPkg && (await getReleasedVersion(mainPkg));
+    const target = mainReleased && bumpVersion(mainReleased, 'minor');
+    if (!mainReleased || !target) {
+      consola.warn(
+        `Can't align packages with ${MAIN_PACKAGE}@${mainReleased ?? '?'}, bump them by hand.`,
+      );
+      return;
+    }
+    const line = mainReleased.split('.').slice(0, 2).join('.');
+
+    for (const pkg of packages) {
+      if (pkg.json.private || skip.includes(pkg.name)) {
+        continue;
+      }
+      const released = await getReleasedVersion(pkg);
+      if (!released || released.split('.').slice(0, 2).join('.') !== line) {
+        continue;
+      }
+      if (pkg.json.version === target) {
+        // Already aligned in an earlier run
+        continue;
+      }
+      const reason = bumps.get(pkg.name)?.reason;
+      bumps.set(pkg.name, {
+        pkg,
+        from: pkg.json.version,
+        to: target,
+        reason:
+          reason ??
+          (pkg.name === MAIN_PACKAGE ? 'minor release' : `aligned with ${MAIN_PACKAGE} ${target}`),
+      });
+    }
+  }
+
+  /**
    * Adds a bump of the same kind for `pkg`, unless it is private, skipped, a prerelease,
    * or was already bumped since `base`.
    */
@@ -147,8 +199,7 @@ async function main() {
     if (bumps.has(pkg.name) || pkg.json.private || skip.includes(pkg.name)) {
       return false;
     }
-    const baseSource = await readFileAtRef(base, `packages/${pkg.dirname}/package.json`);
-    const releasedVersion = baseSource ? JSON.parse(baseSource).version : undefined;
+    const releasedVersion = await getReleasedVersion(pkg);
     if (releasedVersion !== pkg.json.version) {
       // Already bumped (or not released yet)
       return false;
@@ -160,6 +211,10 @@ async function main() {
     }
     bumps.set(pkg.name, { pkg, from: pkg.json.version, to, reason });
     return true;
+  }
+
+  if (kind === 'minor') {
+    await alignWithMainPackage();
   }
 
   // Packages that pin one of the bumped packages exactly have to be released along with it,
@@ -230,7 +285,9 @@ async function main() {
   // Everything released in this cycle, including packages bumped in earlier runs
   const released = [
     ...sortedBumps.map(({ pkg, to }) => ({ name: pkg.name, version: to })),
-    ...alreadyBumped.map((change) => ({ name: change.name, version: change.version })),
+    ...alreadyBumped
+      .filter((change) => !bumps.has(change.name))
+      .map((change) => ({ name: change.name, version: change.version })),
   ].toSorted((a, b) => {
     // The main package first, then by name
     if (a.name === MAIN_PACKAGE) return -1;
