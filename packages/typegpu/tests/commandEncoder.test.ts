@@ -589,6 +589,60 @@ describe('TgpuCommandEncoder', () => {
     );
   });
 
+  it('draws into a wrapped GPURenderPassEncoder and leaves ending it to its owner', ({
+    root,
+    renderPassEncoder,
+  }) => {
+    const group = root.createBindGroup(layout, {
+      foo: root.createBuffer(d.f32).$usage('uniform'),
+    });
+    const pipeline = root.createRenderPipeline({ vertex: mainVertex, fragment: mainFragment });
+
+    const pass = root.createRenderPass(renderPassEncoder);
+    pass.setBindGroup(group);
+    pass.setPipeline(pipeline);
+    pass.draw(3);
+    pass.draw(6);
+
+    expect(root.unwrap(pass)).toBe(renderPassEncoder);
+    // Other code may change the raw pass between draws, so each draw applies the full state
+    expect(renderPassEncoder.setPipeline).toHaveBeenCalledTimes(2);
+    expect(renderPassEncoder.setBindGroup).toHaveBeenCalledTimes(2);
+    expect(renderPassEncoder.draw).toHaveBeenNthCalledWith(1, 3, undefined, undefined, undefined);
+    expect(renderPassEncoder.draw).toHaveBeenNthCalledWith(2, 6, undefined, undefined, undefined);
+    expect(renderPassEncoder.end).not.toHaveBeenCalled();
+  });
+
+  it('dispatches into a wrapped GPUComputePassEncoder and leaves ending it to its owner', ({
+    root,
+    computePassEncoder,
+  }) => {
+    const pipeline = root.createComputePipeline({
+      compute: tgpu.computeFn({ workgroupSize: [1] })(() => {}),
+    });
+
+    const pass = root.createComputePass(computePassEncoder);
+    pass.setPipeline(pipeline);
+    pass.dispatchWorkgroups(1);
+    pipeline.with(pass).dispatchWorkgroups(2);
+
+    expect(root.unwrap(pass)).toBe(computePassEncoder);
+    expect(computePassEncoder.setPipeline).toHaveBeenCalledTimes(2);
+    expect(computePassEncoder.dispatchWorkgroups).toHaveBeenNthCalledWith(
+      1,
+      1,
+      undefined,
+      undefined,
+    );
+    expect(computePassEncoder.dispatchWorkgroups).toHaveBeenNthCalledWith(
+      2,
+      2,
+      undefined,
+      undefined,
+    );
+    expect(computePassEncoder.end).not.toHaveBeenCalled();
+  });
+
   it('unwraps to raw WebGPU objects', ({ root, commandEncoder, renderPassEncoder }) => {
     const encoder = root.createCommandEncoder();
     const renderPass = encoder.beginRenderPass({ colorAttachments: [] });

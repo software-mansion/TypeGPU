@@ -45,8 +45,9 @@ import {
   INTERNAL_createCommandEncoder,
   type TgpuCommandEncoder,
 } from '../commandEncoder/commandEncoder.ts';
-import type { TgpuComputePass } from '../commandEncoder/computePass.ts';
+import { INTERNAL_adoptComputePass, type TgpuComputePass } from '../commandEncoder/computePass.ts';
 import {
+  INTERNAL_adoptRenderCommands,
   INTERNAL_createRenderBundleEncoder,
   type TgpuRenderBundleEncoder,
   type TgpuRenderPass,
@@ -608,6 +609,14 @@ class TgpuRootImpl extends WithBindingImpl implements TgpuRoot, ExperimentalTgpu
       return INTERNAL_adoptCommandEncoder(this, descriptorOrEncoder);
     }
     return INTERNAL_createCommandEncoder(this, descriptorOrEncoder);
+  }
+
+  createRenderPass(gpuPass: GPURenderPassEncoder): TgpuRenderPass {
+    return INTERNAL_adoptRenderCommands(this, gpuPass);
+  }
+
+  createComputePass(gpuPass: GPUComputePassEncoder): TgpuComputePass {
+    return INTERNAL_adoptComputePass(this, gpuPass);
   }
 
   createRenderBundleEncoder(descriptor: GPURenderBundleEncoderDescriptor): TgpuRenderBundleEncoder {

@@ -38,7 +38,8 @@ import type { IORecord } from '../function/fnTypes.ts';
 import type { TgpuFragmentFn, VertexOutToVarying } from '../function/tgpuFragmentFn.ts';
 import type { TgpuVertexFn } from '../function/tgpuVertexFn.ts';
 import type { TgpuCommandEncoder } from '../commandEncoder/commandEncoder.ts';
-import type { TgpuRenderBundleEncoder } from '../commandEncoder/renderPass.ts';
+import type { TgpuComputePass } from '../commandEncoder/computePass.ts';
+import type { TgpuRenderBundleEncoder, TgpuRenderPass } from '../commandEncoder/renderPass.ts';
 import type { TgpuComputePipeline } from '../pipeline/computePipeline.ts';
 import type { FragmentOutToTargets, TgpuRenderPipeline } from '../pipeline/renderPipeline.ts';
 import type { TgpuFixedComparisonSampler, TgpuFixedSampler } from '../sampler/sampler.ts';
@@ -727,6 +728,34 @@ export interface TgpuRoot extends Unwrapper, WithBinding {
    * ```
    */
   createCommandEncoder(descriptor?: GPUCommandEncoderDescriptor): TgpuCommandEncoder;
+
+  /**
+   * Wraps an existing {@link GPURenderPassEncoder}, so TypeGPU pipelines draw into it.
+   *
+   * @remarks
+   * Typed wrapper around a GPURenderPassEncoder, for drawing into a pass that other code begins
+   * and ends, such as a render graph node's. Set pipelines and bind groups on it, as on a pass
+   * from `encoder.beginRenderPass`. Other code may change the raw pass between draws, so each
+   * draw applies the full state. Shader `console.log` output and performance callbacks are
+   * skipped, as in a wrapped encoder.
+   *
+   * @param gpuPass A vanilla WebGPU render pass encoder.
+   */
+  createRenderPass(gpuPass: GPURenderPassEncoder): TgpuRenderPass;
+
+  /**
+   * Wraps an existing {@link GPUComputePassEncoder}, so TypeGPU pipelines dispatch into it.
+   *
+   * @remarks
+   * Typed wrapper around a GPUComputePassEncoder, for dispatching into a pass that other code
+   * begins and ends, such as a render graph node's. Set pipelines and bind groups on it, as on a
+   * pass from `encoder.beginComputePass`. Other code may change the raw pass between
+   * dispatches, so each dispatch applies the full state. Shader `console.log` output and
+   * performance callbacks are skipped, as in a wrapped encoder.
+   *
+   * @param gpuPass A vanilla WebGPU compute pass encoder.
+   */
+  createComputePass(gpuPass: GPUComputePassEncoder): TgpuComputePass;
 
   /**
    * Creates a {@link TgpuRenderBundleEncoder} for recording draw commands into
