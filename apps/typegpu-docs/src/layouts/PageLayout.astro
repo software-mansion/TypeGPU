@@ -9,6 +9,7 @@ import {
   topBarBannerReservationScript,
 } from '../components/TopBarBanner/shared';
 import { TOP_BAR_BANNER } from '../components/TopBarBanner/config';
+import SimulateNoWebGPU from '../components/SimulateNoWebGPU.astro';
 
 // Import Starlight's page shell for its global styles without rendering it.
 void StarlightPage;
@@ -54,6 +55,7 @@ const {
     <title>{title ?? 'TypeGPU'}</title>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <SimulateNoWebGPU />
     {noindex && <meta name="robots" content="noindex" />}
     {reservationScript && <script is:inline set:html={reservationScript} />}
     <link rel="icon" href="/TypeGPU/favicon.svg" />

@@ -1,8 +1,10 @@
 ---
 import StarlightHead from '@astrojs/starlight/components/Head.astro';
 import VtbotStarlight from 'astro-vtbot/components/starlight/Base.astro';
+import SimulateNoWebGPU from '../SimulateNoWebGPU.astro';
 ---
 
+<SimulateNoWebGPU />
 <VtbotStarlight {...Astro.locals.starlightRoute} transition:animate="none">
   <StarlightHead><slot /></StarlightHead>
 </VtbotStarlight>
