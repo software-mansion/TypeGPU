@@ -50,14 +50,11 @@ on your PR.
 4. Decide whether this is a **patch** or a **minor** release. While we're on 0.x, all packages in a release get the
    same kind of bump: either every bumped package gets a patch version, or every one gets a minor version. If you're an
    agent and weren't told which one, ask before bumping anything.
-5. Bump the versions:
-   - **Patch release:** run `pnpm run bump`. It patch-bumps every package from "Packages to release", plus packages
-     that have to ship with them (packages that pin a bumped package exactly, and `@typegpu/cli`, which bakes in the
-     versions of the other packages). It prints the PR title and the `Released packages:` list. Use
-     `--skip <name>` to leave a package out (e.g. when its only change is removing dead code), and `--dry-run` to
-     preview.
-   - **Minor release:** run `pnpm run bump --dry-run` to see which packages need a release, then set their minor
-     versions in `package.json` by hand.
+5. Run `pnpm run bump --patch` or `pnpm run bump --minor`, depending on step 4 (it refuses to run without one of
+   them). It bumps every package from "Packages to release", plus packages that have to ship with them (packages that
+   pin a bumped package exactly, and `@typegpu/cli`, which bakes in the versions of the other packages). It prints the
+   PR title and the `Released packages:` list. Use `--skip <name>` to leave a package out (e.g. when its only change is
+   removing dead code), and `--dry-run` to preview. Prereleases aren't bumped, it tells you to bump those by hand.
 
    Then run `pnpm install`. If you left out a package that `pnpm run changes` listed under "Packages to release", note
    which one and why in the PR description (see step 6). Packages that `pnpm run changes` didn't list there don't need
