@@ -150,16 +150,6 @@ let even = 0;
 let lastFrameTime = performance.now();
 
 const pointer = trackPointer(canvas, () => currentTextureSize);
-canvas.addEventListener(
-  'pointerdown',
-  () => {
-    const helpElem = document.getElementById('help');
-    if (helpElem) {
-      helpElem.style.opacity = '0';
-    }
-  },
-  { once: true },
-);
 
 const baseFireHsv = rgbToHsv(defaults.fireColor);
 

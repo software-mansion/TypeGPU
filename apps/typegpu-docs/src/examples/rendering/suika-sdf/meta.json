@@ -1,6 +1,6 @@
 {
   "title": "Suika SDF",
-  "description": "Runs an interactive fruit-merging physics game whose colorful pieces are rendered from signed distance fields.",
+  "description": "Runs an interactive fruit-merging physics game whose colorful pieces are rendered from signed distance fields. Assets by Apps2Amigos, adapted from zrghr.",
   "category": "rendering",
   "tags": ["interactive"],
   "coolFactor": 10
