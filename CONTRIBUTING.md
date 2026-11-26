@@ -45,28 +45,34 @@ on your PR.
    git log --oneline <last-tag>..origin/release
    ```
 
-4. Bump the **patch** version in `package.json` of every package whose shipped code or behavior changed (`src/`, or
-   other published files such as `packages/typegpu/skills/`). Skip packages where only tests, docs or dev
-   dependencies changed, and write down which ones you skipped and why. Then run `pnpm install`.
-5. Open a draft PR titled `bump: typegpu <version> (+more)`, with the release notes as its description. Follow the
+4. Decide whether this is a **patch** or a **minor** release. While we're on 0.x, all packages in a release get the
+   same kind of bump: either every bumped package gets a patch version, or every one gets a minor version. If you're an
+   agent and weren't told which one, ask before bumping anything.
+5. Bump the version in `package.json` of every package that `nr changes` listed and whose shipped code or behavior
+   changed (`src/`, or other published files such as `packages/typegpu/skills/`). Then run `pnpm install`.
+
+   If `nr changes` listed a package that you're not bumping (e.g. only its tests, docs or tooling changed), say which
+   one and why. Packages that `nr changes` didn't list don't need to be mentioned.
+
+6. Open a draft PR titled `bump: typegpu <version> (+more)`, with the release notes as its description. Follow the
    format of the previous `bump:` PR:
    - `Released packages:` with each bumped package and its new version
    - A short section (with a code snippet when it helps) for each notable change, ending with `* #<PR> by @<author>`
    - `## 💎 Features`, `## 🗿 Fixes / Stability` and `## 📖 Docs` lists with every PR from step 3, including the
      ones that landed on `release`
-6. Take the Continuous Release build and test the changes on StackBlitz (optional)
-7. Merge to main
+7. Take the Continuous Release build and test the changes on StackBlitz (optional)
+8. Merge to main
 
 ### Publishing
 
-8. Prepare each bumped package for publishing
+9. Prepare each bumped package for publishing
 
 ```bash
 cd packages/typegpu
 pnpm publish --dry-run # (if alpha, --tag alpha)
 ```
 
-9. If everything looks okay, then `pnpm publish` (if alpha, `--tag alpha`)
+10. If everything looks okay, then `pnpm publish` (if alpha, `--tag alpha`)
 
 > **Tip:** If you already know all prepublish checks pass (tests, types, publish tag validation), you can skip them to speed up
 > publishing:
@@ -75,6 +81,6 @@ pnpm publish --dry-run # (if alpha, --tag alpha)
 > SKIP_TESTS=true pnpm publish # (if alpha, --tag alpha)
 > ```
 
-10. Rebase _release_ branch on _main_
-11. Create the GitHub release, using the notes from the release PR
-12. Run `npx automd@latest`
+11. Rebase _release_ branch on _main_
+12. Create the GitHub release, using the notes from the release PR
+13. Run `npx automd@latest`
