@@ -59,12 +59,15 @@ on your PR.
    - **Minor release:** run `pnpm run bump --dry-run` to see which packages need a release, then set their minor
      versions in `package.json` by hand.
 
-   Then run `pnpm install`. If you left out a package that `pnpm run changes` listed under "Packages to release", say
-   which one and why. Packages that `pnpm run changes` didn't list there don't need to be mentioned.
+   Then run `pnpm install`. If you left out a package that `pnpm run changes` listed under "Packages to release", note
+   which one and why in the PR description (see step 6). Packages that `pnpm run changes` didn't list there don't need
+   to be mentioned.
 
 6. Open a draft PR titled `bump: typegpu <version> (+more)`, with the release notes as its description. Follow the
    format of the previous `bump:` PR:
    - `Released packages:` with each bumped package and its new version (`pnpm run bump` prints this list)
+   - Right under that list, the packages from step 5 that you left out, and why. Skip this when there are none, and
+     leave it out of the GitHub release in step 12
    - A short section (with a code snippet when it helps) for each notable change, ending with `* #<PR> by @<author>`
    - `## 💎 Features`, `## 🗿 Fixes / Stability` and `## 📖 Docs` lists with every PR from step 3, including the
      ones that landed on `release`
