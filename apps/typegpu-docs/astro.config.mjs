@@ -17,6 +17,8 @@ import wasm from 'vite-plugin-wasm';
 import basicSsl from '@vitejs/plugin-basic-ssl';
 import rehypeMathJax from 'rehype-mathjax';
 import remarkMath from 'remark-math';
+import { fileURLToPath } from 'node:url';
+import { withNewBadges } from './scripts/doc-dates/new-badges.ts';
 
 /**
  * @template T
@@ -42,17 +44,14 @@ const sidebar = stripFalsy([
       {
         label: 'Your first GPU program',
         slug: 'fundamentals/your-first-gpu-program',
-        badge: { text: 'new' },
       },
       {
         label: 'Going parallel with reusable resources',
         slug: 'fundamentals/compute-shaders',
-        badge: { text: 'new' },
       },
       {
         label: 'Vertices and fragments',
         slug: 'fundamentals/vertices-and-fragments',
-        badge: { text: 'new' },
       },
     ]),
   },
@@ -70,7 +69,6 @@ const sidebar = stripFalsy([
       {
         label: 'Pipelines',
         slug: 'apis/pipelines',
-        badge: { text: 'new' },
       },
       {
         label: 'Buffers',
@@ -79,7 +77,6 @@ const sidebar = stripFalsy([
       {
         label: 'Textures',
         slug: 'apis/textures',
-        badge: { text: 'new' },
       },
       {
         label: 'Variables',
@@ -113,7 +110,6 @@ const sidebar = stripFalsy([
       {
         label: 'Utilities',
         slug: 'apis/utils',
-        badge: { text: 'new' },
       },
     ]),
   },
@@ -131,7 +127,6 @@ const sidebar = stripFalsy([
       {
         label: 'Minifying & Obfuscating Shaders',
         slug: 'advanced/minifying-shaders',
-        badge: { text: 'new' },
       },
       DEV && {
         label: 'Explaining the Magic',
@@ -177,7 +172,6 @@ const sidebar = stripFalsy([
       {
         label: 'TypeGPU Kit',
         slug: 'ecosystem/typegpu-kit',
-        badge: { text: 'new' },
       },
       {
         label: '@typegpu/noise',
@@ -222,7 +216,6 @@ const sidebar = stripFalsy([
       {
         label: 'TypeGPU CLI',
         slug: 'tooling/typegpu-cli',
-        badge: { text: 'new' },
       },
       {
         label: 'Build Plugin',
@@ -231,12 +224,10 @@ const sidebar = stripFalsy([
       {
         label: 'Lint Plugin',
         slug: 'tooling/eslint-plugin-typegpu',
-        badge: { text: 'new' },
       },
       {
         label: 'AI Tools',
         slug: 'tooling/ai-tools',
-        badge: { text: 'new' },
       },
       {
         label: 'WGSL to TypeGPU',
@@ -414,7 +405,13 @@ export default defineConfig({
         MobileMenuToggle: './src/components/starlight/MobileMenuToggle.astro',
         Sidebar: './src/components/starlight/Sidebar.astro',
       },
-      sidebar: [...sidebar, typeDocSidebarGroup],
+      sidebar: [
+        // Pages created or updated within the last month get a "new" badge
+        ...withNewBadges(sidebar, {
+          contentDir: fileURLToPath(new URL('./src/content/docs', import.meta.url)),
+        }),
+        typeDocSidebarGroup,
+      ],
     }),
     react(),
     sitemap(),
