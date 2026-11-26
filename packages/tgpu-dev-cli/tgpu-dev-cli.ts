@@ -44,8 +44,11 @@ ${color.Bold}Commands:${color.Reset}
                          and which of them need a release (with their next patch versions).
                          --base <ref>, --head <ref>  Compare other refs.
                          --verbose                   Also list the changed files.
-  tgpu-dev-cli bump      Bumps the patch versions of packages that need a release (see 'changes'),
+  tgpu-dev-cli bump      Bumps the versions of packages that need a release (see 'changes'),
                          along with packages that have to be released with them.
+                         --patch        Bump patch versions (e.g. 0.12.9 → 0.12.10).
+                         --minor        Bump minor versions (e.g. 0.12.9 → 0.13.0).
+                                        One of the two is required.
                          --skip <name>  Don't bump this package (repeatable).
                          --dry-run      Only print what would be bumped.
                          --base <ref>   Compare against this ref instead of the latest release tag.

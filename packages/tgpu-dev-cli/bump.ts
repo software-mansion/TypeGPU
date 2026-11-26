@@ -5,7 +5,7 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { resolveBase } from './changed-files.ts';
 import colors from './colors.ts';
-import { bumpPatch, getReleasePlan, readFileAtRef } from './release-plan.ts';
+import { bumpVersion, getReleasePlan, readFileAtRef } from './release-plan.ts';
 
 /**
  * Packages that read the versions of the other public packages when they're built
@@ -90,9 +90,18 @@ async function main() {
       '--base': String,
       '--skip': [String],
       '--dry-run': Boolean,
+      '--patch': Boolean,
+      '--minor': Boolean,
     },
     { permissive: true },
   );
+
+  if (Boolean(args['--patch']) === Boolean(args['--minor'])) {
+    consola.error('Pass either --patch or --minor, to say what kind of release this is.');
+    process.exitCode = 1;
+    return;
+  }
+  const kind: 'patch' | 'minor' = args['--minor'] ? 'minor' : 'patch';
 
   const base = await resolveBase(args['--base']);
   const skip = args['--skip'] ?? [];
@@ -100,7 +109,7 @@ async function main() {
 
   const root = (await $`git rev-parse --show-toplevel`.text()).trim();
 
-  consola.start(`Planning version bumps for changes since '${base}'...`);
+  consola.start(`Planning ${kind} version bumps for changes since '${base}'...`);
   consola.log('');
 
   const plan = await getReleasePlan({ base, head: 'HEAD', repoRoot: root });
@@ -117,20 +126,21 @@ async function main() {
     if (!pkg) {
       continue;
     }
-    if (!change.nextVersion) {
+    const to = bumpVersion(change.version, kind);
+    if (!to) {
       consola.warn(`${change.name}@${change.version} is a prerelease, bump it by hand.`);
       continue;
     }
     bumps.set(change.name, {
       pkg,
       from: change.version,
-      to: change.nextVersion,
+      to,
       reason: `${change.sourceFiles.length} source file(s) changed`,
     });
   }
 
   /**
-   * Adds a patch bump for `pkg`, unless it is private, skipped, a prerelease,
+   * Adds a bump of the same kind for `pkg`, unless it is private, skipped, a prerelease,
    * or was already bumped since `base`.
    */
   async function addDependentBump(pkg: WorkspacePackage, reason: string) {
@@ -143,7 +153,7 @@ async function main() {
       // Already bumped (or not released yet)
       return false;
     }
-    const to = bumpPatch(pkg.json.version);
+    const to = bumpVersion(pkg.json.version, kind);
     if (!to) {
       consola.warn(`${pkg.name}@${pkg.json.version} is a prerelease, bump it by hand.`);
       return false;
