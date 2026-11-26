@@ -730,28 +730,16 @@ export interface TgpuRoot extends Unwrapper, WithBinding {
   createCommandEncoder(descriptor?: GPUCommandEncoderDescriptor): TgpuCommandEncoder;
 
   /**
-   * Wraps an existing {@link GPURenderPassEncoder}, so TypeGPU pipelines draw into it.
-   *
-   * @remarks
-   * Typed wrapper around a GPURenderPassEncoder, for drawing into a pass that other code begins
-   * and ends, such as a render graph node's. Set pipelines and bind groups on it, as on a pass
-   * from `encoder.beginRenderPass`. Other code may change the raw pass between draws, so each
-   * draw applies the full state. Shader `console.log` output and performance callbacks are
-   * skipped, as in a wrapped encoder.
+   * Wraps an existing {@link GPURenderPassEncoder}, which other code begins and ends, so TypeGPU
+   * pipelines draw into it. Shader `console.log` output and performance callbacks are skipped.
    *
    * @param gpuPass A vanilla WebGPU render pass encoder.
    */
   createRenderPass(gpuPass: GPURenderPassEncoder): TgpuRenderPass;
 
   /**
-   * Wraps an existing {@link GPUComputePassEncoder}, so TypeGPU pipelines dispatch into it.
-   *
-   * @remarks
-   * Typed wrapper around a GPUComputePassEncoder, for dispatching into a pass that other code
-   * begins and ends, such as a render graph node's. Set pipelines and bind groups on it, as on a
-   * pass from `encoder.beginComputePass`. Other code may change the raw pass between
-   * dispatches, so each dispatch applies the full state. Shader `console.log` output and
-   * performance callbacks are skipped, as in a wrapped encoder.
+   * Wraps an existing {@link GPUComputePassEncoder}, which other code begins and ends, so TypeGPU
+   * pipelines dispatch into it. Shader `console.log` output and performance callbacks are skipped.
    *
    * @param gpuPass A vanilla WebGPU compute pass encoder.
    */
