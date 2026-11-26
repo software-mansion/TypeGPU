@@ -33,12 +33,14 @@ on your PR.
 
 ### Preparing the release PR
 
-1. Update your local `main` and `release` branches (`git fetch origin main:main release:release`, or pull both).
-   `nr changes` diffs the **local** branches, so stale ones give a wrong list.
-2. Create a new branch from `main` and run `nr changes` (`pnpm changes`). It lists the files and packages that differ
-   between `release` and `main`.
-3. List everything that landed since the last release, on **both** branches. Commits pushed straight to `release`
-   (usually docs fixes) belong in the release notes too:
+1. Create a new branch from the latest `main`.
+2. Run `pnpm run changes`. It fetches `origin` itself and compares `origin/main` with the latest release tag, so local
+   `main` and `release` branches don't need to be up to date. It sorts the changed packages into:
+   - **Packages to release:** public packages with changes to shipped code
+   - **Already bumped:** versions that differ from the latest release
+   - **Changed, but no release needed:** private packages, or packages where only tests, docs or configs changed
+3. List everything that landed since the last release, for the release notes. Commits pushed straight to `release`
+   (usually docs fixes) belong in the notes too, including ones that haven't been merged back into `main` yet:
 
    ```bash
    git log --oneline <last-tag>..origin/main
@@ -48,15 +50,21 @@ on your PR.
 4. Decide whether this is a **patch** or a **minor** release. While we're on 0.x, all packages in a release get the
    same kind of bump: either every bumped package gets a patch version, or every one gets a minor version. If you're an
    agent and weren't told which one, ask before bumping anything.
-5. Bump the version in `package.json` of every package that `nr changes` listed and whose shipped code or behavior
-   changed (`src/`, or other published files such as `packages/typegpu/skills/`). Then run `pnpm install`.
+5. Bump the versions:
+   - **Patch release:** run `pnpm run bump`. It patch-bumps every package from "Packages to release", plus packages
+     that have to ship with them (packages that pin a bumped package exactly, and `@typegpu/cli`, which bakes in the
+     versions of the other packages). It prints the PR title and the `Released packages:` list. Use
+     `--skip <name>` to leave a package out (e.g. when its only change is removing dead code), and `--dry-run` to
+     preview.
+   - **Minor release:** run `pnpm run bump --dry-run` to see which packages need a release, then set their minor
+     versions in `package.json` by hand.
 
-   If `nr changes` listed a package that you're not bumping (e.g. only its tests, docs or tooling changed), say which
-   one and why. Packages that `nr changes` didn't list don't need to be mentioned.
+   Then run `pnpm install`. If you left out a package that `pnpm run changes` listed under "Packages to release", say
+   which one and why. Packages that `pnpm run changes` didn't list there don't need to be mentioned.
 
 6. Open a draft PR titled `bump: typegpu <version> (+more)`, with the release notes as its description. Follow the
    format of the previous `bump:` PR:
-   - `Released packages:` with each bumped package and its new version
+   - `Released packages:` with each bumped package and its new version (`pnpm run bump` prints this list)
    - A short section (with a code snippet when it helps) for each notable change, ending with `* #<PR> by @<author>`
    - `## 💎 Features`, `## 🗿 Fixes / Stability` and `## 📖 Docs` lists with every PR from step 3, including the
      ones that landed on `release`
