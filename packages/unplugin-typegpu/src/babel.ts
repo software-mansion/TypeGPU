@@ -184,7 +184,7 @@ export default function TypeGPUPlugin() {
           : fallbackSourceTracker(this.filename);
       }
       initPluginState(this, {
-        warn: (message) => console.warn(message),
+        warn: (message) => console.warn(`[unplugin-typegpu] ${message}`),
         assignMetadata,
         wrapInAutoName,
         replaceWithAssignmentOverload,
