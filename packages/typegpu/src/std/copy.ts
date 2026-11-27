@@ -19,7 +19,7 @@ export function cpuCopy<T>(e: T): T {
   return e;
 }
 
-export const copy = dualImpl({
+export const copy = /*#__PURE__*/ dualImpl({
   name: 'copy',
   signature: (arg) => {
     return {

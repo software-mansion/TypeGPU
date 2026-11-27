@@ -57,7 +57,7 @@ const u32AllowedSchemas = [u32, vec2u, vec3u, vec4u];
 /**
  * @deprecated Use 'std.bitcast' instead.
  */
-export const bitcastU32toF32 = dualImpl({
+export const bitcastU32toF32 = /*#__PURE__*/ dualImpl({
   name: 'bitcastU32toF32',
   normalImpl: ((value) => {
     assertKind(value, u32Kind);
@@ -95,7 +95,7 @@ type BitcastU32toI32Overload = <T extends number | v2u | v3u | v4u>(
 /**
  * @deprecated Use 'std.bitcast' instead.
  */
-export const bitcastU32toI32 = dualImpl({
+export const bitcastU32toI32 = /*#__PURE__*/ dualImpl({
   name: 'bitcastU32toI32',
   normalImpl: ((value) => {
     assertKind(value, u32Kind);
@@ -135,7 +135,7 @@ const f32AllowedSchemas = [f32, vec2f, vec3f, vec4f];
 /**
  * @deprecated Use 'std.bitcast' instead.
  */
-export const bitcastF32toU32 = dualImpl({
+export const bitcastF32toU32 = /*#__PURE__*/ dualImpl({
   name: 'bitcastF32toU32',
   normalImpl: ((value) => {
     assertKind(value, f32Kind);
@@ -198,12 +198,12 @@ const bitcastAllowedSchemas = [
 
 type BitcastAllowedTypes = (typeof bitcastAllowedSchemas)[number];
 
-const buffer = new ArrayBuffer(16);
+const buffer = /*#__PURE__*/ new ArrayBuffer(16);
 const bufViews = {
-  f32: new Float32Array(buffer),
-  u32: new Uint32Array(buffer),
-  i32: new Int32Array(buffer),
-  u16: new Uint16Array(buffer),
+  f32: /*#__PURE__*/ new Float32Array(buffer),
+  u32: /*#__PURE__*/ new Uint32Array(buffer),
+  i32: /*#__PURE__*/ new Int32Array(buffer),
+  u16: /*#__PURE__*/ new Uint16Array(buffer),
 };
 
 function writeToBuffer(
@@ -299,98 +299,98 @@ function bitcastFor<In extends BitcastAllowedTypes, Out extends BitcastAllowedTy
 const casts = {
   /* 2 bytes */
   f16: {
-    f16: bitcastFor(f16, f16),
+    f16: /*#__PURE__*/ bitcastFor(f16, f16),
   },
 
   /* 4 bytes */
   f32: {
-    f32: bitcastFor(f32, f32),
-    i32: bitcastFor(f32, i32),
-    u32: bitcastFor(f32, u32),
-    vec2h: bitcastFor(f32, vec2h),
+    f32: /*#__PURE__*/ bitcastFor(f32, f32),
+    i32: /*#__PURE__*/ bitcastFor(f32, i32),
+    u32: /*#__PURE__*/ bitcastFor(f32, u32),
+    vec2h: /*#__PURE__*/ bitcastFor(f32, vec2h),
   },
   i32: {
-    f32: bitcastFor(i32, f32),
-    i32: bitcastFor(i32, i32),
-    u32: bitcastFor(i32, u32),
-    vec2h: bitcastFor(i32, vec2h),
+    f32: /*#__PURE__*/ bitcastFor(i32, f32),
+    i32: /*#__PURE__*/ bitcastFor(i32, i32),
+    u32: /*#__PURE__*/ bitcastFor(i32, u32),
+    vec2h: /*#__PURE__*/ bitcastFor(i32, vec2h),
   },
   u32: {
-    f32: bitcastFor(u32, f32),
-    i32: bitcastFor(u32, i32),
-    u32: bitcastFor(u32, u32),
-    vec2h: bitcastFor(u32, vec2h),
+    f32: /*#__PURE__*/ bitcastFor(u32, f32),
+    i32: /*#__PURE__*/ bitcastFor(u32, i32),
+    u32: /*#__PURE__*/ bitcastFor(u32, u32),
+    vec2h: /*#__PURE__*/ bitcastFor(u32, vec2h),
   },
   vec2h: {
-    f32: bitcastFor(vec2h, f32),
-    i32: bitcastFor(vec2h, i32),
-    u32: bitcastFor(vec2h, u32),
-    vec2h: bitcastFor(vec2h, vec2h),
+    f32: /*#__PURE__*/ bitcastFor(vec2h, f32),
+    i32: /*#__PURE__*/ bitcastFor(vec2h, i32),
+    u32: /*#__PURE__*/ bitcastFor(vec2h, u32),
+    vec2h: /*#__PURE__*/ bitcastFor(vec2h, vec2h),
   },
 
   /* 6 bytes */
   vec3h: {
-    vec3h: bitcastFor(vec3h, vec3h),
+    vec3h: /*#__PURE__*/ bitcastFor(vec3h, vec3h),
   },
 
   /* 8 bytes */
   vec2f: {
-    vec2f: bitcastFor(vec2f, vec2f),
-    vec2i: bitcastFor(vec2f, vec2i),
-    vec2u: bitcastFor(vec2f, vec2u),
-    vec4h: bitcastFor(vec2f, vec4h),
+    vec2f: /*#__PURE__*/ bitcastFor(vec2f, vec2f),
+    vec2i: /*#__PURE__*/ bitcastFor(vec2f, vec2i),
+    vec2u: /*#__PURE__*/ bitcastFor(vec2f, vec2u),
+    vec4h: /*#__PURE__*/ bitcastFor(vec2f, vec4h),
   },
   vec2i: {
-    vec2f: bitcastFor(vec2i, vec2f),
-    vec2i: bitcastFor(vec2i, vec2i),
-    vec2u: bitcastFor(vec2i, vec2u),
-    vec4h: bitcastFor(vec2i, vec4h),
+    vec2f: /*#__PURE__*/ bitcastFor(vec2i, vec2f),
+    vec2i: /*#__PURE__*/ bitcastFor(vec2i, vec2i),
+    vec2u: /*#__PURE__*/ bitcastFor(vec2i, vec2u),
+    vec4h: /*#__PURE__*/ bitcastFor(vec2i, vec4h),
   },
   vec2u: {
-    vec2f: bitcastFor(vec2u, vec2f),
-    vec2i: bitcastFor(vec2u, vec2i),
-    vec2u: bitcastFor(vec2u, vec2u),
-    vec4h: bitcastFor(vec2u, vec4h),
+    vec2f: /*#__PURE__*/ bitcastFor(vec2u, vec2f),
+    vec2i: /*#__PURE__*/ bitcastFor(vec2u, vec2i),
+    vec2u: /*#__PURE__*/ bitcastFor(vec2u, vec2u),
+    vec4h: /*#__PURE__*/ bitcastFor(vec2u, vec4h),
   },
   vec4h: {
-    vec2f: bitcastFor(vec4h, vec2f),
-    vec2i: bitcastFor(vec4h, vec2i),
-    vec2u: bitcastFor(vec4h, vec2u),
-    vec4h: bitcastFor(vec4h, vec4h),
+    vec2f: /*#__PURE__*/ bitcastFor(vec4h, vec2f),
+    vec2i: /*#__PURE__*/ bitcastFor(vec4h, vec2i),
+    vec2u: /*#__PURE__*/ bitcastFor(vec4h, vec2u),
+    vec4h: /*#__PURE__*/ bitcastFor(vec4h, vec4h),
   },
 
   /* 12 bytes */
   vec3f: {
-    vec3f: bitcastFor(vec3f, vec3f),
-    vec3i: bitcastFor(vec3f, vec3i),
-    vec3u: bitcastFor(vec3f, vec3u),
+    vec3f: /*#__PURE__*/ bitcastFor(vec3f, vec3f),
+    vec3i: /*#__PURE__*/ bitcastFor(vec3f, vec3i),
+    vec3u: /*#__PURE__*/ bitcastFor(vec3f, vec3u),
   },
   vec3i: {
-    vec3f: bitcastFor(vec3i, vec3f),
-    vec3i: bitcastFor(vec3i, vec3i),
-    vec3u: bitcastFor(vec3i, vec3u),
+    vec3f: /*#__PURE__*/ bitcastFor(vec3i, vec3f),
+    vec3i: /*#__PURE__*/ bitcastFor(vec3i, vec3i),
+    vec3u: /*#__PURE__*/ bitcastFor(vec3i, vec3u),
   },
   vec3u: {
-    vec3f: bitcastFor(vec3u, vec3f),
-    vec3i: bitcastFor(vec3u, vec3i),
-    vec3u: bitcastFor(vec3u, vec3u),
+    vec3f: /*#__PURE__*/ bitcastFor(vec3u, vec3f),
+    vec3i: /*#__PURE__*/ bitcastFor(vec3u, vec3i),
+    vec3u: /*#__PURE__*/ bitcastFor(vec3u, vec3u),
   },
 
   /* 16 bytes */
   vec4f: {
-    vec4f: bitcastFor(vec4f, vec4f),
-    vec4i: bitcastFor(vec4f, vec4i),
-    vec4u: bitcastFor(vec4f, vec4u),
+    vec4f: /*#__PURE__*/ bitcastFor(vec4f, vec4f),
+    vec4i: /*#__PURE__*/ bitcastFor(vec4f, vec4i),
+    vec4u: /*#__PURE__*/ bitcastFor(vec4f, vec4u),
   },
   vec4i: {
-    vec4f: bitcastFor(vec4i, vec4f),
-    vec4i: bitcastFor(vec4i, vec4i),
-    vec4u: bitcastFor(vec4i, vec4u),
+    vec4f: /*#__PURE__*/ bitcastFor(vec4i, vec4f),
+    vec4i: /*#__PURE__*/ bitcastFor(vec4i, vec4i),
+    vec4u: /*#__PURE__*/ bitcastFor(vec4i, vec4u),
   },
   vec4u: {
-    vec4f: bitcastFor(vec4u, vec4f),
-    vec4i: bitcastFor(vec4u, vec4i),
-    vec4u: bitcastFor(vec4u, vec4u),
+    vec4f: /*#__PURE__*/ bitcastFor(vec4u, vec4f),
+    vec4i: /*#__PURE__*/ bitcastFor(vec4u, vec4i),
+    vec4u: /*#__PURE__*/ bitcastFor(vec4u, vec4u),
   },
 } as const;
 
@@ -409,4 +409,4 @@ function getBitcast<
   throw new Error(`Incorrect bitcast from ${getName(from)} to ${getName(to)}.`);
 }
 
-export const bitcast = comptime(getBitcast);
+export const bitcast = /*#__PURE__*/ comptime(getBitcast);

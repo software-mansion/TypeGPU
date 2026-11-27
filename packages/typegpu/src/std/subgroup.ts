@@ -37,7 +37,7 @@ interface IdentityNumOrVecWithMask {
 
 const errorMessage = 'Subgroup operations can only be used in the GPU context.';
 
-export const subgroupAdd = dualImpl<IdentityNumOrVec>({
+export const subgroupAdd = /*#__PURE__*/ dualImpl<IdentityNumOrVec>({
   name: 'subgroupAdd',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
   normalImpl: errorMessage,
@@ -45,7 +45,7 @@ export const subgroupAdd = dualImpl<IdentityNumOrVec>({
   sideEffects: false,
 });
 
-export const subgroupExclusiveAdd = dualImpl<IdentityNumOrVec>({
+export const subgroupExclusiveAdd = /*#__PURE__*/ dualImpl<IdentityNumOrVec>({
   name: 'subgroupExclusiveAdd',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
   normalImpl: errorMessage,
@@ -53,7 +53,7 @@ export const subgroupExclusiveAdd = dualImpl<IdentityNumOrVec>({
   sideEffects: false,
 });
 
-export const subgroupInclusiveAdd = dualImpl<IdentityNumOrVec>({
+export const subgroupInclusiveAdd = /*#__PURE__*/ dualImpl<IdentityNumOrVec>({
   name: 'subgroupInclusiveAdd',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
   normalImpl: errorMessage,
@@ -61,7 +61,7 @@ export const subgroupInclusiveAdd = dualImpl<IdentityNumOrVec>({
   sideEffects: false,
 });
 
-export const subgroupAll = dualImpl<(e: boolean) => boolean>({
+export const subgroupAll = /*#__PURE__*/ dualImpl<(e: boolean) => boolean>({
   name: 'subgroupAll',
   signature: { argTypes: [bool], returnType: bool },
   normalImpl: errorMessage,
@@ -69,7 +69,7 @@ export const subgroupAll = dualImpl<(e: boolean) => boolean>({
   sideEffects: false,
 });
 
-export const subgroupAnd = dualImpl<IdentityIntNumOrVec>({
+export const subgroupAnd = /*#__PURE__*/ dualImpl<IdentityIntNumOrVec>({
   name: 'subgroupAnd',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
   normalImpl: errorMessage,
@@ -77,7 +77,7 @@ export const subgroupAnd = dualImpl<IdentityIntNumOrVec>({
   sideEffects: false,
 });
 
-export const subgroupAny = dualImpl<(e: boolean) => boolean>({
+export const subgroupAny = /*#__PURE__*/ dualImpl<(e: boolean) => boolean>({
   name: 'subgroupAny',
   signature: { argTypes: [bool], returnType: bool },
   normalImpl: errorMessage,
@@ -85,7 +85,7 @@ export const subgroupAny = dualImpl<(e: boolean) => boolean>({
   sideEffects: false,
 });
 
-export const subgroupBallot = dualImpl<(e: boolean) => v4u>({
+export const subgroupBallot = /*#__PURE__*/ dualImpl<(e: boolean) => v4u>({
   name: 'subgroupBallot',
   signature: { argTypes: [bool], returnType: vec4u },
   normalImpl: errorMessage,
@@ -93,7 +93,7 @@ export const subgroupBallot = dualImpl<(e: boolean) => v4u>({
   sideEffects: false,
 });
 
-export const subgroupBroadcast = dualImpl<IdentityNumOrVecWithIdx>({
+export const subgroupBroadcast = /*#__PURE__*/ dualImpl<IdentityNumOrVecWithIdx>({
   name: 'subgroupBroadcast',
   signature: (...args) => {
     const id = unify([args[1]] as [AnyWgslData], [i32, u32]);
@@ -111,7 +111,7 @@ export const subgroupBroadcast = dualImpl<IdentityNumOrVecWithIdx>({
   sideEffects: false,
 });
 
-export const subgroupBroadcastFirst = dualImpl<IdentityNumOrVec>({
+export const subgroupBroadcastFirst = /*#__PURE__*/ dualImpl<IdentityNumOrVec>({
   name: 'subgroupBroadcastFirst',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
   normalImpl: errorMessage,
@@ -119,7 +119,7 @@ export const subgroupBroadcastFirst = dualImpl<IdentityNumOrVec>({
   sideEffects: false,
 });
 
-export const subgroupElect = dualImpl<() => boolean>({
+export const subgroupElect = /*#__PURE__*/ dualImpl<() => boolean>({
   name: 'subgroupElect',
   signature: { argTypes: [], returnType: bool },
   normalImpl: errorMessage,
@@ -127,7 +127,7 @@ export const subgroupElect = dualImpl<() => boolean>({
   sideEffects: false,
 });
 
-export const subgroupMax = dualImpl<IdentityNumOrVec>({
+export const subgroupMax = /*#__PURE__*/ dualImpl<IdentityNumOrVec>({
   name: 'subgroupMax',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
   normalImpl: errorMessage,
@@ -135,7 +135,7 @@ export const subgroupMax = dualImpl<IdentityNumOrVec>({
   sideEffects: false,
 });
 
-export const subgroupMin = dualImpl<IdentityNumOrVec>({
+export const subgroupMin = /*#__PURE__*/ dualImpl<IdentityNumOrVec>({
   name: 'subgroupMin',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
   normalImpl: errorMessage,
@@ -143,7 +143,7 @@ export const subgroupMin = dualImpl<IdentityNumOrVec>({
   sideEffects: false,
 });
 
-export const subgroupMul = dualImpl<IdentityNumOrVec>({
+export const subgroupMul = /*#__PURE__*/ dualImpl<IdentityNumOrVec>({
   name: 'subgroupMul',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
   normalImpl: errorMessage,
@@ -151,7 +151,7 @@ export const subgroupMul = dualImpl<IdentityNumOrVec>({
   sideEffects: false,
 });
 
-export const subgroupExclusiveMul = dualImpl<IdentityNumOrVec>({
+export const subgroupExclusiveMul = /*#__PURE__*/ dualImpl<IdentityNumOrVec>({
   name: 'subgroupExclusiveMul',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
   normalImpl: errorMessage,
@@ -159,7 +159,7 @@ export const subgroupExclusiveMul = dualImpl<IdentityNumOrVec>({
   sideEffects: false,
 });
 
-export const subgroupInclusiveMul = dualImpl<IdentityNumOrVec>({
+export const subgroupInclusiveMul = /*#__PURE__*/ dualImpl<IdentityNumOrVec>({
   name: 'subgroupInclusiveMul',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
   normalImpl: errorMessage,
@@ -167,7 +167,7 @@ export const subgroupInclusiveMul = dualImpl<IdentityNumOrVec>({
   sideEffects: false,
 });
 
-export const subgroupOr = dualImpl<IdentityIntNumOrVec>({
+export const subgroupOr = /*#__PURE__*/ dualImpl<IdentityIntNumOrVec>({
   name: 'subgroupOr',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
   normalImpl: errorMessage,
@@ -175,7 +175,7 @@ export const subgroupOr = dualImpl<IdentityIntNumOrVec>({
   sideEffects: false,
 });
 
-export const subgroupShuffle = dualImpl<IdentityNumOrVecWithIdx>({
+export const subgroupShuffle = /*#__PURE__*/ dualImpl<IdentityNumOrVecWithIdx>({
   name: 'subgroupShuffle',
   signature: (...args) => {
     const id = unify([args[1]] as [AnyWgslData], [i32, u32]);
@@ -193,7 +193,7 @@ export const subgroupShuffle = dualImpl<IdentityNumOrVecWithIdx>({
   sideEffects: false,
 });
 
-export const subgroupShuffleDown = dualImpl<IdentityNumOrVecWithDelta>({
+export const subgroupShuffleDown = /*#__PURE__*/ dualImpl<IdentityNumOrVecWithDelta>({
   name: 'subgroupShuffleDown',
   signature: (...args) => {
     const delta = unify([args[1]] as [AnyWgslData], [u32]);
@@ -209,7 +209,7 @@ export const subgroupShuffleDown = dualImpl<IdentityNumOrVecWithDelta>({
   sideEffects: false,
 });
 
-export const subgroupShuffleUp = dualImpl<IdentityNumOrVecWithDelta>({
+export const subgroupShuffleUp = /*#__PURE__*/ dualImpl<IdentityNumOrVecWithDelta>({
   name: 'subgroupShuffleUp',
   signature: (...args) => {
     const delta = unify([args[1]] as [AnyWgslData], [u32]);
@@ -225,7 +225,7 @@ export const subgroupShuffleUp = dualImpl<IdentityNumOrVecWithDelta>({
   sideEffects: false,
 });
 
-export const subgroupShuffleXor = dualImpl<IdentityNumOrVecWithMask>({
+export const subgroupShuffleXor = /*#__PURE__*/ dualImpl<IdentityNumOrVecWithMask>({
   name: 'subgroupShuffleXor',
   signature: (...args) => {
     const mask = unify([args[1]] as [AnyWgslData], [u32]);
@@ -241,7 +241,7 @@ export const subgroupShuffleXor = dualImpl<IdentityNumOrVecWithMask>({
   sideEffects: false,
 });
 
-export const subgroupXor = dualImpl<IdentityIntNumOrVec>({
+export const subgroupXor = /*#__PURE__*/ dualImpl<IdentityIntNumOrVec>({
   name: 'subgroupXor',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
   normalImpl: errorMessage,
@@ -249,7 +249,7 @@ export const subgroupXor = dualImpl<IdentityIntNumOrVec>({
   sideEffects: false,
 });
 
-export const quadBroadcast = dualImpl<IdentityNumOrVecWithIdx>({
+export const quadBroadcast = /*#__PURE__*/ dualImpl<IdentityNumOrVecWithIdx>({
   name: 'quadBroadcast',
   signature: (...args) => {
     const id = unify([args[1]] as [AnyWgslData], [i32, u32]);
@@ -265,7 +265,7 @@ export const quadBroadcast = dualImpl<IdentityNumOrVecWithIdx>({
   sideEffects: false,
 });
 
-export const quadSwapDiagonal = dualImpl<IdentityNumOrVec>({
+export const quadSwapDiagonal = /*#__PURE__*/ dualImpl<IdentityNumOrVec>({
   name: 'quadSwapDiagonal',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
   normalImpl: errorMessage,
@@ -273,7 +273,7 @@ export const quadSwapDiagonal = dualImpl<IdentityNumOrVec>({
   sideEffects: false,
 });
 
-export const quadSwapX = dualImpl<IdentityNumOrVec>({
+export const quadSwapX = /*#__PURE__*/ dualImpl<IdentityNumOrVec>({
   name: 'quadSwapX',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
   normalImpl: errorMessage,
@@ -281,7 +281,7 @@ export const quadSwapX = dualImpl<IdentityNumOrVec>({
   sideEffects: false,
 });
 
-export const quadSwapY = dualImpl<IdentityNumOrVec>({
+export const quadSwapY = /*#__PURE__*/ dualImpl<IdentityNumOrVec>({
   name: 'quadSwapY',
   signature: (arg) => ({ argTypes: [arg], returnType: arg }),
   normalImpl: errorMessage,

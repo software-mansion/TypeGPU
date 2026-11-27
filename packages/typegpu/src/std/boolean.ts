@@ -71,7 +71,7 @@ function correspondingBooleanVectorSchema(dataType: BaseData) {
  * allEq(vec2f(0.0, 1.0), vec2f(0.0, 2.0)) // returns false
  * allEq(vec3u(0, 1, 2), vec3u(0, 1, 2)) // returns true
  */
-export const allEq = dualImpl({
+export const allEq = /*#__PURE__*/ dualImpl({
   name: 'allEq',
   signature: (...argTypes) => ({ argTypes, returnType: bool }),
   normalImpl: <T extends AnyVecInstance>(lhs: T, rhs: T) => cpuAll(cpuEq(lhs, rhs)),
@@ -94,7 +94,7 @@ const cpuEq = <T extends AnyVecInstance>(lhs: T, rhs: T) => {
  * all(eq(vec4i(4, 3, 2, 1), vec4i(4, 3, 2, 1))) // returns true
  * allEq(vec4i(4, 3, 2, 1), vec4i(4, 3, 2, 1)) // returns true
  */
-export const eq = dualImpl({
+export const eq = /*#__PURE__*/ dualImpl({
   name: 'eq',
   signature: (...argTypes) => ({
     argTypes,
@@ -113,7 +113,7 @@ export const eq = dualImpl({
  * ne(vec3u(0, 1, 2), vec3u(2, 1, 0)) // returns vec3b(true, false, true)
  * any(ne(vec4i(4, 3, 2, 1), vec4i(4, 2, 2, 1))) // returns true
  */
-export const ne = dualImpl({
+export const ne = /*#__PURE__*/ dualImpl({
   name: 'ne',
   signature: (...argTypes) => ({
     argTypes,
@@ -138,7 +138,7 @@ const cpuLt = <T extends AnyNumericVecInstance>(lhs: T, rhs: T) => {
  * lt(vec3u(0, 1, 2), vec3u(2, 1, 0)) // returns vec3b(true, false, false)
  * all(lt(vec4i(1, 2, 3, 4), vec4i(2, 3, 4, 5))) // returns true
  */
-export const lt = dualImpl({
+export const lt = /*#__PURE__*/ dualImpl({
   name: 'lt',
   signature: (...argTypes) => ({
     argTypes,
@@ -157,7 +157,7 @@ export const lt = dualImpl({
  * le(vec3u(0, 1, 2), vec3u(2, 1, 0)) // returns vec3b(true, true, false)
  * all(le(vec4i(1, 2, 3, 4), vec4i(2, 3, 3, 5))) // returns true
  */
-export const le = dualImpl({
+export const le = /*#__PURE__*/ dualImpl({
   name: 'le',
   signature: (...argTypes) => ({
     argTypes,
@@ -177,7 +177,7 @@ export const le = dualImpl({
  * gt(vec3u(0, 1, 2), vec3u(2, 1, 0)) // returns vec3b(false, false, true)
  * all(gt(vec4i(2, 3, 4, 5), vec4i(1, 2, 3, 4))) // returns true
  */
-export const gt = dualImpl({
+export const gt = /*#__PURE__*/ dualImpl({
   name: 'gt',
   signature: (...argTypes) => ({
     argTypes,
@@ -197,7 +197,7 @@ export const gt = dualImpl({
  * ge(vec3u(0, 1, 2), vec3u(2, 1, 0)) // returns vec3b(false, true, true)
  * all(ge(vec4i(2, 2, 4, 5), vec4i(1, 2, 3, 4))) // returns true
  */
-export const ge = dualImpl({
+export const ge = /*#__PURE__*/ dualImpl({
   name: 'ge',
   signature: (...argTypes) => ({
     argTypes: argTypes,
@@ -225,7 +225,7 @@ function cpuNot<T extends AnyBooleanVecInstance | boolean>(value: T): T {
  * not(true) // returns false
  * not(vec3b(true, true, false)) // returns vec3b(false, false, true)
  */
-export const not = dualImpl({
+export const not = /*#__PURE__*/ dualImpl({
   name: 'not',
   signature: (arg) => {
     if (!isBool(arg) && !isVecBool(arg)) {
@@ -254,7 +254,7 @@ const cpuOr = <T extends AnyBooleanVecInstance>(lhs: T, rhs: T) => {
  * or(vec2b(false, true), vec2b(false, false)) // returns vec2b(false, true)
  * or(vec3b(true, true, false), vec3b(false, true, false)) // returns vec3b(true, true, false)
  */
-export const or = dualImpl({
+export const or = /*#__PURE__*/ dualImpl({
   name: 'or',
   signature: (...argTypes) => ({ argTypes, returnType: argTypes[0] }),
   normalImpl: cpuOr,
@@ -271,7 +271,7 @@ const cpuAnd = <T extends AnyBooleanVecInstance>(lhs: T, rhs: T) =>
  * and(vec2b(false, true), vec2b(true, true)) // returns vec2b(false, true)
  * and(vec3b(true, true, false), vec3b(false, true, false)) // returns vec3b(false, true, false)
  */
-export const and = dualImpl({
+export const and = /*#__PURE__*/ dualImpl({
   name: 'and',
   signature: (...argTypes) => ({ argTypes, returnType: argTypes[0] }),
   normalImpl: cpuAnd,
@@ -295,7 +295,7 @@ const cpuAll = (value: boolean | AnyBooleanVecInstance) => {
  * all(vec2b(false, true)) // returns false
  * all(vec3b(true, true, true)) // returns true
  */
-export const all = dualImpl({
+export const all = /*#__PURE__*/ dualImpl({
   name: 'all',
   signature: (...argTypes) => ({ argTypes, returnType: bool }),
   normalImpl: cpuAll,
@@ -309,7 +309,7 @@ export const all = dualImpl({
  * any(vec2b(false, true)) // returns true
  * any(vec3b(false, false, false)) // returns false
  */
-export const any = dualImpl({
+export const any = /*#__PURE__*/ dualImpl({
   name: 'any',
   signature: (...argTypes) => ({ argTypes, returnType: bool }),
   normalImpl: (value: AnyBooleanVecInstance) => !cpuAll(cpuNot(value)),
@@ -328,7 +328,7 @@ export const any = dualImpl({
  *
  * @param {number} precision argument that specifies the maximum allowed difference, 0.01 by default.
  */
-export const isCloseTo = dualImpl({
+export const isCloseTo = /*#__PURE__*/ dualImpl({
   name: 'isCloseTo',
   signature: (...args) => ({
     argTypes: args as AnyWgslData[],
@@ -420,7 +420,7 @@ export const validSelectBranchTypes: AnyWgslData[] = [
  * select(vec2i(1, 2), vec2i(3, 4), true) // returns vec2i(3, 4)
  * select(vec2i(1, 2), vec2i(3, 4), vec2b(false, true)) // returns vec2i(1, 4)
  */
-export const select = dualImpl({
+export const select = /*#__PURE__*/ dualImpl({
   name: 'select',
   signature: (f, t, cond) => {
     const [uf, ut] = unify([f, t], validSelectBranchTypes) ?? ([f, t] as const);
