@@ -16,7 +16,10 @@ export function setSourceNode(snippet: Snippet, node: tinyest.Expression): Snipp
   return snippet;
 }
 
-export function getSourceNode(snippet: Snippet): tinyest.Expression | undefined {
+export function getSourceNode(snippet: Snippet | undefined): tinyest.Expression | undefined {
+  if (!snippet) {
+    return;
+  }
   return sourceNodes.get(snippet);
 }
 

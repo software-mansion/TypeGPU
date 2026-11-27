@@ -790,7 +790,7 @@ describe(`switch statement in 'use gpu' functions`, () => {
       [Error: Resolution of the following tree failed:
       - <root>
       - fn*:fn
-      - fn*:fn(): Identifier temp not found]
+      - fn*:fn(): Identifier 'temp' not found.]
     `);
   });
 

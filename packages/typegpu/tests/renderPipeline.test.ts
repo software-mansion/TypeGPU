@@ -1136,7 +1136,7 @@ describe('root.createRenderPipeline', () => {
       - <root>
       - renderPipeline:pipeline
       - renderPipelineCore
-      - autoFragmentFn: Identifier prop not found]
+      - autoFragmentFn: Identifier 'prop' not found.]
     `);
   });
 
