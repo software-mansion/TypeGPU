@@ -1305,6 +1305,7 @@ The generated shader will evaluate them in declaration order.`,
 
     let convLhs: Snippet;
     let convRhs: Snippet;
+    let hasCommonType = true;
 
     if (bitShiftOps.includes(op)) {
       const lhsDataType = lhsExpr.dataType;
@@ -1341,10 +1342,13 @@ The generated shader will evaluate them in declaration order.`,
       convLhs = lhsExpr;
     } else {
       const forcedType = exprType === NODE.assignmentExpr ? [lhsExpr.dataType] : undefined;
-      [convLhs, convRhs] = convertToCommonType(this.ctx, [lhsExpr, rhsExpr], forcedType) ?? [
-        lhsExpr,
-        rhsExpr,
-      ];
+      const converted = convertToCommonType<[Snippet, Snippet]>(
+        this.ctx,
+        [lhsExpr, rhsExpr],
+        forcedType,
+      );
+      hasCommonType = converted !== undefined;
+      [convLhs, convRhs] = converted ?? [lhsExpr, rhsExpr];
     }
 
     const type = operatorToType(convLhs.dataType, op, convRhs.dataType);
@@ -1358,6 +1362,12 @@ The generated shader will evaluate them in declaration order.`,
           `'${stringifyNode(expression)}' is invalid, because references cannot be assigned.\n-----\nTry '${stringifyNode(lhs)} = ${
             this.ctx.resolve(unptr(rhsExpr.dataType)).value
           }(${stringifyNode(rhs)})' to copy the value instead.\n-----`,
+        );
+      }
+      // Compound assignment operators can mix types, e.g. vec3f *= f32
+      if (op === '=' && !hasCommonType) {
+        throw new WgslTypeError(
+          `'${stringifyNode(expression)}' is invalid, because a value of type '${String(rhsExpr.dataType)}' cannot be assigned to '${stringifyNode(lhs)}', which is of type '${String(lhsExpr.dataType)}'.`,
         );
       }
     }
