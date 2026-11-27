@@ -422,6 +422,141 @@ describe('tgpu.slot', () => {
     `);
   });
 
+  it('does not leave the bound name on an unnamed function', () => {
+    const valueSlot = tgpu.slot(1);
+    // Wrapped in an array so it does not get auto-named
+    const inner = [
+      tgpu.fn(
+        [],
+        d.i32,
+      )(() => {
+        'use gpu';
+        return valueSlot.$;
+      }),
+    ][0]!;
+
+    expect(tgpu.resolve([inner.with(valueSlot, 2).$name('bound')])).toContain('fn bound()');
+    expect(tgpu.resolve([inner])).not.toContain('bound');
+    expect(inner.toString()).toBe('fn:<unnamed>');
+  });
+
+  it('restores the original name of a function after resolving its bound version', () => {
+    const valueSlot = tgpu.slot(1);
+    const inner = tgpu
+      .fn(
+        [],
+        d.i32,
+      )(() => {
+        'use gpu';
+        return valueSlot.$;
+      })
+      .$name('original');
+
+    expect(tgpu.resolve([inner.with(valueSlot, 2).$name('bound')])).toContain('fn bound()');
+    expect(inner.toString()).toBe('fn:original');
+    expect(tgpu.resolve([inner])).toContain('fn original()');
+  });
+
+  it('does not leave the bound name on an unnamed generic function', () => {
+    const valueSlot = tgpu.slot(1);
+    // Wrapped in an array so it does not get auto-named
+    const inner = [
+      tgpu.fn(() => {
+        'use gpu';
+        return valueSlot.$;
+      }),
+    ][0]!;
+    const bound = inner.with(valueSlot, 2).$name('bound');
+
+    // Naming the bound variant does not name the shared inner function
+    expect(tgpu.resolve([inner])).not.toContain('fn bound');
+
+    const main = tgpu.fn(
+      [],
+      d.i32,
+    )(() => {
+      'use gpu';
+      return bound();
+    });
+
+    expect(tgpu.resolve([bound])).toContain('fn bound()');
+    expect(tgpu.resolve([main])).toContain('fn bound()');
+    expect(inner.toString()).toBe('fn*:<unnamed>');
+    expect(tgpu.resolve([inner])).not.toContain('fn bound');
+  });
+
+  it('keeps an explicitly empty name after resolving a bound version', () => {
+    const valueSlot = tgpu.slot(1);
+    const inner = tgpu
+      .fn(
+        [],
+        d.i32,
+      )(() => {
+        'use gpu';
+        return valueSlot.$;
+      })
+      .$name('');
+
+    expect(tgpu.resolve([inner.with(valueSlot, 2).$name('bound')])).toContain('fn bound()');
+    expect(inner.toString()).toBe('fn:');
+  });
+
+  it('names a shelled function wrapping a bound generic after the generic', () => {
+    const valueSlot = tgpu.slot(1);
+    // Wrapped in arrays so they do not get auto-named
+    const inner = [
+      tgpu.fn(() => {
+        'use gpu';
+        return valueSlot.$;
+      }),
+    ][0]!;
+    const bound = inner.with(valueSlot, 2).$name('bound');
+    const shelled = [tgpu.fn([], d.i32)(bound)][0]!;
+
+    expect(shelled.toString()).toBe('fn:bound[valueSlot=2]');
+    expect(tgpu.resolve([shelled])).toMatchInlineSnapshot(`
+      "fn bound() -> i32 {
+        return 2i;
+      }"
+    `);
+    expect(tgpu.resolve([inner])).not.toContain('fn bound');
+  });
+
+  it('keeps temporarily applied names in the trace of a resolution error', () => {
+    const valueSlot = tgpu.slot(1);
+    const missingSlot = tgpu.slot<number>().$name('missing');
+    // Wrapped in arrays so they do not get auto-named
+    const innerGeneric = [
+      tgpu.fn(() => {
+        'use gpu';
+        return valueSlot.$ + missingSlot.$;
+      }),
+    ][0]!;
+    const innerShelled = [
+      tgpu.fn(
+        [],
+        d.i32,
+      )(() => {
+        'use gpu';
+        return valueSlot.$ + missingSlot.$;
+      }),
+    ][0]!;
+
+    expect(() => tgpu.resolve([innerGeneric.with(valueSlot, 2).$name('boundGeneric')]))
+      .toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn*:boundGeneric
+      - fn*:boundGeneric(): Missing value for 'slot:missing']
+    `);
+    expect(() => tgpu.resolve([innerShelled.with(valueSlot, 2).$name('boundShelled')]))
+      .toThrowErrorMatchingInlineSnapshot(`
+      [Error: Resolution of the following tree failed:
+      - <root>
+      - fn:boundShelled: Missing value for 'slot:missing']
+    `);
+  });
+
   it('allows comptime strings', () => {
     const precisionSlot = tgpu.slot<string>('f16');
 

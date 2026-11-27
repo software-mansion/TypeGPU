@@ -289,7 +289,14 @@ function createFn<ImplSchema extends AnyFn>(
   });
 
   if (pairs.length > 0) {
-    return createBoundFunction(fn, pairs);
+    const boundFn = createBoundFunction(fn, pairs);
+    // The bound generic's name lives on the generic itself, not on the shared inner
+    // implementation, so it has to be carried over to the bound shelled function.
+    const genericName = getName(_implementation);
+    if (genericName !== undefined && getName(boundFn) === undefined) {
+      setName(boundFn, genericName);
+    }
+    return boundFn;
   }
   return fn;
 }
@@ -371,8 +378,9 @@ function createGenericFn<T extends AnyFn>(inner: T, pairs: SlotValuePair[]): Tgp
 
     $name(label: string): TgpuGenericFn<T> {
       setName(this, label);
-      // Giving `inner` a name if it doesn't have one
-      if (!getName(inner)) {
+      // Giving `inner` a name if it doesn't have one. Bound variants share `inner` with
+      // the original function, so they apply their name only while being resolved.
+      if (pairs.length === 0 && !getName(inner)) {
         setName(inner, label);
       }
       return this as TgpuGenericFn<T> & SelfResolvable;
