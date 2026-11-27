@@ -8,7 +8,7 @@ const typegpu = await jiti.import<typeof TypeGPUPlugin>('unplugin-typegpu/vite',
 const testBuilt = isTestingBuiltTypegpu();
 
 export default defineConfig({
-  plugins: [typegpu({ forceTgpuAlias: 'tgpu', earlyPruning: false })],
+  plugins: [typegpu({ forceTgpuAlias: 'tgpu', earlyPruning: false, unstable_sourceMaps: true })],
   resolve: {
     alias: typegpuBuiltAliases(),
   },

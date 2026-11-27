@@ -16,3 +16,10 @@ export const DEV = process.env.NODE_ENV === 'development' || process.env.NODE_EN
  * `true` only when running in tests. Prefer `DEV` unless the behavior is specific to tests.
  */
 export const TEST = process.env.NODE_ENV === 'test';
+
+/**
+ * If source maps are available, locations are included in error messages.
+ * This variable disables this behavior in test env by default,
+ * so that inline snapshots do not include locations.
+ */
+export const INCLUDE_SOURCE = !TEST;
