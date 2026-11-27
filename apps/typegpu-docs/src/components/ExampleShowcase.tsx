@@ -55,7 +55,6 @@ export const ADVANCED_EXAMPLE_KEYS = [
   'advanced--appjs-venue',
   'algorithms--genetic-racing',
   'algorithms--matrix-multiplication',
-  'algorithms--matrix-next',
   'algorithms--mnist-inference',
   'image-processing--ascii-filter',
   'image-processing--image-tuning',
@@ -69,6 +68,7 @@ export const ADVANCED_EXAMPLE_KEYS = [
   'rendering--clouds',
   'rendering--cubemap-reflection',
   'rendering--function-visualizer',
+  'advanced--jelly-knob',
   'rendering--jelly-slider',
   'rendering--jelly-switch',
   'rendering--os-awards',
@@ -79,7 +79,6 @@ export const ADVANCED_EXAMPLE_KEYS = [
   'rendering--radiance-cascades-drawing',
   'rendering--ray-marching',
   'rendering--render-bundles',
-  'rendering--render-bundles-with',
   'rendering--simple-shadow',
   'rendering--smoky-triangle',
   'rendering--suika-sdf',
@@ -170,7 +169,7 @@ function ShowcaseCard({ example }: { example: Example }) {
             Preview unavailable
           </span>
         )}
-        {example.metadata.tags?.includes('webgl') && (
+        {example.usedApis.includes('@typegpu/gl') && (
           <span className="bg-navy-100 dark:bg-almost-white dark:text-navy-100 absolute top-3 left-3 px-2 py-1 font-mono text-[9px] font-semibold tracking-[0.08em] text-white">
             WebGPU + WebGL
           </span>

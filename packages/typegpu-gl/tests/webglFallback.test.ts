@@ -1,6 +1,8 @@
 import { describe, expect, vi } from 'vitest';
 import { tgpu, d, std } from 'typegpu';
-import { initWithGL } from '@typegpu/gl';
+import { glOptions, initWithGL } from '@typegpu/gl';
+import { isTestingBuiltTypegpu } from 'typegpu-testing-utility/config';
+import * as env from '../src/env.ts';
 import { it } from './utils/extendedTest.ts';
 
 // ----------
@@ -37,6 +39,21 @@ describe('TgpuRootWebGL - unsupported operations throw', () => {
 
     expect(() => root.createQuerySet('timestamp', 1)).toThrowErrorMatchingInlineSnapshot(
       `[WebGLFallbackUnsupportedError: WebGL fallback does not support 'createQuerySet'. Use WebGPU for full TypeGPU functionality.]`,
+    );
+  });
+
+  it('quotes texture features in error messages exactly once', ({ gl }) => {
+    const root = initWithGL({ gl });
+
+    expect(() =>
+      root.createTexture({ size: [1, 1], format: 'bgra8unorm' }),
+    ).toThrowErrorMatchingInlineSnapshot(
+      `[WebGLFallbackUnsupportedError: WebGL fallback does not support 'texture format bgra8unorm' (supported formats: r8unorm, rg8unorm, rgba8unorm, rgba8unorm-srgb, rgba16float, rgba32float). Use WebGPU for full TypeGPU functionality.]`,
+    );
+    expect(() =>
+      root.createTexture({ size: [1, 1], format: 'rgba8unorm' }).$usage('storage'),
+    ).toThrowErrorMatchingInlineSnapshot(
+      `[WebGLFallbackUnsupportedError: WebGL fallback does not support 'storage texture usage'. Use WebGPU for full TypeGPU functionality.]`,
     );
   });
 
@@ -93,6 +110,92 @@ describe('TgpuRootWebGL - createRenderPipeline', () => {
     expect(gl.compileShader).toHaveBeenCalledTimes(2);
     expect(gl.createProgram).toHaveBeenCalledTimes(1);
     expect(gl.linkProgram).toHaveBeenCalledTimes(1);
+  });
+
+  it('works in environments without WebGPU globals', ({ gl }) => {
+    vi.stubGlobal('GPUBufferUsage', undefined);
+    vi.stubGlobal('GPUTextureUsage', undefined);
+    vi.stubGlobal('GPUShaderStage', undefined);
+    try {
+      const root = initWithGL({ gl });
+      const pipeline = root.createRenderPipeline({
+        vertex: () => {
+          'use gpu';
+          return { $position: d.vec4f(0, 0, 0, 1) };
+        },
+        fragment: () => {
+          'use gpu';
+          return d.vec4f(1, 0, 0, 1);
+        },
+      });
+      expect(pipeline).toBeDefined();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  describe('console.log in shaders', () => {
+    const fragment = () => {
+      'use gpu';
+      console.log(d.u32(1));
+      return d.vec4f();
+    };
+
+    it('becomes a no-op', () => {
+      const glsl = tgpu.resolve([fragment], glOptions());
+      expect(glsl).toContain('/* console.log() */');
+      expect(glsl).not.toMatch(/console\.log\(\s*\d/);
+    });
+
+    it('is a no-op in render pipelines created by the WebGL root', ({ gl }) => {
+      // The WebGL root stands in for a WebGPU root, so a WGSL log generator would try to
+      // allocate log buffers through it, and fail in browsers without WebGPU.
+      vi.stubGlobal('GPUBufferUsage', undefined);
+      vi.stubGlobal('GPUTextureUsage', undefined);
+      vi.stubGlobal('GPUShaderStage', undefined);
+      try {
+        const root = initWithGL({ gl });
+        const pipeline = root.createRenderPipeline({
+          vertex: () => {
+            'use gpu';
+            return { $position: d.vec4f(0, 0, 0, 1) };
+          },
+          fragment,
+        });
+        pipeline.draw(3);
+      } finally {
+        vi.unstubAllGlobals();
+      }
+
+      const sources = vi.mocked(gl.shaderSource).mock.calls.map((call) => call[1]);
+      expect(sources.some((source) => source.includes('/* console.log() */'))).toBe(true);
+    });
+
+    // Built packages read their own copy of `DEV` (from `dist/`), which spying on the source
+    // module doesn't reach.
+    const skipInBuilt = isTestingBuiltTypegpu();
+
+    it.skipIf(skipInBuilt)('warns once in development', () => {
+      using warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      using _ = vi.spyOn(env, 'DEV', 'get').mockReturnValue(true);
+      const twoLogs = () => {
+        'use gpu';
+        console.log(d.u32(1));
+        console.log(d.u32(2));
+        return d.vec4f();
+      };
+      tgpu.resolve([twoLogs], glOptions());
+      tgpu.resolve([fragment], glOptions());
+      expect(warn).toHaveBeenCalledOnce();
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining("'console.log' isn't supported"));
+    });
+
+    it.skipIf(skipInBuilt)("doesn't warn outside of development", () => {
+      using warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+      using _ = vi.spyOn(env, 'DEV', 'get').mockReturnValue(false);
+      tgpu.resolve([fragment], glOptions());
+      expect(warn).not.toHaveBeenCalled();
+    });
   });
 
   it('supports withColorAttachment and draw', ({ gl, createHTMLCanvas }) => {

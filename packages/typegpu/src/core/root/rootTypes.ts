@@ -656,9 +656,59 @@ export interface TgpuRoot extends Unwrapper, WithBinding {
     CreateTextureResult<TSize, TFormat, TMipLevelCount, TSampleCount, TViewFormats, TDimension>
   >;
 
+  /**
+   * Wraps an existing WebGPU texture, so it can be used through TypeGPU's APIs.
+   *
+   * @remarks
+   * Typed wrapper around a GPUTexture. The props describe `gpuTexture` and are not checked
+   * against it. Usage flags have to be set when creating `gpuTexture`, so `.$usage(...)`
+   * only marks the typed texture as usable in that way.
+   *
+   * @param props The size, format and other properties of `gpuTexture`.
+   * @param gpuTexture A vanilla WebGPU texture.
+   */
+  createTexture<
+    TWidth extends number,
+    THeight extends number,
+    TDepth extends number,
+    TSize extends
+      | readonly [TWidth]
+      | readonly [TWidth, THeight]
+      | readonly [TWidth, THeight, TDepth],
+    TFormat extends GPUTextureFormat,
+    TMipLevelCount extends number,
+    TSampleCount extends number,
+    TViewFormats extends GPUTextureFormat[],
+    TDimension extends GPUTextureDimension,
+  >(
+    props: CreateTextureOptions<
+      TSize,
+      TFormat,
+      TMipLevelCount,
+      TSampleCount,
+      TViewFormats,
+      TDimension
+    >,
+    gpuTexture: GPUTexture,
+  ): TgpuTexture<
+    CreateTextureResult<TSize, TFormat, TMipLevelCount, TSampleCount, TViewFormats, TDimension>
+  >;
+
   createSampler(props: WgslSamplerProps): TgpuFixedSampler;
 
   createComparisonSampler(props: WgslComparisonSamplerProps): TgpuFixedComparisonSampler;
+
+  /**
+   * Wraps an existing {@link GPUCommandEncoder}, so TypeGPU passes and pipelines record into it.
+   *
+   * @remarks
+   * Typed wrapper around a GPUCommandEncoder, for recording into an encoder that other code
+   * creates and submits. Shader `console.log` output and performance callbacks are read after
+   * a submission TypeGPU makes, so they are skipped, with a warning in development.
+   *
+   * @param gpuEncoder A vanilla WebGPU command encoder.
+   */
+  createCommandEncoder(gpuEncoder: GPUCommandEncoder): TgpuCommandEncoder;
 
   /**
    * Creates a {@link TgpuCommandEncoder} for batching multiple render/compute

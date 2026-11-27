@@ -3,12 +3,14 @@
 export { abstractInt, abstractFloat } from './data/numeric.ts';
 export { makeResolvable } from './tgsl/makeResolvable.ts';
 export { makeDereferenceable } from './tgsl/makeDereferenceable.ts';
-export { UnknownData } from './data/dataTypes.ts';
+export { UnknownData, unptr } from './data/dataTypes.ts';
+export { concretize } from './tgsl/generationHelpers.ts';
 export { getName, setName } from './shared/meta.ts';
 export { WgslGenerator } from './tgsl/wgslGenerator.ts';
 export { snip, withValue, withDataType, withSideEffects } from './data/snippet.ts';
 export { stringifyNode, stringifyObjectProperty } from './shared/tseynit.ts';
 export { dualImpl } from './core/function/dualImpl.ts';
+export { getLogResources } from './core/pipeline/pipelineUtils.ts';
 export {
   isNonTransferableResource,
   isTransferableResource,
@@ -17,6 +19,7 @@ export {
 } from './serial/registry.ts';
 export type { TgpuResourceSnapshot, TransferableResourceType } from './serial/registry.ts';
 export type { RestoreContext } from './serial/types.ts';
+export type { LogResources } from './tgsl/consoleLog/types.ts';
 export {
   deserializeDataSchema,
   serializeDataSchema,

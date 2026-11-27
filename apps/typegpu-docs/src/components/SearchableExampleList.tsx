@@ -185,11 +185,11 @@ export function SearchableExampleList({
               className="border-tameplum-100 bg-white dark:border-white/10 dark:bg-[#272b3c] absolute top-full right-0 left-0 z-30 mt-2 overflow-y-auto rounded-none border p-3 shadow-xl"
               style={{ maxHeight: '60vh' }}
             >
-              {availableTags.length > 0 && (
+              {availableApis.length > 0 && (
                 <>
                   <div className="mb-1.5 flex items-center justify-between">
                     <p className="text-tameplum-600 dark:text-gray-300 px-0.5 text-xs font-medium">
-                      Tags
+                      APIs
                     </p>
                     <button
                       type="button"
@@ -198,7 +198,7 @@ export function SearchableExampleList({
                         setSelectedApis([]);
                       }}
                       disabled={selectedTags.length === 0 && selectedApis.length === 0}
-                      className={`flex items-center gap-1 rounded-none border border-tameplum-100 px-2 py-0.5 text-[10px] text-tameplum-600 transition-colors hover:border-tameplum-600 hover:bg-tameplum-50 ${selectedTags.length === 0 && selectedApis.length === 0 ? 'invisible' : ''}`}
+                      className={`flex items-center gap-1 rounded-none border border-tameplum-100 bg-transparent px-2 py-0.5 text-[10px] text-tameplum-600 transition-colors hover:bg-tameplum-50 dark:border-white/10 dark:text-gray-300 dark:hover:bg-white/10 ${selectedTags.length === 0 && selectedApis.length === 0 ? 'invisible' : ''}`}
                     >
                       <svg
                         className="h-2.5 w-2.5"
@@ -213,41 +213,6 @@ export function SearchableExampleList({
                       Clear all
                     </button>
                   </div>
-                  <div className="flex flex-wrap gap-x-1.5 gap-y-1.5">
-                    {availableTags.map((tag) => {
-                      const isSelected = selectedTags.includes(tag);
-                      return (
-                        <button
-                          key={tag}
-                          type="button"
-                          onClick={() => {
-                            if (scrollContainerRef?.current) {
-                              scrollContainerRef.current.scrollTop = 0;
-                            }
-                            setSelectedTags((prev) =>
-                              prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
-                            );
-                          }}
-                          className={
-                            isSelected
-                              ? 'rounded-none bg-gradient-to-r from-gradient-purple-dark to-gradient-blue-dark px-2.5 py-0.5 text-[11px] font-medium whitespace-nowrap text-white transition-opacity hover:opacity-90'
-                              : 'rounded-none bg-tameplum-50 px-2.5 py-0.5 text-[11px] font-medium whitespace-nowrap text-tameplum-600 transition-colors hover:bg-tameplum-100 dark:bg-white/6 dark:text-gray-300 dark:hover:bg-white/10'
-                          }
-                        >
-                          {tag}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </>
-              )}
-              {availableApis.length > 0 && (
-                <>
-                  <p
-                    className={`mb-1.5 px-0.5 text-xs font-medium text-tameplum-600 dark:text-gray-300 ${availableTags.length > 0 ? 'mt-3' : ''}`}
-                  >
-                    APIs
-                  </p>
                   <div className="flex flex-wrap gap-x-1.5 gap-y-1.5">
                     {availableApis.map((api) => {
                       const isSelected = selectedApis.includes(api);
@@ -270,6 +235,41 @@ export function SearchableExampleList({
                           }
                         >
                           {api}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </>
+              )}
+              {availableTags.length > 0 && (
+                <>
+                  <p
+                    className={`mb-1.5 px-0.5 text-xs font-medium text-tameplum-600 dark:text-gray-300 ${availableApis.length > 0 ? 'mt-3' : ''}`}
+                  >
+                    Tags
+                  </p>
+                  <div className="flex flex-wrap gap-x-1.5 gap-y-1.5">
+                    {availableTags.map((tag) => {
+                      const isSelected = selectedTags.includes(tag);
+                      return (
+                        <button
+                          key={tag}
+                          type="button"
+                          onClick={() => {
+                            if (scrollContainerRef?.current) {
+                              scrollContainerRef.current.scrollTop = 0;
+                            }
+                            setSelectedTags((prev) =>
+                              prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag],
+                            );
+                          }}
+                          className={
+                            isSelected
+                              ? 'rounded-none bg-gradient-to-r from-gradient-purple-dark to-gradient-blue-dark px-2.5 py-0.5 text-[11px] font-medium whitespace-nowrap text-white transition-opacity hover:opacity-90'
+                              : 'rounded-none bg-tameplum-50 px-2.5 py-0.5 text-[11px] font-medium whitespace-nowrap text-tameplum-600 transition-colors hover:bg-tameplum-100 dark:bg-white/6 dark:text-gray-300 dark:hover:bg-white/10'
+                          }
+                        >
+                          {tag}
                         </button>
                       );
                     })}

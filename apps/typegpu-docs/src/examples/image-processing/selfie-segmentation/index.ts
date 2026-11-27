@@ -1,5 +1,5 @@
 import { tgpu, common, d, std } from 'typegpu';
-import type { TgpuBindGroup } from 'typegpu';
+import type { TgpuBindGroup, TgpuCommandEncoder } from 'typegpu';
 import { defineControls } from '../../common/defineControls.ts';
 import {
   FrameCropParams,
@@ -147,13 +147,13 @@ function processVideoFrame(_: number, metadata: VideoFrameCallbackMetadata) {
   }
   const crop = squareCrop(metadata.width, metadata.height, uvTransform);
   const externalTexture = root.device.importExternalTexture({ source: video });
-  const encoder = root.device.createCommandEncoder();
+  const encoder = root.createCommandEncoder();
   const pass = encoder.beginComputePass();
   inference.encodeVideoFrame(pass, externalTexture, crop);
   postProcessor.encode(pass, externalTexture, crop, canvas, postProcessProfile);
   pass.end();
   renderComposite(encoder, externalTexture, postProcessor.maskView, crop);
-  root.device.queue.submit([encoder.finish()]);
+  encoder.submit();
 
   videoFrameCallbackId = video.requestVideoFrameCallback(processVideoFrame);
 }
@@ -161,7 +161,7 @@ function processVideoFrame(_: number, metadata: VideoFrameCallbackMetadata) {
 videoFrameCallbackId = video.requestVideoFrameCallback(processVideoFrame);
 
 function renderComposite(
-  encoder: GPUCommandEncoder,
+  encoder: TgpuCommandEncoder,
   externalTexture: GPUExternalTexture,
   maskTexture: SampledMaskView,
   crop: VideoFrameCrop,

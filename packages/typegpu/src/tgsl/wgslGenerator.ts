@@ -71,9 +71,12 @@ import { getAttributesString } from '../data/attributes.ts';
 import { validSelectBranchTypes } from '../std/boolean.ts';
 import { isInfixDispatch } from './infixDispatch.ts';
 import type { VariableScope } from '../core/variable/tgpuVariable.ts';
+import { DEV } from '../shared/env.ts';
 import { logger } from '../tgpuLogger.ts';
 import { TgpuDeclareImpl } from '../core/declare/tgpuDeclare.ts';
 import { fail } from './fail.ts';
+import { isWgslComparisonSampler, isWgslSampler } from '../data/sampler.ts';
+import { isWgslExternalTexture, isWgslStorageTexture, isWgslTexture } from '../data/texture.ts';
 
 const { NodeTypeCatalog: NODE } = tinyest;
 
@@ -212,6 +215,20 @@ function schemaWrappingSuggestion(declaration: string, rhs: string, value: unkno
 -----
 - Try using or defining a schema that matches your desired value the most, and wrap the value with it: '${declaration} = Schema(${rhs})'
 -----`;
+}
+
+/**
+ * Textures and samplers live in the 'handle' address space, and can only be referenced
+ * by their global identifier (or a function parameter), not stored in local variables.
+ */
+function isHandleData(dataType: unknown): boolean {
+  return (
+    isWgslTexture(dataType) ||
+    isWgslStorageTexture(dataType) ||
+    isWgslExternalTexture(dataType) ||
+    isWgslSampler(dataType) ||
+    isWgslComparisonSampler(dataType)
+  );
 }
 
 export class WgslGenerator implements ShaderGenerator {
@@ -413,6 +430,14 @@ export class WgslGenerator implements ShaderGenerator {
     return stitch`${this.ctx.pre}switch ${discriminantExpr} {\n${body}\n${this.ctx.pre}}`;
   }
 
+  /**
+   * Generates a call to a logging operation, like `console.log`. Generators of
+   * languages that can't log can override it.
+   */
+  protected _generateLog(op: AnyFn, args: readonly Snippet[]): Snippet {
+    return this.ctx.generateLog(op, args);
+  }
+
   protected _callShellless(callee: AnyFn, args: readonly Snippet[]): ResolvedSnippet | undefined {
     const isGeneric = isGenericFn(callee);
     const slotPairs = isGeneric ? (callee[$providing]?.pairs ?? []) : [];
@@ -487,7 +512,7 @@ export class WgslGenerator implements ShaderGenerator {
     const callee = mathToStd.get(_callee) ?? _callee;
 
     if (supportedLogOps().includes(callee)) {
-      return this.ctx.generateLog(callee, args);
+      return this._generateLog(callee, args);
     }
 
     if (callee === constant) {
@@ -664,184 +689,14 @@ export class WgslGenerator implements ShaderGenerator {
       );
     }
 
-    if (expression[0] === NODE.binaryExpr || expression[0] === NODE.assignmentExpr) {
-      // Binary/Assignment Expression
-      const [exprType, lhs, op, rhs] = expression;
-      const lhsExpr = this._expression(lhs);
-      const rhsExpr = this._expression(rhs);
+    if (expression[0] === NODE.binaryExpr) {
+      return this._binaryOrAssignmentExpression(expression);
+    }
 
-      if (rhsExpr.value instanceof RefOperator) {
-        fail(
-          `Cannot assign a ref to an existing variable '${stringifyNode(lhs)}', define a new variable instead.`,
-          expression,
-        );
-      }
-
-      if (op === '==') {
-        fail('Please use the === operator instead of ==', expression);
-      }
-
-      if (op === '!=') {
-        fail('Please use the !== operator instead of !=', expression);
-      }
-
-      const stdBinaryRelationalOp = binaryRelationalOpToStdMap[op];
-      const knownLhs = stdBinaryRelationalOp && asComptime(lhsExpr);
-      const knownRhs = knownLhs && asComptime(rhsExpr);
-      if (stdBinaryRelationalOp && knownLhs && knownRhs) {
-        const left = knownLhs.value;
-        const right = knownRhs.value;
-
-        switch (op) {
-          case '===':
-            return snip(left === right, bool, 'constant', false);
-          case '!==':
-            return snip(left !== right, bool, 'constant', false);
-        }
-
-        if (typeof left !== 'number' || typeof right !== 'number') {
-          const bothVectors = wgsl.isVec(lhsExpr.dataType) && wgsl.isVec(rhsExpr.dataType);
-          fail(
-            `Comparison '${stringifyNode(expression)}' requires numeric operands.${
-              bothVectors
-                ? ` For component-wise comparison, use 'std.${stdBinaryRelationalOp}'.`
-                : ''
-            }`,
-            expression,
-          );
-        }
-
-        switch (op) {
-          case '<':
-            return snip(left < right, bool, 'constant', false);
-          case '<=':
-            return snip(left <= right, bool, 'constant', false);
-          case '>':
-            return snip(left > right, bool, 'constant', false);
-          case '>=':
-            return snip(left >= right, bool, 'constant', false);
-        }
-      }
-
-      if (lhsExpr.dataType === UnknownData) {
-        fail(
-          `Left-hand side '${stringifySnippet(lhsExpr)}' of '${op}' is of unknown type.`,
-          expression,
-        );
-      }
-
-      if (rhsExpr.dataType === UnknownData) {
-        fail(
-          `Right-hand side '${stringifySnippet(rhsExpr)}' of '${op}' is of unknown type.`,
-          expression,
-        );
-      }
-
-      const codegen = binaryOpCodeToCodegen[op as keyof typeof binaryOpCodeToCodegen];
-      if (codegen) {
-        return codegen(this.ctx, [lhsExpr, rhsExpr]);
-      }
-
-      let convLhs: Snippet;
-      let convRhs: Snippet;
-
-      if (bitShiftOps.includes(op)) {
-        const lhsDataType = lhsExpr.dataType;
-        if (!wgsl.isInteger(lhsDataType) && !wgsl.isIntegerVec(lhsDataType)) {
-          fail(
-            `Expression: ${stringifyNode(expression)}\nLeft-hand side of '${op}' must be an integer or vector of integers.\nGot ${this.ctx.resolve(lhsDataType).value}.`,
-            expression,
-          );
-        }
-
-        const lhsPrimitive = wgsl.isVec(lhsDataType) ? lhsDataType.primitive : lhsDataType;
-
-        if (['>>>', '>>>='].includes(op) && lhsPrimitive.type !== 'u32') {
-          fail(
-            `Expression: ${stringifyNode(expression)}\nLeft-hand side of '${op}' must be an unsigned integer or vector of unsigned integers.\nGot ${this.ctx.resolve(lhsDataType).value}.\nUse ${op.slice(1)} instead.`,
-            expression,
-          );
-        }
-
-        if (['>>', '>>='].includes(op) && lhsPrimitive.type === 'u32') {
-          logger.warn(
-            'deprecated',
-            `\nExpression: ${stringifyNode(expression)}\nUsing u32 or vecN<u32> as left-hand side of ${op} is deprecated.\nUse >${op} instead.`,
-          );
-        }
-
-        // rhs must be u32 (or vecN<u32> for vector lhs) according to the WGSL spec
-        let rhsTarget: wgsl.BaseData;
-        if (wgsl.isVec(lhsDataType)) {
-          const cc = lhsDataType.componentCount;
-          rhsTarget = cc === 2 ? vec2u : cc === 3 ? vec3u : vec4u;
-        } else {
-          rhsTarget = u32;
-        }
-        convRhs = tryConvertSnippet(this.ctx, rhsExpr, rhsTarget, false);
-        convLhs = lhsExpr;
-      } else {
-        const forcedType = exprType === NODE.assignmentExpr ? [lhsExpr.dataType] : undefined;
-        [convLhs, convRhs] = convertToCommonType(this.ctx, [lhsExpr, rhsExpr], forcedType) ?? [
-          lhsExpr,
-          rhsExpr,
-        ];
-      }
-
-      const type = operatorToType(convLhs.dataType, op, convRhs.dataType);
-
-      if (exprType === NODE.assignmentExpr) {
-        this.validateSnippetMutation(convLhs, expression);
-        this.tryMarkModified(lhs);
-        // Compound assignment operators are okay, e.g. +=, -=, *=, /=, ...
-        if (
-          op === '=' &&
-          isStoredInMemory(rhsExpr) &&
-          !wgsl.isNaturallyEphemeral(rhsExpr.dataType)
-        ) {
-          fail(
-            `'${stringifyNode(expression)}' is invalid, because references cannot be assigned.`,
-            expression,
-            [
-              `Try '${stringifyNode(lhs)} = ${
-                this.ctx.resolve(unptr(rhsExpr.dataType)).value
-              }(${stringifyNode(rhs)})' to copy the value instead.`,
-            ],
-          );
-        }
-      }
-
-      if (stdBinaryRelationalOp) {
-        const equalityCheck = ['===', '!=='].includes(op);
-        const correctOperandTypes =
-          (wgsl.isNumericSchema(convLhs.dataType) && wgsl.isNumericSchema(convRhs.dataType)) ||
-          (equalityCheck && wgsl.isBool(convLhs.dataType) && wgsl.isBool(convRhs.dataType));
-
-        if (!correctOperandTypes) {
-          const bothVectors = wgsl.isVec(convLhs.dataType) && wgsl.isVec(convRhs.dataType);
-          fail(
-            `Comparison '${stringifyNode(expression)}' requires numeric${equalityCheck ? ' or boolean' : ''} operands. Got '${String(convLhs.dataType)}' and '${String(convRhs.dataType)}'.${
-              bothVectors
-                ? ` For component-wise comparison, use 'std.${stdBinaryRelationalOp}'.`
-                : ''
-            }`,
-            expression,
-          );
-        }
-      }
-
-      if (UNSUPPORTED_OPS.includes(op)) {
-        fail(`The \`${op}\` operator is unsupported in TypeGPU functions.`, expression);
-      }
-
-      return snip(
-        this.emitBinaryOp(convLhs, (OP_MAP[op] ?? op) as BinaryOperator, convRhs),
-        type,
-        // Result of an operation, so not a reference to anything
-        /* origin */ 'runtime',
-        exprType === NODE.assignmentExpr ||
-          lhsExpr.possibleSideEffects ||
-          rhsExpr.possibleSideEffects,
+    if (expression[0] === NODE.assignmentExpr) {
+      fail(
+        `'${stringifyNode(expression)}' is invalid because assignment is only allowed as a standalone statement.`,
+        expression,
       );
     }
 
@@ -1020,7 +875,7 @@ export class WgslGenerator implements ShaderGenerator {
           if (propType === undefined) {
             // Evaluate every field even if it gets stripped by the struct schema
             const expr = this._expression(value);
-            if (expr.possibleSideEffects) {
+            if (DEV && expr.possibleSideEffects) {
               logger.warn(
                 'suspicious',
                 `\
@@ -1051,7 +906,7 @@ The generated shader will omit it, so its runtime side effects will not occur.`,
         const changesSideEffectsOrder = keysWithSideEffectsInSourceOrder.some(
           (key, index) => key !== keysWithSideEffectsInSchemaOrder[index],
         );
-        if (changesSideEffectsOrder) {
+        if (DEV && changesSideEffectsOrder) {
           logger.warn(
             'suspicious',
             `\
@@ -1356,6 +1211,180 @@ The generated shader will evaluate them in declaration order.`,
     return `${name}(${resolvedArgs})`;
   }
 
+  protected _binaryOrAssignmentExpression(
+    expression: tinyest.BinaryExpression | tinyest.AssignmentExpression,
+  ): Snippet {
+    const [exprType, lhs, op, rhs] = expression;
+    const lhsExpr = this._expression(lhs);
+    const rhsExpr = this._expression(rhs);
+
+    if (rhsExpr.value instanceof RefOperator) {
+      fail(
+        `Cannot assign a ref to an existing variable '${stringifyNode(lhs)}', define a new variable instead.`,
+        expression,
+      );
+    }
+
+    if (op === '==') {
+      fail('Please use the === operator instead of ==', expression);
+    }
+
+    if (op === '!=') {
+      fail('Please use the !== operator instead of !=', expression);
+    }
+
+    const stdBinaryRelationalOp = binaryRelationalOpToStdMap[op];
+    const knownLhs = stdBinaryRelationalOp && asComptime(lhsExpr);
+    const knownRhs = knownLhs && asComptime(rhsExpr);
+    if (stdBinaryRelationalOp && knownLhs && knownRhs) {
+      const left = knownLhs.value;
+      const right = knownRhs.value;
+
+      switch (op) {
+        case '===':
+          return snip(left === right, bool, 'constant', false);
+        case '!==':
+          return snip(left !== right, bool, 'constant', false);
+      }
+
+      if (typeof left !== 'number' || typeof right !== 'number') {
+        const bothVectors = wgsl.isVec(lhsExpr.dataType) && wgsl.isVec(rhsExpr.dataType);
+        fail(
+          `Comparison '${stringifyNode(expression)}' requires numeric operands.${
+            bothVectors ? ` For component-wise comparison, use 'std.${stdBinaryRelationalOp}'.` : ''
+          }`,
+          expression,
+        );
+      }
+
+      switch (op) {
+        case '<':
+          return snip(left < right, bool, 'constant', false);
+        case '<=':
+          return snip(left <= right, bool, 'constant', false);
+        case '>':
+          return snip(left > right, bool, 'constant', false);
+        case '>=':
+          return snip(left >= right, bool, 'constant', false);
+      }
+    }
+
+    if (lhsExpr.dataType === UnknownData) {
+      fail(
+        `Left-hand side '${stringifySnippet(lhsExpr)}' of '${op}' is of unknown type.`,
+        expression,
+      );
+    }
+
+    if (rhsExpr.dataType === UnknownData) {
+      fail(
+        `Right-hand side '${stringifySnippet(rhsExpr)}' of '${op}' is of unknown type.`,
+        expression,
+      );
+    }
+
+    const codegen = binaryOpCodeToCodegen[op as keyof typeof binaryOpCodeToCodegen];
+    if (codegen) {
+      return codegen(this.ctx, [lhsExpr, rhsExpr]);
+    }
+
+    let convLhs: Snippet;
+    let convRhs: Snippet;
+
+    if (bitShiftOps.includes(op)) {
+      const lhsDataType = lhsExpr.dataType;
+      if (!wgsl.isInteger(lhsDataType) && !wgsl.isIntegerVec(lhsDataType)) {
+        fail(
+          `Expression: ${stringifyNode(expression)}\nLeft-hand side of '${op}' must be an integer or vector of integers.\nGot ${this.ctx.resolve(lhsDataType).value}.`,
+          expression,
+        );
+      }
+
+      const lhsPrimitive = wgsl.isVec(lhsDataType) ? lhsDataType.primitive : lhsDataType;
+
+      if (['>>>', '>>>='].includes(op) && lhsPrimitive.type !== 'u32') {
+        fail(
+          `Expression: ${stringifyNode(expression)}\nLeft-hand side of '${op}' must be an unsigned integer or vector of unsigned integers.\nGot ${this.ctx.resolve(lhsDataType).value}.\nUse ${op.slice(1)} instead.`,
+          expression,
+        );
+      }
+
+      if (DEV && ['>>', '>>='].includes(op) && lhsPrimitive.type === 'u32') {
+        logger.warn(
+          'deprecated',
+          `\nExpression: ${stringifyNode(expression)}\nUsing u32 or vecN<u32> as left-hand side of ${op} is deprecated.\nUse >${op} instead.`,
+        );
+      }
+
+      // rhs must be u32 (or vecN<u32> for vector lhs) according to the WGSL spec
+      let rhsTarget: wgsl.BaseData;
+      if (wgsl.isVec(lhsDataType)) {
+        const cc = lhsDataType.componentCount;
+        rhsTarget = cc === 2 ? vec2u : cc === 3 ? vec3u : vec4u;
+      } else {
+        rhsTarget = u32;
+      }
+      convRhs = tryConvertSnippet(this.ctx, rhsExpr, rhsTarget, false);
+      convLhs = lhsExpr;
+    } else {
+      const forcedType = exprType === NODE.assignmentExpr ? [lhsExpr.dataType] : undefined;
+      [convLhs, convRhs] = convertToCommonType(this.ctx, [lhsExpr, rhsExpr], forcedType) ?? [
+        lhsExpr,
+        rhsExpr,
+      ];
+    }
+
+    const type = operatorToType(convLhs.dataType, op, convRhs.dataType);
+
+    if (exprType === NODE.assignmentExpr) {
+      this.validateSnippetMutation(convLhs, expression);
+      this.tryMarkModified(lhs);
+      // Compound assignment operators are okay, e.g. +=, -=, *=, /=, ...
+      if (op === '=' && isStoredInMemory(rhsExpr) && !wgsl.isNaturallyEphemeral(rhsExpr.dataType)) {
+        fail(
+          `'${stringifyNode(expression)}' is invalid, because references cannot be assigned.`,
+          expression,
+          [
+            `Try '${stringifyNode(lhs)} = ${
+              this.ctx.resolve(unptr(rhsExpr.dataType)).value
+            }(${stringifyNode(rhs)})' to copy the value instead.`,
+          ],
+        );
+      }
+    }
+
+    if (stdBinaryRelationalOp) {
+      const equalityCheck = ['===', '!=='].includes(op);
+      const correctOperandTypes =
+        (wgsl.isNumericSchema(convLhs.dataType) && wgsl.isNumericSchema(convRhs.dataType)) ||
+        (equalityCheck && wgsl.isBool(convLhs.dataType) && wgsl.isBool(convRhs.dataType));
+
+      if (!correctOperandTypes) {
+        const bothVectors = wgsl.isVec(convLhs.dataType) && wgsl.isVec(convRhs.dataType);
+        fail(
+          `Comparison '${stringifyNode(expression)}' requires numeric${equalityCheck ? ' or boolean' : ''} operands. Got '${String(convLhs.dataType)}' and '${String(convRhs.dataType)}'.${
+            bothVectors ? ` For component-wise comparison, use 'std.${stdBinaryRelationalOp}'.` : ''
+          }`,
+          expression,
+        );
+      }
+    }
+
+    if (UNSUPPORTED_OPS.includes(op)) {
+      fail(`The \`${op}\` operator is unsupported in TypeGPU functions.`, expression);
+    }
+
+    return snip(
+      this.emitBinaryOp(convLhs, (OP_MAP[op] ?? op) as BinaryOperator, convRhs),
+      type,
+      // Result of an operation, so not a reference to anything
+      /* origin */ 'runtime',
+      exprType === NODE.assignmentExpr ||
+        lhsExpr.possibleSideEffects ||
+        rhsExpr.possibleSideEffects,
+    );
+  }
+
   public emitBinaryOp(lhs: Snippet, op: BinaryOperator, rhs: Snippet): string {
     const lhsStr = this.ctx.resolveSnippet(lhs).value;
     const rhsStr = this.ctx.resolveSnippet(rhs).value;
@@ -1471,6 +1500,16 @@ The generated shader will evaluate them in declaration order.`,
       );
     }
 
+    if (isHandleData(definitionDataType)) {
+      // Handles cannot be reassigned, so only `const` aliases make sense
+      const rhsStr = stringifyNode(eqNode);
+      fail(
+        `'let ${rawId} = ${rhsStr}' is invalid, because textures and samplers cannot be assigned to 'let' variable declarations.`,
+        statement,
+        [`- Try 'const ${rawId} = ${rhsStr}' instead.`],
+      );
+    }
+
     if (isStoredInMemory(eq) && !wgsl.isNaturallyEphemeral(eq.dataType)) {
       // `let` declarations cannot store references
       const rhsStr = stringifyNode(eqNode);
@@ -1565,6 +1604,10 @@ The generated shader will evaluate them in declaration order.`,
       );
     }
 
+    if (isHandleData(definitionDataType)) {
+      return this._aliasHandleStatement(rawId, eq);
+    }
+
     if (eq.origin === 'argument') {
       // Arguments are immutable, so we 'let' them be (kill me)
       varType = 'let';
@@ -1621,6 +1664,19 @@ The generated shader will evaluate them in declaration order.`,
       code: this._emitVarDecl(emittedVarType, snippet.value, concreteType, rhsStr),
       definesInNearestScope: true,
     };
+  }
+
+  /**
+   * Handles declarations whose right-hand side is a texture or sampler handle.
+   *
+   * WGSL forbids handle types in `const` and `var` declarations, and allows them in `let`
+   * declarations only with the optional `texture_and_sampler_let` language extension.
+   * Instead of emitting a declaration, we treat the variable as a compile-time alias,
+   * so every use of it resolves to the original handle expression.
+   */
+  protected _aliasHandleStatement(rawId: string, eq: Snippet): ResolvedStatement {
+    this.ctx.defineVariable(rawId, eq);
+    return { code: '', definesInNearestScope: false };
   }
 
   /**
@@ -1763,9 +1819,9 @@ ${this.ctx.pre}else ${alternate}`,
         this.ctx.pushBlockScope();
         const [initStatement, conditionExpr, updateStatement] = this.ctx.withResetIndentLevel(
           () => [
-            init ? this._statement(init).code : undefined,
-            condition ? this._expressionWithTypeConversion(condition, bool) : undefined,
-            update ? this._statement(update).code : undefined,
+            init !== null ? this._statement(init).code : undefined,
+            condition !== null ? this._expressionWithTypeConversion(condition, bool) : undefined,
+            update !== null ? this._statement(update).code : undefined,
           ],
         );
 
@@ -1841,11 +1897,11 @@ ${this.ctx.pre}else ${alternate}`,
             return { code: '', definesInNearestScope: false };
           }
 
-          const firstElement = elements[0] as Snippet;
-          if (
-            !isStoredInMemory(firstElement) &&
-            !wgsl.isNaturallyEphemeral(firstElement.dataType)
-          ) {
+          const constructedInPlace = (e: Snippet) =>
+            !isStoredInMemory(e) &&
+            asComptime(e) === undefined &&
+            !wgsl.isNaturallyEphemeral(e.dataType);
+          if (elements.some(constructedInPlace)) {
             fail(
               `Cannot unroll '${stringifyNode(iterable)}'. The elements of iterable are constructed in place but are not value types.`,
               statement,
@@ -2032,7 +2088,7 @@ ${this.ctx.pre}else ${alternate}`,
             invariant(testNode, `Expected node to be not nullish.`);
             fail(
               `All of switch tests must be constant.
-Test '${stringifyNode(testNode)}' is not constant, making the following switch statement invalid. 
+Test '${stringifyNode(testNode)}' is not constant, making the following switch statement invalid.
 This error may be caused by an implicit conversion.
 ${stringifyNode(statement)}`,
               testNode,
@@ -2064,6 +2120,12 @@ ${stringifyNode(statement)}`,
         code: this._emitSwitchStatement(discriminantExpr, groupedCaseExprs),
         definesInNearestScope: false,
       };
+    }
+
+    if (statement[0] === NODE.assignmentExpr) {
+      const assignment = setSourceNode(this._binaryOrAssignmentExpression(statement), statement);
+      const assignmentStr = this.ctx.resolveSnippet(assignment).value;
+      return { code: `${this.ctx.pre}${assignmentStr};`, definesInNearestScope: false };
     }
 
     if (statement[0] === NODE.postUpdate) {

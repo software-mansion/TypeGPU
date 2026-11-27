@@ -1039,6 +1039,55 @@ describe('WgslGenerator', () => {
     `);
   });
 
+  it('keeps a literal `false` condition of a for loop', () => {
+    const main = tgpu.fn(
+      [],
+      d.i32,
+    )(() => {
+      let a = d.i32(0);
+      for (let i = 0; false; i++) {
+        a += 1;
+      }
+      return a;
+    });
+
+    expect(main()).toBe(0);
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn main() -> i32 {
+        var a = 0i;
+        for (var i = 0; false; i++) {
+          a += 1i;
+        }
+        return a;
+      }"
+    `);
+  });
+
+  it('keeps the omitted clauses of a for loop empty', () => {
+    const main = tgpu.fn(
+      [],
+      d.i32,
+    )(() => {
+      let a = d.i32(0);
+      for (;;) {
+        a += 1;
+        break;
+      }
+      return a;
+    });
+
+    expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+      "fn main() -> i32 {
+        var a = 0i;
+        for (; ; ) {
+          a += 1i;
+          break;
+        }
+        return a;
+      }"
+    `);
+  });
+
   it('throws error when incorrectly initializing function', () => {
     const internalTestFn = tgpu.fn(
       [d.vec2f],

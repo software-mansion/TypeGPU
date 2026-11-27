@@ -2,6 +2,6 @@
   "title": "Area Light (LTC)",
   "description": "Demonstrates real-time rectangular area lighting with Linearly Transformed Cosines across materials with varying roughness and metallicity.",
   "category": "rendering",
-  "tags": ["3d", "lighting", "rasterization"],
+  "tags": ["3d", "lighting"],
   "coolFactor": 8
 }

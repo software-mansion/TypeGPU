@@ -1261,6 +1261,29 @@ describe('TgpuBuffer (InferInput)', () => {
   });
 });
 
+describe('TgpuBuffer (.patch() with out of bounds indices)', () => {
+  it('throws without uploading anything', ({ root, device }) => {
+    const Schema = d.struct({ a: d.arrayOf(d.u32, 2), b: d.u32 });
+    const buffer = root.createBuffer(Schema, { a: [1, 2], b: 3 });
+
+    expect(() => buffer.patch({ a: { 2: 99 } })).toThrow(
+      'Index 2 is out of bounds for an array of 2 elements.',
+    );
+    expect(device.mock.queue.writeBuffer).not.toHaveBeenCalled();
+  });
+
+  it('leaves the host buffer untouched when a later index is out of bounds', ({ root, device }) => {
+    const buffer = root.createBuffer(d.arrayOf(d.u32, 4), [0, 0, 0, 0]);
+    void buffer.buffer;
+
+    expect(() => buffer.patch({ 0: 5, 9: 1 })).toThrow(
+      'Index 9 is out of bounds for an array of 4 elements.',
+    );
+    expect(device.mock.queue.writeBuffer).not.toHaveBeenCalled();
+    expect([...new Uint32Array(buffer.arrayBuffer)]).toStrictEqual([0, 0, 0, 0]);
+  });
+});
+
 describe('TgpuBuffer (.patch() with flexible inputs)', () => {
   it('should patch a mapped buffer', ({ root }) => {
     const mappedBuffer = root.device.createBuffer({

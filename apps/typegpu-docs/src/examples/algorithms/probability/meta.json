@@ -2,6 +2,6 @@
   "title": "Probability Distribution Plot",
   "description": "Samples probability distributions with TypeGPU noise utilities and plots their histograms to compare the resulting shapes.",
   "category": "algorithms",
-  "tags": ["ecosystem", "statistics"],
+  "tags": [],
   "coolFactor": 6
 }

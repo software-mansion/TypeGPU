@@ -324,3 +324,10 @@ The fragment function receives the interpolated `uv` in each pixel.
 Each pixel then colors itself based on the distance from its `uv` to the center `(0.5, 0.5)`: closer than `0.2` is red, otherwise black.
 
 {/* TODO: example with multiple pipelines per frame */}
+
+## What's next?
+
+You now know how compute shaders, vertex shaders and fragment shaders fit together.
+From here you can keep building everything yourself, or reach for [TypeGPU Kit](/TypeGPU/ecosystem/typegpu-kit), which builds on these same pieces.
+It has ready-made modules for [cameras](https://docs.swmansion.com/typegpu-kit/kit/cameras/), [lighting](https://docs.swmansion.com/typegpu-kit/kit/lighting/), [post-processing](https://docs.swmansion.com/typegpu-kit/kit/finish/) and [particles](https://docs.swmansion.com/typegpu-kit/kit/particles/) that record into your own passes.
+To start a project with it, run `npm create @typegpu/kit`.

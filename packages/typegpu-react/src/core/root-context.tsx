@@ -35,6 +35,15 @@ function attachPromiseStatus<T>(
   }
 }
 
+// Lets React's `use` read a settled promise synchronously, without suspending
+function markFulfilled<T>(promise: PromiseLike<T>, value: T) {
+  Object.assign(promise, { status: 'fulfilled', value });
+}
+
+function markRejected(promise: PromiseLike<unknown>, reason: unknown) {
+  Object.assign(promise, { status: 'rejected', reason });
+}
+
 const use =
   React.use ||
   // A shim for older React versions
@@ -97,16 +106,17 @@ class OwnRootContext implements RootContext {
     if (this.#destroyed) {
       console.warn(`[@typegpu/react]: Tried to init an already destroyed root.`);
       const reason = new Error('Already destroyed');
-      return {
-        status: 'rejected',
-        reason,
-        settledPromise: Promise.resolve({ status: 'rejected' as const, reason }),
-      };
+      const settled = { status: 'rejected' as const, reason };
+      const settledPromise = Promise.resolve(settled);
+      markFulfilled(settledPromise, settled);
+      return { status: 'rejected', reason, settledPromise };
     }
 
     if (!this.#result) {
       const promise = tgpu.init(this.#options).then(
         (root) => {
+          markFulfilled(promise, root);
+          markFulfilled(settledPromise, { status: 'fulfilled', value: root });
           if (this.#destroyed) {
             this.#result = undefined;
           } else {
@@ -116,12 +126,14 @@ class OwnRootContext implements RootContext {
           return root;
         },
         (reason) => {
+          markRejected(promise, reason);
+          markFulfilled(settledPromise, { status: 'rejected', reason });
           this.#result = { status: 'rejected', reason, settledPromise };
           throw reason;
         },
       );
 
-      const settledPromise = promise.then(
+      const settledPromise: Promise<PromiseSettledResult<TgpuRoot>> = promise.then(
         (value) => ({ status: 'fulfilled' as const, value }),
         (reason) => ({ status: 'rejected' as const, reason }),
       );
@@ -150,12 +162,12 @@ class ExistingRootContext implements RootContext {
   result: RootContextFulfilledResult;
 
   constructor(root: TgpuRoot) {
-    this.result = {
-      status: 'fulfilled',
-      value: root,
-      promise: Promise.resolve(root),
-      settledPromise: Promise.resolve({ status: 'fulfilled' as const, value: root }),
-    };
+    const promise = Promise.resolve(root);
+    markFulfilled(promise, root);
+    const settled = { status: 'fulfilled' as const, value: root };
+    const settledPromise = Promise.resolve(settled);
+    markFulfilled(settledPromise, settled);
+    this.result = { status: 'fulfilled', value: root, promise, settledPromise };
   }
 
   initOrGetRoot(): RootContextResult {
@@ -250,7 +262,6 @@ export const Root = ({ children, options, root, disableWorklets = false }: RootP
  * {@link useRootWithStatus} instead.
  */
 export function useRoot(): TgpuRoot {
-  const suspendedOn = useRef<Promise<unknown> | undefined>(undefined);
   useBailOnServer();
 
   const context = useContext(rootContext) ?? globalRootContextValue;
@@ -260,15 +271,7 @@ export function useRoot(): TgpuRoot {
     throw result.reason as Error;
   }
 
-  // Once this component suspended on the promise, it has to keep calling `use` with it, so that
-  // replays (also caused by other `use` calls after this hook) see the same sequence of `use`
-  // calls. React has already tracked the promise by then, so `use` returns synchronously.
-  // Otherwise, return an already-fulfilled value directly, without ever suspending.
-  if (result.status === 'fulfilled' && suspendedOn.current !== result.promise) {
-    return result.value;
-  }
-
-  suspendedOn.current = result.promise;
+  // Always call `use`: refs are lost when a component suspends before its first commit
   return use(result.promise);
 }
 
@@ -279,26 +282,11 @@ export function useRoot(): TgpuRoot {
 export function useRootOrError():
   | { status: 'fulfilled'; value: TgpuRoot }
   | { status: 'rejected'; reason: unknown } {
-  const suspendedOn = useRef<Promise<unknown> | undefined>(undefined);
   useBailOnServer();
 
   const context = useContext(rootContext) ?? globalRootContextValue;
 
-  const result = context.initOrGetRoot();
-
-  // Same as in `useRoot`, but even a rejected root is read through `use` after suspending
-  // (`settledPromise` never rejects).
-  if (suspendedOn.current !== result.settledPromise) {
-    if (result.status === 'fulfilled') {
-      return { status: 'fulfilled', value: result.value };
-    }
-    if (result.status === 'rejected') {
-      return { status: 'rejected', reason: result.reason };
-    }
-  }
-
-  suspendedOn.current = result.settledPromise;
-  return use(result.settledPromise);
+  return use(context.initOrGetRoot().settledPromise);
 }
 
 /**
