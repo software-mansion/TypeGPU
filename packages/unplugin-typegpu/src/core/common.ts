@@ -1,6 +1,7 @@
 import * as t from '@babel/types';
 import type { NodePath, TraverseOptions } from '@babel/traverse';
 import type { FilterPattern } from 'unplugin';
+import defu, { type Defu } from 'defu';
 import MagicString from 'magic-string';
 import type { NodePositionProvider, TranspilationResult } from 'tinyest-for-wgsl';
 import { transpileBabelFn } from 'tinyest-for-wgsl';
@@ -177,7 +178,7 @@ export interface PluginState extends TransformMethods {
    * In Babel, options are assigned to the property `opts` on the plugin state.
    * We use this pattern everywhere for consistency.
    */
-  opts: Required<Options>;
+  opts: ResolvedOptions;
 
   inUseGpuScope: boolean;
 
@@ -208,14 +209,14 @@ export interface UnpluginPluginState extends PluginState {
 
 export function initPluginState(state: PluginState, methods: TransformMethods): void {
   state.tgpuAliases = new Set<string>(state.opts.forceTgpuAlias ? [state.opts.forceTgpuAlias] : []);
-  state.autoNamingEnabled = state.opts.autoNamingEnabled ?? true;
+  state.autoNamingEnabled = state.opts.autoNamingEnabled;
   state.inUseGpuScope = false;
   state.fileContextFlags = 0;
   Object.assign(state, methods);
 }
 
 /** Regular expressions used for early pruning (to avoid unnecessary parsing, which is expensive) */
-export const getEarlyPruneRegex = (obfuscate: boolean | undefined) => {
+export const getEarlyPruneRegex = (obfuscate: boolean) => {
   const baseRegex = [/["']use gpu["']/, /t(ype)?gpu/];
   if (obfuscate) {
     baseRegex.push(/__TYPEGPU_META__/);
@@ -229,7 +230,22 @@ export const defaultOptions = {
   earlyPruning: true,
   unstable_obfuscate: false,
   unstable_sourceMaps: false,
-} satisfies Partial<Options>;
+} satisfies Options;
+
+type Prettify<T> = { [K in keyof T]: T[K] } & {};
+
+export type ResolvedOptions = Prettify<Defu<Options, [typeof defaultOptions]>>;
+
+/**
+ * Applies defaults and validates the options.
+ * `platformDefaults` take precedence over `defaultOptions`, but not over user options.
+ */
+export function resolveOptions(
+  rawOptions: Options | undefined,
+  platformDefaults: Options = {},
+): ResolvedOptions {
+  return checkOpts(defu(rawOptions, platformDefaults, defaultOptions));
+}
 
 /**
  * Returns the block scope of a function declaration, if one exists.
