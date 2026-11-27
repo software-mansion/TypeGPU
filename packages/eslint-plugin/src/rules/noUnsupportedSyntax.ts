@@ -42,6 +42,7 @@ export const noUnsupportedSyntax = createRule({
       for (const parameter of node.params) {
         if (
           parameter.type !== 'Identifier' &&
+          parameter.type !== 'ArrayPattern' &&
           parameter.type !== 'AssignmentPattern' &&
           parameter.type !== 'ObjectPattern'
         ) {
@@ -51,6 +52,19 @@ export const noUnsupportedSyntax = createRule({
     }
 
     return {
+      ArrayPattern(node) {
+        if (!directives.getEnclosingTypegpuFunction()) {
+          return;
+        }
+
+        // The outer pattern reports unsupported nested destructuring
+        if (isNestedInDestructuringPattern(node)) {
+          return;
+        }
+
+        report(node, 'array destructuring');
+      },
+
       ArrowFunctionExpression(node) {
         validateFunctionParameters(node);
         if (directives.getDirectiveStack().at(-2)?.directives.includes('use gpu')) {
@@ -60,11 +74,6 @@ export const noUnsupportedSyntax = createRule({
 
       AssignmentExpression(node) {
         if (!directives.getEnclosingTypegpuFunction()) {
-          return;
-        }
-
-        if (node.left.type === 'ArrayPattern') {
-          report(node.left, 'destructuring assignment');
           return;
         }
 
@@ -176,12 +185,12 @@ export const noUnsupportedSyntax = createRule({
           return;
         }
 
-        const parent = node.parent;
         // The outer pattern reports unsupported nested destructuring
-        if (parent.type === 'Property' && parent.parent.type === 'ObjectPattern') {
+        if (isNestedInDestructuringPattern(node)) {
           return;
         }
 
+        const parent = node.parent;
         const isVariableDeclaration =
           parent.type === 'VariableDeclarator' &&
           parent.parent.type === 'VariableDeclaration' &&
@@ -264,16 +273,6 @@ export const noUnsupportedSyntax = createRule({
         }
       },
 
-      VariableDeclarator(node) {
-        if (!directives.getEnclosingTypegpuFunction()) {
-          return;
-        }
-
-        if (node.id.type !== 'Identifier' && node.id.type !== 'ObjectPattern') {
-          report(node, 'unsupported variable binding pattern');
-        }
-      },
-
       YieldExpression(node) {
         if (!directives.getEnclosingTypegpuFunction()) {
           return;
@@ -287,6 +286,17 @@ export const noUnsupportedSyntax = createRule({
 const unsupportedAssignmentOps = ['&&=', '**=', '||=', '??='];
 const unsupportedBinaryOps = ['==', '!=', 'in', 'instanceof', '|>'];
 const unsupportedUnaryOps = ['+', 'typeof', 'void', 'delete'];
+
+function isNestedInDestructuringPattern(
+  node: TSESTree.ArrayPattern | TSESTree.ObjectPattern,
+): boolean {
+  const parent = node.parent;
+  return (
+    parent.type === 'ArrayPattern' ||
+    parent.type === 'RestElement' ||
+    (parent.type === 'Property' && parent.parent.type === 'ObjectPattern')
+  );
+}
 
 function isSupportedObjectBindingPattern(pattern: TSESTree.ObjectPattern): boolean {
   return pattern.properties.every(

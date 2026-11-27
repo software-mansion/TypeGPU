@@ -22,6 +22,7 @@ describe('noUnsupportedSyntax', () => {
       "function fn({ a, b: renamed }) { 'use gpu'; }",
       'const fn = () => { const { nested: { a } } = obj; }',
       'const fn = () => { let a = 0; for ({ a } of source) {} }',
+      'const fn = () => { const [a] = arr; for ([a] of source) {} }',
     ],
     invalid: [
       {
@@ -313,6 +314,18 @@ describe('noUnsupportedSyntax', () => {
         ],
       },
       {
+        code: "const fn = () => { 'use gpu'; const { nested: [a] } = obj; }",
+        errors: [
+          {
+            messageId: 'unexpected',
+            data: {
+              snippet: '{ nested: [a] }',
+              syntax: 'object destructuring',
+            },
+          },
+        ],
+      },
+      {
         code: "const fn = () => { 'use gpu'; const { a = 1 } = obj; }",
         errors: [
           {
@@ -398,7 +411,7 @@ describe('noUnsupportedSyntax', () => {
             messageId: 'unexpected',
             data: {
               snippet: '[a]',
-              syntax: 'unsupported function parameter binding pattern',
+              syntax: 'array destructuring',
             },
           },
         ],
@@ -456,7 +469,7 @@ describe('noUnsupportedSyntax', () => {
         errors: [
           {
             messageId: 'unexpected',
-            data: { snippet: '[a]', syntax: 'destructuring assignment' },
+            data: { snippet: '[a]', syntax: 'array destructuring' },
           },
         ],
       },
@@ -465,7 +478,34 @@ describe('noUnsupportedSyntax', () => {
         errors: [
           {
             messageId: 'unexpected',
-            data: { snippet: '[a] = arr', syntax: 'unsupported variable binding pattern' },
+            data: { snippet: '[a]', syntax: 'array destructuring' },
+          },
+        ],
+      },
+      {
+        code: "const fn = () => { 'use gpu'; const [[a], { b }] = arr; }",
+        errors: [
+          {
+            messageId: 'unexpected',
+            data: { snippet: '[[a], { b }]', syntax: 'array destructuring' },
+          },
+        ],
+      },
+      {
+        code: "const fn = () => { 'use gpu'; for (const [value] of source) {} }",
+        errors: [
+          {
+            messageId: 'unexpected',
+            data: { snippet: '[value]', syntax: 'array destructuring' },
+          },
+        ],
+      },
+      {
+        code: "const fn = () => { 'use gpu'; let a = 0; for ([a] of source) {} }",
+        errors: [
+          {
+            messageId: 'unexpected',
+            data: { snippet: '[a]', syntax: 'array destructuring' },
           },
         ],
       },
