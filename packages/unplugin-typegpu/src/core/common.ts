@@ -2,7 +2,11 @@ import * as t from '@babel/types';
 import type { NodePath, TraverseOptions } from '@babel/traverse';
 import type { FilterPattern } from 'unplugin';
 import MagicString from 'magic-string';
-import { transpileBabelFn, type TranspilationResult } from 'tinyest-for-wgsl';
+import {
+  transpileBabelFn,
+  type NodePositionProvider,
+  type TranspilationResult,
+} from 'tinyest-for-wgsl';
 import { getEmbeddedTypegpuMetadata } from './embeddedMetadata.ts';
 import { obfuscate } from './obfuscate.ts';
 import { embedSourceMap, type Block, type SourceMappedNode } from 'tinyest';
@@ -10,8 +14,12 @@ import { originalPositionFor, TraceMap, type EncodedSourceMap } from '@jridgewel
 import type { SourceMap } from 'rollup';
 
 export interface Options {
-  /** @default [/\.m?[jt]sx?$/] */
-  include?: FilterPattern;
+  /**
+   * The Node.js and Deno hooks (`unplugin-typegpu/node`) default to `/\.[cm]?[jt]sx?$/` instead.
+   *
+   * @default /\.m?[jt]sx?(?:\?.*)?$/
+   */
+  include?: FilterPattern | undefined;
 
   /** @default undefined */
   exclude?: FilterPattern | undefined;
@@ -23,22 +31,23 @@ export interface Options {
   forceTgpuAlias?: string | undefined;
 
   /** @default true */
-  autoNamingEnabled?: boolean;
+  autoNamingEnabled?: boolean | undefined;
 
   /**
    * Obfuscate the generated AST.
    * This results in obfuscation of the generated WGSL, and in smaller bundle sizes.
+   * Requires `autoNamingEnabled: false`.
    *
    * @default false
    */
-  unstable_obfuscate?: boolean;
+  unstable_obfuscate?: boolean | undefined;
 
   /**
    * Keep the source map info so that resolve errors link to an appropriate source.
    *
    * @default false
    */
-  unstable_sourceMaps?: boolean;
+  unstable_sourceMaps?: boolean | undefined;
 
   /**
    * Skipping files that don't contain "typegpu", "tgpu" or "use gpu".
@@ -143,12 +152,12 @@ export interface PluginState extends TransformMethods {
   /**
    * Used for source mapping during transpilation.
    */
-  sourceTracker?: SourceTracer;
+  sourceTracker?: SourceTracker;
 }
 
-export type SourceTracer = {
-  position: (node: t.Node) => [line: number, column: number] | undefined;
-  filename(node: t.Node): string | undefined;
+export type SourceTracker = {
+  position: NodePositionProvider<t.Node>;
+  filename(this: void, node: t.Node): string | undefined;
 };
 
 export interface NodeLocation {
@@ -367,9 +376,14 @@ const resourceConstructors: string[] = [
   'createTexture',
   'createSampler',
   'createComparisonSampler',
+  'createCommandEncoder',
+  'createRenderBundleEncoder',
   // d
   'struct',
   'unstruct',
+  // encoder
+  'beginRenderPass',
+  'beginComputePass',
   // other
   'createView',
 ];
@@ -480,7 +494,7 @@ const operators = {
   '%=': '__tsover_mod',
 };
 
-export const fallbackSourceTracer = (fallbackFilename: string | undefined): SourceTracer => ({
+export const fallbackSourceTracer = (fallbackFilename: string | undefined): SourceTracker => ({
   position: (node) => {
     if (!node.loc) {
       return undefined;
@@ -662,8 +676,8 @@ export const functionVisitor: TraverseOptions<PluginState> = {
   },
 };
 
-export function originalMappingFor(combinedMap: SourceMap | EncodedSourceMap): SourceTracer {
-  const tracer = new TraceMap({
+export function originalMappingFor(combinedMap: SourceMap | EncodedSourceMap): SourceTracker {
+  const tracker = new TraceMap({
     ...combinedMap,
     version: 3,
     file: combinedMap.file ?? null,
@@ -678,7 +692,7 @@ export function originalMappingFor(combinedMap: SourceMap | EncodedSourceMap): S
       line,
       column,
       source: filename,
-    } = originalPositionFor(tracer, {
+    } = originalPositionFor(tracker, {
       line: node.loc.start.line,
       column: node.loc.start.column,
     });
@@ -695,7 +709,7 @@ export function originalMappingFor(combinedMap: SourceMap | EncodedSourceMap): S
         return [source.line, source.column];
       }
     },
-    filename: (node: t.Node) => {
+    filename: (node) => {
       const source = sourceFor(node);
       return source?.filename;
     },

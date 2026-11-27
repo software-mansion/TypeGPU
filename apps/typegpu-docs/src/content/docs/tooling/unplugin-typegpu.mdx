@@ -58,7 +58,8 @@ with your runtime using one of the setups below.
 
 The plugin was built using [unplugin](https://unplugin.unjs.io/), which allows it to be used with a variety of bundlers.
 Currently, the package exports plugins for the following ones: _esbuild_, _farm_, _rolldown_, _rollup_, _rspack_, _vite_, _webpack_.
-Apart from the tools supported by _unplugin_, a _babel_ plugin was also created.
+Apart from the tools supported by _unplugin_, the package also includes a _babel_ plugin, a _bun_ plugin,
+and module hooks for [Node.js and Deno](#nodejs-and-deno).
 
 :::caution
 The _babel_ and _vite_/_rollup_ plugins are the ones that are actively being maintained and tested by the TypeGPU team,
@@ -170,16 +171,24 @@ patterns, and `exclude` are unsupported. By default, it skips files without `typ
 
 ```ts
 interface Options {
-  /** @default [/\.m?[jt]sx?$/] */
-  include?: FilterPattern;
+  /** @default /\.m?[jt]sx?(?:\?.*)?$/ */
+  include?: FilterPattern | undefined;
   /** @default undefined */
-  exclude?: FilterPattern;
+  exclude?: FilterPattern | undefined;
   /** @default undefined */
   enforce?: 'post' | 'pre' | undefined;
   /** @default undefined */
-  forceTgpuAlias?: string;
+  forceTgpuAlias?: string | undefined;
   /** @default true */
-  autoNamingEnabled?: boolean;
+  autoNamingEnabled?: boolean | undefined;
+
+  /**
+   * Obfuscate the generated AST.
+   * This results in obfuscation of the generated WGSL, and in smaller bundle sizes.
+   *
+   * @default false
+   */
+  unstable_obfuscate?: boolean | undefined;
 
   /**
    * Skipping files that don't contain 'typegpu', 'tgpu' or 'use gpu'.
@@ -192,11 +201,18 @@ interface Options {
 }
 ```
 
+Every option also accepts an explicit `undefined`, which means the same as leaving it out,
+so `{ include: condition ? pattern : undefined }` falls back to the default pattern.
+
 The plugin accepts the standard `unplugin` options, that make it possible to customize which files are to be processed ([include/exclude](https://rolldown.rs/guide/plugin-development#plugin-hook-filters) patterns),
 or [enforce](https://vite.dev/guide/api-plugin.html#plugin-ordering) the order in which the plugin is run in regards to other plugins.
+The Node.js and Deno hooks default `include` to `/\.[cm]?[jt]sx?$/`, so that CommonJS modules are transformed as well.
 
 The custom _forceTgpuAlias_ option allows specifying the name of _tgpu_ object imported from `typegpu`.
 It is only useful in a handful of custom scenarios, when the name cannot be retrieved by the plugin automatically from the import statement.
+
+The _unstable_obfuscate_ option shortens identifiers in the generated WGSL, see [Minifying & Obfuscating Shaders](/TypeGPU/advanced/minifying-shaders) for details.
+It requires `autoNamingEnabled: false`.
 
 ## Further reading
 

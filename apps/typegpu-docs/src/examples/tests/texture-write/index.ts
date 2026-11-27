@@ -21,7 +21,7 @@ const testFormats = [
 
 type TestFormat = (typeof testFormats)[number];
 
-const hasFloat32Filterable = root.device.features.has('float32-filterable');
+const hasFloat32Filterable = root.enabledFeatures.has('float32-filterable');
 
 function isFilterable(format: TestFormat): boolean {
   return !(format === 'rgba32float' && !hasFloat32Filterable);

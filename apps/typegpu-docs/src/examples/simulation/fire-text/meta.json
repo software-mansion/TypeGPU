@@ -2,6 +2,6 @@
   "title": "Fire Text",
   "description": "A stable-fluids playground. By default it simulates fire from typed text and brush strokes.",
   "category": "simulation",
-  "tags": ["fluid", "particles", "interaction"],
+  "tags": ["double buffering", "fluid", "interactive", "particles"],
   "coolFactor": 9
 }

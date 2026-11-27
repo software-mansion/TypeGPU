@@ -614,10 +614,10 @@ describe('TGSL tgpu.fn function', () => {
     });
 
     expect(tgpu.resolve([addOnes])).toMatchInlineSnapshot(`
-      "fn addOnes(ptr: ptr<storage, vec3f, read_write>) {
-        (*ptr).x += 1f;
-        (*ptr).y += 1f;
-        (*ptr).z += 1f;
+      "fn addOnes(ptr_1: ptr<storage, vec3f, read_write>) {
+        (*ptr_1).x += 1f;
+        (*ptr_1).y += 1f;
+        (*ptr_1).z += 1f;
       }"
     `);
 
@@ -628,10 +628,10 @@ describe('TGSL tgpu.fn function', () => {
     };
 
     expect(tgpu.resolve([callAddOnes])).toMatchInlineSnapshot(`
-      "fn addOnes(ptr: ptr<storage, vec3f, read_write>) {
-        (*ptr).x += 1f;
-        (*ptr).y += 1f;
-        (*ptr).z += 1f;
+      "fn addOnes(ptr_1: ptr<storage, vec3f, read_write>) {
+        (*ptr_1).x += 1f;
+        (*ptr_1).y += 1f;
+        (*ptr_1).z += 1f;
       }
 
       fn callAddOnes() {

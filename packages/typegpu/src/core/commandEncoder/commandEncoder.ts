@@ -1,4 +1,6 @@
+import { setName, type TgpuNamable } from '../../shared/meta.ts';
 import { $internal } from '../../shared/symbols.ts';
+import { DEV } from '../../shared/env.ts';
 import { logger } from '../../tgpuLogger.ts';
 import type { ExperimentalTgpuRoot } from '../root/rootTypes.ts';
 import {
@@ -46,7 +48,7 @@ export interface CommandEncoderInternals {
  * For anything not covered by the typed surface (e.g. texture copies), grab
  * the raw encoder via `root.unwrap(encoder)`.
  */
-export interface TgpuCommandEncoder {
+export interface TgpuCommandEncoder extends TgpuNamable {
   readonly [$internal]: CommandEncoderInternals;
   readonly resourceType: 'command-encoder';
 
@@ -134,7 +136,7 @@ class TgpuCommandEncoderImpl implements TgpuCommandEncoder {
     const { rawEncoder, root, afterSubmit } = this[$internal];
     this.#recordPendingCommands();
 
-    if (afterSubmit.size > 0) {
+    if (DEV && afterSubmit.size > 0) {
       logger.warnOnce(
         'suspicious',
         root,
@@ -144,5 +146,11 @@ class TgpuCommandEncoderImpl implements TgpuCommandEncoder {
     }
 
     return rawEncoder.finish(descriptor);
+  }
+
+  $name(label: string) {
+    setName(this, label);
+    this[$internal].rawEncoder.label = label;
+    return this;
   }
 }

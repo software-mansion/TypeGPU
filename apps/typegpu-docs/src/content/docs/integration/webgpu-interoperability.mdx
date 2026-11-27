@@ -1,5 +1,6 @@
 ---
 title: WebGPU Interoperability
+description: How to adopt TypeGPU incrementally in a WebGPU codebase and unwrap TypeGPU resources to raw WebGPU objects.
 ---
 
 TypeGPU is built in a way that allows you to pick and choose the primitives you need, incrementally adopt them into your project and have a working app at each step
@@ -81,6 +82,25 @@ typedBuffer.write([d.vec3f(1, 2, 3), d.vec3f(4, 5, 6)]);
 
 // Interpreting the raw bytes in `rawBuffer` as JS values
 const values = await typedBuffer.read(); // => d.v3f[]
+```
+
+#### Textures
+
+Similarly, `root.createTexture` accepts a raw WebGPU texture after its props. The props describe the texture and are not checked against it.
+
+```ts
+const rawTexture = device.createTexture({
+  size: [256, 256],
+  format: 'rgba16float',
+  usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.RENDER_ATTACHMENT,
+});
+
+const typedTexture = root
+  .createTexture({ size: [256, 256], format: 'rgba16float' }, rawTexture)
+  .$usage('sampled', 'render');
+
+// Views, bind groups and render passes now use `rawTexture` underneath.
+const view = typedTexture.createView(d.texture2d(d.f32));
 ```
 
 #### Bind Group Layouts

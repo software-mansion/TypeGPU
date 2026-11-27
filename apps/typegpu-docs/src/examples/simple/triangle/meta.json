@@ -2,6 +2,6 @@
   "title": "Triangle",
   "description": "Builds the smallest complete TypeGPU render pipeline and draws a colored triangle.",
   "category": "simple",
-  "tags": ["basics", "primitives"],
+  "tags": ["basics"],
   "coolFactor": 3
 }

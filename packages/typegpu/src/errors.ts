@@ -24,7 +24,7 @@ export function invariant(
   }
 
   // In production we strip the message but still throw
-  if (!DEV && !TEST) {
+  if (!DEV) {
     throw new Error(prefix);
   }
 

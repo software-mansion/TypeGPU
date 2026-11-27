@@ -218,6 +218,43 @@ describe('ast to JS transformation', () => {
       `);
     });
 
+    it('indents standalone nested blocks without adding spaces to control-flow blocks', () => {
+      const fn = () => {
+        'use gpu';
+        {
+          [1, 2];
+        }
+        if (true) {
+          [3, 4];
+        }
+      };
+      expect(stringifyNode(getBodyAst(fn))).toMatchInlineSnapshot(`
+        "{
+          {
+            [1, 2];
+          }
+          if (true) {
+            [3, 4];
+          }
+        }"
+      `);
+    });
+
+    it('handles for loop without a block body', () => {
+      const fn = () => {
+        'use gpu';
+        let result = 0;
+        for (let i = 0; i < 10; i++) result += i;
+      };
+
+      expect(stringifyNode(getBodyAst(fn))).toMatchInlineSnapshot(`
+         "{
+           let result = 0;
+           for (let i = 0; i < 10; i++) result += i;
+         }"
+       `);
+    });
+
     it('handles declarations', () => {
       const fn = () => {
         'use gpu';
@@ -287,6 +324,22 @@ describe('ast to JS transformation', () => {
       expect(stringifyNode(getBodyAst(fn))).toMatchInlineSnapshot(`
         "{
           for (let i = 0; i < 10; i++) {
+            const j = i;
+          }
+        }"
+      `);
+    });
+
+    it('handles for loop with a literal `false` condition', () => {
+      const fn = () => {
+        'use gpu';
+        for (let i = 0; false; i++) {
+          const j = i;
+        }
+      };
+      expect(stringifyNode(getBodyAst(fn))).toMatchInlineSnapshot(`
+        "{
+          for (let i = 0; false; i++) {
             const j = i;
           }
         }"
@@ -411,7 +464,6 @@ describe('ast to JS transformation', () => {
           }
         }
       };
-      // TODO(#2894): Fix block indentation
       expect(stringifyNode(getBodyAst(fn))).toMatchInlineSnapshot(`
         "{
           const myVar = 1;
@@ -423,7 +475,7 @@ describe('ast to JS transformation', () => {
             default:
               return 3;
             case 2:
-        {
+              {
                 const myVar = 2;
                 return myVar + other;
               }

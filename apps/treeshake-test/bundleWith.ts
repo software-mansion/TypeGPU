@@ -1,11 +1,69 @@
 import { build as esbuild } from 'esbuild';
 import * as fs from 'node:fs/promises';
+import { existsSync } from 'node:fs';
 import * as path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { build as tsdown } from 'tsdown';
 import esbuildPlugin from 'unplugin-typegpu/esbuild';
 import rolldownPlugin from 'unplugin-typegpu/rolldown';
 import webpackPlugin from 'unplugin-typegpu/webpack';
-import webpack from 'webpack';
+import webpack, { type WebpackPluginInstance } from 'webpack';
+
+/**
+ * Workspace packages that `typegpu` depends on are consumed from source during
+ * development, but from their built files when installed from npm. We alias
+ * them to their built files, so that we measure what users actually get.
+ */
+const builtWorkspaceDeps: Record<string, string> = {
+  tinyest: fileURLToPath(new URL('../../packages/tinyest/dist/index.js', import.meta.url)),
+};
+
+for (const [name, builtPath] of Object.entries(builtWorkspaceDeps)) {
+  if (!existsSync(builtPath)) {
+    throw new Error(
+      `'${name}' is not built (missing ${builtPath}). Run 'pnpm --filter ${name} build'.`,
+    );
+  }
+}
+
+const PACKAGES_DIR = fileURLToPath(new URL('../../packages/', import.meta.url));
+
+function assertNotWorkspaceSource(file: string) {
+  const relative = path.relative(PACKAGES_DIR, file.split('?')[0] ?? file);
+  if (relative.startsWith('..') || path.isAbsolute(relative)) {
+    return;
+  }
+  const segments = relative.split(path.sep);
+  if (segments.includes('dist') || segments.includes('node_modules')) {
+    return;
+  }
+  throw new Error(
+    `Bundled a workspace source file: ${file}\n` +
+      `If a new workspace dependency was added to 'typegpu', add it to 'builtWorkspaceDeps' in bundleWith.ts, and build it in the 'test' script.`,
+  );
+}
+
+const rolldownWorkspaceSourceGuard = {
+  name: 'treeshake-test:no-workspace-source',
+  load(id: string) {
+    assertNotWorkspaceSource(id);
+    return null;
+  },
+};
+
+const webpackWorkspaceSourceGuard: WebpackPluginInstance = {
+  apply(compiler) {
+    const name = 'treeshake-test:no-workspace-source';
+    compiler.hooks.normalModuleFactory.tap(name, (factory) => {
+      factory.hooks.afterResolve.tap(name, (data) => {
+        const resource = data.createData.resource;
+        if (resource) {
+          assertNotWorkspaceSource(resource);
+        }
+      });
+    });
+  },
+};
 
 export type ResultRecord = {
   testFilename: string;
@@ -14,11 +72,12 @@ export type ResultRecord = {
 };
 
 export async function bundleWithEsbuild(entryUrl: URL, outDir: URL): Promise<URL> {
-  const entryFileName = path.basename(entryUrl.pathname, '.ts');
+  const entryFileName = path.basename(entryUrl.pathname, '.js');
   const outPath = new URL(`${entryFileName}.esbuild.js`, outDir);
   await esbuild({
     plugins: [esbuildPlugin()],
     entryPoints: [entryUrl.pathname],
+    alias: builtWorkspaceDeps,
     bundle: true,
     outfile: outPath.pathname,
     format: 'esm',
@@ -29,7 +88,7 @@ export async function bundleWithEsbuild(entryUrl: URL, outDir: URL): Promise<URL
 }
 
 export async function bundleWithWebpack(entryPath: URL, outDir: URL): Promise<URL> {
-  const entryFileName = path.basename(entryPath.pathname, '.ts');
+  const entryFileName = path.basename(entryPath.pathname, '.js');
   const outPath = new URL(`./${entryFileName}.webpack.js`, outDir);
 
   return new Promise((resolve, reject) => {
@@ -40,27 +99,12 @@ export async function bundleWithWebpack(entryPath: URL, outDir: URL): Promise<UR
           path: path.dirname(outPath.pathname),
           filename: path.basename(outPath.pathname),
         },
-        plugins: [webpackPlugin()],
-        module: {
-          rules: [
-            {
-              test: /\.ts$/,
-              use: {
-                loader: 'ts-loader',
-                options: {
-                  compilerOptions: {
-                    module: 'es2015',
-                    target: 'es2015',
-                    esModuleInterop: true,
-                    allowSyntheticDefaultImports: true,
-                    skipLibCheck: true,
-                  },
-                  transpileOnly: true,
-                },
-              },
-              exclude: /node_modules/,
-            },
-          ],
+        plugins: [webpackPlugin(), webpackWorkspaceSourceGuard],
+        resolve: {
+          // `$` makes webpack match the exact specifier
+          alias: Object.fromEntries(
+            Object.entries(builtWorkspaceDeps).map(([name, builtPath]) => [`${name}$`, builtPath]),
+          ),
         },
         optimization: {
           minimize: true,
@@ -79,12 +123,12 @@ export async function bundleWithWebpack(entryPath: URL, outDir: URL): Promise<UR
 }
 
 export async function bundleWithTsdown(entryUrl: URL, outDir: URL): Promise<URL> {
-  const entryFileName = path.basename(entryUrl.pathname, '.ts');
+  const entryFileName = path.basename(entryUrl.pathname, '.js');
   const outPath = new URL(`./${entryFileName}.tsdown.js`, outDir);
 
   try {
     await tsdown({
-      plugins: [rolldownPlugin()],
+      plugins: [rolldownPlugin(), rolldownWorkspaceSourceGuard],
       outputOptions: {
         name: path.basename(outPath.pathname),
         dir: path.dirname(outPath.pathname),
@@ -96,6 +140,7 @@ export async function bundleWithTsdown(entryUrl: URL, outDir: URL): Promise<URL>
         [`${entryFileName}.tsdown`]: entryUrl.pathname,
       },
       noExternal: /.*/,
+      alias: builtWorkspaceDeps,
     });
 
     return outPath;
