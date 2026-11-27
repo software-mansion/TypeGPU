@@ -15,6 +15,14 @@ const Uniforms = d.struct({
   modelMatrix: d.mat4x4f,
 });
 
+// Page backgrounds (in sRGB) the canvas is composited onto, matching `bg-white` and `bg-navy-bg`
+const lightBackground = d.vec3f(1);
+const darkBackground = d.vec3f(35 / 255, 39 / 255, 54 / 255);
+
+function isDarkMode() {
+  return document.documentElement.dataset.theme === 'dark' ? 1 : 0;
+}
+
 export async function initHeroEffect(options: HeroEffectOptions) {
   const { root, context } = options;
   const canvas = context.canvas as HTMLCanvasElement;
@@ -32,6 +40,7 @@ export async function initHeroEffect(options: HeroEffectOptions) {
   }
 
   const uniforms = root.createUniform(Uniforms);
+  const darkMode = root.createUniform(d.u32, isDarkMode());
   const fsampler = root.createSampler({
     minFilter: 'linear',
     magFilter: 'linear',
@@ -140,8 +149,17 @@ export async function initHeroEffect(options: HeroEffectOptions) {
     );
 
     const grayscale = d.vec4f(d.vec3f(c2.x + c2.y + c2.z + 0.8) * tint, 1) * 0.5 * c2.w;
+    const result = std.saturate(std.mix(grayscale, c2, std.smoothstep(0, 0.2, downSample)));
 
-    return std.mix(grayscale, c2, std.smoothstep(0, 0.2, downSample));
+    // The canvas is premultiplied, and the effect relies on color exceeding alpha (additive light).
+    // The compositor outputs `color + background * (1 - alpha)`, which can go above 1.0 and
+    // make the display switch to HDR. Clamping against the page background keeps it within range.
+    let background = d.vec3f(lightBackground);
+    if (darkMode.$ === 1) {
+      background = d.vec3f(darkBackground);
+    }
+    const maxColor = 1 - background * (1 - result.w);
+    return d.vec4f(std.min(result.xyz, maxColor), result.w);
   });
 
   const postProcessPipeline = root.createRenderPipeline({
@@ -165,6 +183,7 @@ export async function initHeroEffect(options: HeroEffectOptions) {
     }
 
     fluidSim.update(timestamp);
+    darkMode.write(isDarkMode());
 
     const viewProjection = mat4.perspective(
       0.5,
@@ -236,6 +255,7 @@ export async function initHeroEffect(options: HeroEffectOptions) {
       fluidSim.destroy();
       screenTextures.destroy();
       uniforms.buffer.destroy();
+      darkMode.buffer.destroy();
       model.destroy();
     },
   };
