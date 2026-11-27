@@ -2,7 +2,7 @@ import * as tinyest from 'tinyest';
 import { stitch } from '../core/resolve/stitch.ts';
 import { arrayOf } from '../data/array.ts';
 import { type AnyData, UnknownData, unptr } from '../data/dataTypes.ts';
-import { bool, i32, u32 } from '../data/numeric.ts';
+import { abstractInt, bool, i32, u32 } from '../data/numeric.ts';
 import { vec2u, vec3u, vec4u } from '../data/vector.ts';
 import {
   fallthroughCopyOrigin,
@@ -1307,7 +1307,29 @@ The generated shader will evaluate them in declaration order.`,
     let convRhs: Snippet;
 
     if (bitShiftOps.includes(op)) {
-      const lhsDataType = lhsExpr.dataType;
+      // Shifting a comptime-known abstract integer by a comptime-known amount
+      // is folded with JS semantics, the same way `+`, `-`, `*` and `/` are.
+      if (exprType === NODE.binaryExpr && lhsExpr.dataType.type === 'abstractInt') {
+        const knownShiftLhs = asComptime(lhsExpr)?.value;
+        const knownShiftRhs = asComptime(rhsExpr)?.value;
+        if (typeof knownShiftLhs === 'number' && typeof knownShiftRhs === 'number') {
+          const folded =
+            op === '<<'
+              ? knownShiftLhs << knownShiftRhs
+              : op === '>>'
+                ? knownShiftLhs >> knownShiftRhs
+                : knownShiftLhs >>> knownShiftRhs;
+          return snip(folded, abstractInt, /* origin */ 'constant', false);
+        }
+      }
+
+      // JS's `>>>` reinterprets its lhs as a uint32, so an abstract integer lhs becomes a u32
+      // (e.g. `-16 >>> 1` is `u32(-16) >> 1u`, matching JS).
+      const shiftLhs =
+        op === '>>>' && lhsExpr.dataType.type === 'abstractInt'
+          ? tryConvertSnippet(this.ctx, lhsExpr, u32, false)
+          : lhsExpr;
+      const lhsDataType = shiftLhs.dataType;
       if (!wgsl.isInteger(lhsDataType) && !wgsl.isIntegerVec(lhsDataType)) {
         throw new WgslTypeError(
           `Expression: ${stringifyNode(expression)}\nLeft-hand side of '${op}' must be an integer or vector of integers.\nGot ${this.ctx.resolve(lhsDataType).value}.`,
@@ -1318,7 +1340,7 @@ The generated shader will evaluate them in declaration order.`,
 
       if (['>>>', '>>>='].includes(op) && lhsPrimitive.type !== 'u32') {
         throw new WgslTypeError(
-          `Expression: ${stringifyNode(expression)}\nLeft-hand side of '${op}' must be an unsigned integer or vector of unsigned integers.\nGot ${this.ctx.resolve(lhsDataType).value}.\nUse ${op.slice(1)} instead.`,
+          `Expression: ${stringifyNode(expression)}\nLeft-hand side of '${op}' must be an unsigned integer or vector of unsigned integers.\nGot ${String(lhsDataType)}.\nUse ${op.slice(1)} instead.`,
         );
       }
 
@@ -1338,7 +1360,7 @@ The generated shader will evaluate them in declaration order.`,
         rhsTarget = u32;
       }
       convRhs = tryConvertSnippet(this.ctx, rhsExpr, rhsTarget, false);
-      convLhs = lhsExpr;
+      convLhs = shiftLhs;
     } else {
       const forcedType = exprType === NODE.assignmentExpr ? [lhsExpr.dataType] : undefined;
       [convLhs, convRhs] = convertToCommonType(this.ctx, [lhsExpr, rhsExpr], forcedType) ?? [

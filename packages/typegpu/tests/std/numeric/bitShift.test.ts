@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
-import { u32, i32, vec3f, vec3i, vec3u, f32, vec2u } from 'typegpu/data';
-import { bitShiftLeft, bitShiftRight } from 'typegpu/std';
+import { bool, u32, i32, vec3f, vec3i, vec3u, f32, vec2u } from 'typegpu/data';
+import { bitShiftLeft, bitShiftRight, select } from 'typegpu/std';
 import { tgpu } from 'typegpu';
 
 describe('bit shift', () => {
@@ -517,5 +517,299 @@ describe('std.bitShift', () => {
 
     const y = vec3i(1, 2, 3);
     y.bitShiftLeft(2);
+  });
+});
+
+describe('bit shifts of comptime-known abstract integers', () => {
+  const TEXELS = 16;
+  const NEG = -16;
+  const THREE = 3;
+  const SHIFT = 1;
+
+  it('folds >> compared with an i32', () => {
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const f = tgpu.fn(
+      [i32],
+      bool,
+    )((column) => {
+      'use gpu';
+      return column >= TEXELS >> 1;
+    });
+
+    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+      "fn f(column: i32) -> bool {
+        return (column >= 8i);
+      }"
+    `);
+    expect(consoleWarnSpy).not.toHaveBeenCalled();
+  });
+
+  it('folds << compared with an i32', () => {
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const f = tgpu.fn(
+      [i32],
+      bool,
+    )((column) => {
+      'use gpu';
+      return column >= TEXELS << 1;
+    });
+
+    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+      "fn f(column: i32) -> bool {
+        return (column >= 32i);
+      }"
+    `);
+    expect(consoleWarnSpy).not.toHaveBeenCalled();
+  });
+
+  it('folds >>> compared with an i32', () => {
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const f = tgpu.fn(
+      [i32],
+      bool,
+    )((column) => {
+      'use gpu';
+      return column >= TEXELS >>> 1;
+    });
+
+    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+      "fn f(column: i32) -> bool {
+        return (column >= 8i);
+      }"
+    `);
+    expect(consoleWarnSpy).not.toHaveBeenCalled();
+  });
+
+  it('folds >> and >>> compared with a u32', () => {
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const f = tgpu.fn(
+      [u32],
+      bool,
+    )((column) => {
+      'use gpu';
+      return column >= TEXELS >> 1 && column >= TEXELS >>> 1;
+    });
+
+    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+      "fn f(column: u32) -> bool {
+        return ((column >= 8u) && (column >= 8u));
+      }"
+    `);
+    expect(consoleWarnSpy).not.toHaveBeenCalled();
+  });
+
+  it('folds >> compared with an f32', () => {
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const f = tgpu.fn(
+      [f32],
+      bool,
+    )((x) => {
+      'use gpu';
+      return x >= TEXELS >> 1;
+    });
+
+    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+      "fn f(x: f32) -> bool {
+        return (x >= 8f);
+      }"
+    `);
+    expect(consoleWarnSpy).not.toHaveBeenCalled();
+  });
+
+  it('folds shifts of number literals', () => {
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const f = tgpu.fn(
+      [i32],
+      bool,
+    )((column) => {
+      'use gpu';
+      return column >= 16 >> 1;
+    });
+
+    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+      "fn f(column: i32) -> bool {
+        return (column >= 8i);
+      }"
+    `);
+    expect(consoleWarnSpy).not.toHaveBeenCalled();
+  });
+
+  it('folds shifts assigned to i32 and u32 variables', () => {
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const f = () => {
+      'use gpu';
+      let a = i32(0);
+      a = TEXELS >> 1;
+      let b = u32(0);
+      b = TEXELS << 2;
+    };
+
+    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+      "fn f() {
+        var a = 0i;
+        a = 8i;
+        var b = 0u;
+        b = 64u;
+      }"
+    `);
+    expect(consoleWarnSpy).not.toHaveBeenCalled();
+  });
+
+  it('folds shifts mixed into i32, u32 and f32 arithmetic', () => {
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const f = tgpu.fn([i32, u32, f32])((a, b, c) => {
+      'use gpu';
+      const _x = a + (TEXELS >> 1);
+      const _y = b + (TEXELS << 2);
+      const _z = c * (TEXELS >> 1);
+    });
+
+    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+      "fn f(a: i32, b: u32, c: f32) {
+        let _x = (a + 8i);
+        let _y = (b + 64u);
+        let _z = (c * 8f);
+      }"
+    `);
+    expect(consoleWarnSpy).not.toHaveBeenCalled();
+  });
+
+  it('folds shifts stored in a local const', () => {
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const f = tgpu.fn(
+      [i32],
+      bool,
+    )((column) => {
+      'use gpu';
+      const half = TEXELS >> 1;
+      return column >= half;
+    });
+
+    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+      "fn f(column: i32) -> bool {
+        const half = 8;
+        return (column >= half);
+      }"
+    `);
+    expect(consoleWarnSpy).not.toHaveBeenCalled();
+  });
+
+  it('folds shifts returned from an i32 function', () => {
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const f = tgpu.fn(
+      [],
+      i32,
+    )(() => {
+      'use gpu';
+      return TEXELS >> 1;
+    });
+
+    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+      "fn f() -> i32 {
+        return 8i;
+      }"
+    `);
+    expect(consoleWarnSpy).not.toHaveBeenCalled();
+  });
+
+  it('folds shifts passed to explicit casts', () => {
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const f = () => {
+      'use gpu';
+      const _a = i32(TEXELS >> 1);
+      const _b = u32(TEXELS >>> 1);
+    };
+
+    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+      "fn f() {
+        const _a = 8i;
+        const _b = 8u;
+      }"
+    `);
+    expect(consoleWarnSpy).not.toHaveBeenCalled();
+  });
+
+  it('folds shifts inside select', () => {
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const f = tgpu.fn(
+      [i32],
+      i32,
+    )((column) => {
+      'use gpu';
+      return 3 - (2 + select(0, 1, column >= TEXELS >> 1));
+    });
+
+    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+      "fn f(column: i32) -> i32 {
+        return (3i - (2i + select(0i, 1i, (column >= 8i))));
+      }"
+    `);
+    expect(consoleWarnSpy).not.toHaveBeenCalled();
+  });
+
+  it('folds with JS semantics for negative and overflowing values', () => {
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const f = tgpu.fn([i32, u32])((a, b) => {
+      'use gpu';
+      // JS: -8 (sign-extending)
+      const _x = a >= NEG >> 1;
+      // JS: 2147483640 (`>>>` reinterprets the lhs as u32)
+      const _y = b >= NEG >>> 1;
+      // JS: -1073741824 (WGSL's 64-bit abstract int would give 3221225472, which doesn't fit in i32)
+      const _z = a >= THREE << 30;
+    });
+
+    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+      "fn f(a: i32, b: u32) {
+        let _x = (a >= -8i);
+        let _y = (b >= 2147483640u);
+        let _z = (a >= -1073741824i);
+      }"
+    `);
+    expect(consoleWarnSpy).not.toHaveBeenCalled();
+  });
+
+  it('still warns when the folded value changes after conversion', () => {
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const f = tgpu.fn(
+      [u32],
+      bool,
+    )((column) => {
+      'use gpu';
+      return column >= NEG >> 1;
+    });
+
+    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+      "fn f(column: u32) -> bool {
+        return (column >= 4294967288u);
+      }"
+    `);
+    expect(consoleWarnSpy.mock.calls).toMatchInlineSnapshot(`
+      [
+        [
+          "⚠️ [implicit-conversion] ",
+          "Implicit abstract conversion from NEG >> 1: abstractInt to u32 changes the value to 4294967288. Use an explicit conversion if this behavior is intended.",
+        ],
+      ]
+    `);
+  });
+
+  it('does not fold shifts of runtime values by a JS constant', () => {
+    using consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const f = tgpu.fn([i32, u32])((a, b) => {
+      'use gpu';
+      const _x = a >> SHIFT;
+      const _y = a << SHIFT;
+      const _z = b >>> SHIFT;
+    });
+
+    expect(tgpu.resolve([f])).toMatchInlineSnapshot(`
+      "fn f(a: i32, b: u32) {
+        let _x = (a >> 1u);
+        let _y = (a << 1u);
+        let _z = (b >> 1u);
+      }"
+    `);
+    expect(consoleWarnSpy).not.toHaveBeenCalled();
   });
 });
