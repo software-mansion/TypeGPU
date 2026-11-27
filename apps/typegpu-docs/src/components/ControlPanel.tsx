@@ -334,11 +334,11 @@ export function ControlPanel({
               onScroll={updateScrollFades}
               className="grid min-h-0 grid-cols-[minmax(0,0.3fr)_minmax(0,0.7fr)] content-start items-start gap-3 overflow-auto px-4 pt-1 pb-2"
             >
-              <div className="col-span-2 grid">
-                <Button onClick={onFullscreenToggle}>
-                  {fullscreen ? 'Exit fullscreen' : 'Open fullscreen'}
-                </Button>
-              </div>
+              {!fullscreen && (
+                <div className="col-span-2 grid">
+                  <Button onClick={onFullscreenToggle}>Open fullscreen</Button>
+                </div>
+              )}
               {exampleControlParams.map(paramToControlRow)}
             </div>
             <div
