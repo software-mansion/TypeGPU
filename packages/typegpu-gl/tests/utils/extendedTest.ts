@@ -95,6 +95,7 @@ function createMockWebGL2(canvas: OffscreenCanvas) {
 
   const gl = {
     canvas,
+    isContextLost: vi.fn(() => false),
 
     // Buffer constants
     UNIFORM_BUFFER: 35345,
