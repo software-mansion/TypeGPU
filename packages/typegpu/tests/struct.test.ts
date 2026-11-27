@@ -125,17 +125,6 @@ describe('struct', () => {
         sizeOf(Invalid);
       }).toThrow();
     }
-
-    {
-      const Invalid = struct({
-        a: u32,
-        b: Unbounded,
-      });
-
-      expect(() => {
-        sizeOf(Invalid);
-      }).toThrow();
-    }
   });
 
   it('supports f16', () => {
@@ -243,6 +232,14 @@ describe('struct', () => {
         @align(32) b: array<f32>,
       }"
     `);
+  });
+
+  it('rejects a struct prop that contains a runtime-sized array', () => {
+    expect(() =>
+      d.struct({ a: d.u32, b: d.struct({ x: d.arrayOf(d.u32, 0) }) }),
+    ).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Cannot nest runtime sized structs (property 'b').]`,
+    );
   });
 
   it('can be called to create an object', () => {

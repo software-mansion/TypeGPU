@@ -105,10 +105,6 @@ function computeMLOfStruct(struct: WgslStruct): SchemaMemoryLayout {
     const propLayout = getMemoryLayout(property);
     size += propLayout.size;
 
-    if (Number.isNaN(size) && undecorate(property).type !== 'array') {
-      throw new Error('Cannot nest unbounded struct within another struct');
-    }
-
     if (prefixEnd) {
       continue;
     }

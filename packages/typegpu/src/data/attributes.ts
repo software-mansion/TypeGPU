@@ -48,8 +48,10 @@ import {
   isBuiltinAttrib,
   isDecorated,
   isSizeAttrib,
+  isWgslArray,
   type IsWgslData,
   isWgslData,
+  isWgslStruct,
   type Location,
   type PerspectiveOrLinearInterpolatableData,
   type PerspectiveOrLinearInterpolationType,
@@ -219,6 +221,10 @@ export function size<TSize extends number, TData extends AnyData>(
   size: TSize,
   data: TData,
 ): Decorate<TData, Size<TSize>> {
+  if ((isWgslArray(data) || isWgslStruct(data)) && Number.isNaN(sizeOf(data))) {
+    throw new Error(`Cannot apply @size to a runtime sized schemas.`);
+  }
+
   return attribute(data, {
     [$internal]: true,
     type: '@size',

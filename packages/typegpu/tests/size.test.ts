@@ -95,4 +95,16 @@ describe('d.size', () => {
       }>
     >();
   });
+
+  it('rejects @size on a runtime-sized array', () => {
+    expect(() => d.size(16, d.arrayOf(d.u32, 0))).toThrowErrorMatchingInlineSnapshot(
+      `[Error: Cannot apply @size to a runtime sized schemas.]`,
+    );
+  });
+
+  it('rejects @size on a runtime-sized struct', () => {
+    expect(() =>
+      d.size(16, d.struct({ a: d.u32, b: d.arrayOf(d.u32, 0) })),
+    ).toThrowErrorMatchingInlineSnapshot(`[Error: Cannot apply @size to a runtime sized schemas.]`);
+  });
 });
