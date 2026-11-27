@@ -539,5 +539,17 @@ describe('ast to JS transformation', () => {
 
       expect(stringifyNode(ast)).toMatchInlineSnapshot(`"ident || true"`);
     });
+
+    it('escapes backticks in template literal', () => {
+      const node: tinyest.TemplateLiteral = [N.templateLiteral, ['`'], []];
+
+      expect(stringifyNode(node)).toBe('`\\``');
+    });
+
+    it('stringifies falsy expressions in template literals', () => {
+      const node: tinyest.TemplateLiteral = [N.templateLiteral, ['', '1', '2'], [false, 'ident']];
+
+      expect(stringifyNode(node)).toBe('`${false}1${ident}2`');
+    });
   });
 });

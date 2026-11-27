@@ -286,6 +286,69 @@ export const controls = defineControls({
         })
         .dispatchThreads(16),
   },
+  'Template literals': {
+    onButtonClick: () =>
+      root
+        .createGuardedComputePipeline(() => {
+          'use gpu';
+          console.log(`Log with template literal: ${4 + 4}`);
+        })
+        .dispatchThreads(),
+  },
+  'Template literals with helper function': {
+    onButtonClick: () => {
+      const helper = (n: number) => {
+        'use gpu';
+        return n;
+      };
+
+      return root
+        .createGuardedComputePipeline(() => {
+          'use gpu';
+          console.log(`Log with template literal: ${helper(4 + 16)}`);
+        })
+        .dispatchThreads();
+    },
+  },
+  'Template literals with consecutive interpolations': {
+    onButtonClick: () => {
+      const helper = (n: number) => {
+        'use gpu';
+        return n;
+      };
+
+      return root
+        .createGuardedComputePipeline(() => {
+          'use gpu';
+          console.log(
+            // eslint-disable-next-line @typescript-eslint/no-unnecessary-template-expression
+            `Log with template literal: ${helper(1 + 2)}${helper(3 + 4)}${helper(5 + 6)}${'last'}`,
+          );
+        })
+        .dispatchThreads();
+    },
+  },
+  'Template literals with complex content': {
+    onButtonClick: () =>
+      root
+        .createGuardedComputePipeline(() => {
+          'use gpu';
+          console.log(
+            `Log with template literal \`and backticks\` \nNew line \nAnother line with a slash: \\`,
+          );
+        })
+        .dispatchThreads(),
+  },
+  'Template literals with nested template literals': {
+    onButtonClick: () =>
+      root
+        .createGuardedComputePipeline(() => {
+          'use gpu';
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-template-expression
+          console.log(`The value is: ${`nested ${4 + 4}`}`);
+        })
+        .dispatchThreads(),
+  },
 });
 
 export function onCleanup() {

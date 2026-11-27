@@ -11,6 +11,7 @@ describe('noUnsupportedSyntax', () => {
       "const cls = new (class { #priv = 1; fn = () => { 'use gpu'; const a = this.#priv; } } )()",
       "const fn = () => { 'use gpu'; switch (x) { case 1: break; } }",
       "const fn = () => { 'use gpu'; const obj = { [key]: 1 }; }",
+      "const fn = () => { 'use gpu'; const x = `hello`; }",
     ],
     invalid: [
       {
@@ -220,20 +221,11 @@ describe('noUnsupportedSyntax', () => {
         ],
       },
       {
-        code: "const func = function() { 'use gpu'; const x = `hello`; }",
-        errors: [
-          {
-            messageId: 'unexpected',
-            data: { snippet: '`hello`', syntax: 'template literal' },
-          },
-        ],
-      },
-      {
         code: "const fn = () => { 'use gpu'; const x = tag`hello`; }",
         errors: [
           {
             messageId: 'unexpected',
-            data: { snippet: '`hello`', syntax: 'template literal' },
+            data: { snippet: 'tag`hello`', syntax: 'tagged template literal' },
           },
         ],
       },
