@@ -38,5 +38,6 @@ export type {
   ShaderGeneratorClass,
   FunctionDefinitionOptions,
   ConstantDefinitionOptions,
+  OverrideDefinitionOptions,
   VariableDefinitionOptions,
 } from './tgsl/shaderGenerator.ts';
