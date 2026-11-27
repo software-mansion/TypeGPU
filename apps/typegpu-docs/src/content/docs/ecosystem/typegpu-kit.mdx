@@ -1,0 +1,40 @@
+---
+title: TypeGPU Kit
+description: Building blocks for TypeGPU, from cameras and lighting to post-processing, particles and text.
+---
+
+import KitPromo from '../../../components/kit/KitPromo.astro';
+
+[TypeGPU Kit](https://docs.swmansion.com/typegpu-kit/) is a set of GPU modules built on TypeGPU, shipped as the `@typegpu/kit` package.
+Each module borrows your root and records into the passes you give it. You keep the device, the frame loop and the canvas.
+Use the modules you need and write the rest yourself.
+
+<KitPromo variant="card" href="https://docs.swmansion.com/typegpu-kit/getting-started/" />
+
+## Starting a project
+
+Kit's initializer writes a Vite project that uses Kit, with a scene to build on:
+
+```sh
+npm create @typegpu/kit
+```
+
+To add Kit to a project you already have, follow Kit's [Getting started](https://docs.swmansion.com/typegpu-kit/getting-started/) guide.
+
+## What's in it
+
+Kit's modules are grouped by what they do:
+
+- **Rendering**: [cameras](https://docs.swmansion.com/typegpu-kit/kit/cameras/), [meshes](https://docs.swmansion.com/typegpu-kit/kit/meshes/), [instances](https://docs.swmansion.com/typegpu-kit/kit/instances/), [lighting and shadows](https://docs.swmansion.com/typegpu-kit/kit/lighting/), [ambient occlusion](https://docs.swmansion.com/typegpu-kit/kit/ao/), [lines](https://docs.swmansion.com/typegpu-kit/kit/lines/) and [glTF models](https://docs.swmansion.com/typegpu-kit/kit/gltf/).
+- **Post-processing**: [bloom, exposure and tone mapping](https://docs.swmansion.com/typegpu-kit/kit/finish/), [depth of field](https://docs.swmansion.com/typegpu-kit/kit/dof/), [FXAA](https://docs.swmansion.com/typegpu-kit/kit/fxaa/) and [TAA](https://docs.swmansion.com/typegpu-kit/kit/taa/).
+- **Effects and media**: [particles](https://docs.swmansion.com/typegpu-kit/kit/particles/), [trails](https://docs.swmansion.com/typegpu-kit/kit/trails/), [text](https://docs.swmansion.com/typegpu-kit/kit/text/), [images](https://docs.swmansion.com/typegpu-kit/kit/images/) and [video](https://docs.swmansion.com/typegpu-kit/kit/video/).
+- **Frames and data**: [frame loops](https://docs.swmansion.com/typegpu-kit/kit/frames/), [passes](https://docs.swmansion.com/typegpu-kit/kit/passes/), [render targets](https://docs.swmansion.com/typegpu-kit/kit/targets/), [GPU sorting](https://docs.swmansion.com/typegpu-kit/kit/sorter/), [readback](https://docs.swmansion.com/typegpu-kit/kit/readback/) and [picking](https://docs.swmansion.com/typegpu-kit/kit/picker/).
+- **Tools**: a [profiler](https://docs.swmansion.com/typegpu-kit/kit/profiler/), a [GPU debug panel](https://docs.swmansion.com/typegpu-kit/kit/gpu-debug/) and [testing helpers](https://docs.swmansion.com/typegpu-kit/kit/testing/).
+- **Platforms**: [hosting scenes](https://docs.swmansion.com/typegpu-kit/kit/hosting/) on the web and in React Native, from the same scene file.
+
+The [module map](https://docs.swmansion.com/typegpu-kit/map/) lists every module and how they connect.
+
+## Examples
+
+Browse Kit's [examples](https://docs.swmansion.com/typegpu-kit/examples/) to see the modules in action.
+To learn how the modules fit together, read [How the kit works](https://docs.swmansion.com/typegpu-kit/concepts/how-the-kit-works/).

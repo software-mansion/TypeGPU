@@ -138,6 +138,14 @@ describe('resource snapshot protocol', () => {
     expect(restoredTexture.usableAsStorage).toBe(false);
     expect(restoredTexture.usableAsRender).toBe(true);
     expect(root.unwrap(restoredTexture)).toBe(rawTexture);
+
+    const overridden = root
+      .createTexture({ size: [2, 2], format: 'rgba8unorm' })
+      .$overrideFlags(GPUTextureUsage.RENDER_ATTACHMENT);
+    root.unwrap(overridden);
+    const restoredOverridden = roundTrip(overridden, root);
+    expect(restoredOverridden.usableAsRender).toBe(true);
+    expect(root.unwrap(restoredOverridden)).toBe(root.unwrap(overridden));
   });
 
   it('round-trips compute, render and guarded compute pipelines', ({ root }) => {

@@ -128,7 +128,7 @@ A whole-number literal declares an integer (`let sum = 0` and `let x = 1.0` are 
 
 ## Textures and samplers
 
-Pass them straight into the call, `std.textureSample(layout.$.sampledTex, layout.$.sampler, uv)`, and keep them out of variables (not `const myTex = layout.$.sampledTex`). Stage and uniformity rules for sampling: `references/textures.md`.
+Destructuring them (`const { sampledTex } = layout.$`) isn't supported. Stage and uniformity rules for sampling: `references/textures.md`.
 
 ---
 

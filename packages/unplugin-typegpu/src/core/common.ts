@@ -165,14 +165,16 @@ export interface PluginState extends TransformMethods {
 
   inUseGpuScope: boolean;
 
-  /**
-   * Used for source mapping during transpilation.
-   */
-  originalPositionFor?: NodePositionProvider;
+  sourceTracker?: SourceTracker | undefined;
 
   /** Used to warn about unsupported metadata versions at most once per file. */
   warnedAboutMetadataVersion: boolean;
 }
+
+export type SourceTracker = {
+  position: NodePositionProvider<t.Node>;
+  filename(this: void, node: t.Node): string | undefined;
+};
 
 export interface NodeLocation {
   start?: number | null;
@@ -515,12 +517,15 @@ const operators = {
   '%=': '__tsover_mod',
 };
 
-export const nodePosition: NodePositionProvider = (node) => {
-  if (!node.loc) {
-    return undefined;
-  }
-  return [node.loc.start.line, node.loc.start.column];
-};
+export const fallbackSourceTracker = (fallbackFilename: string | undefined): SourceTracker => ({
+  position: (node) => {
+    if (!node.loc) {
+      return undefined;
+    }
+    return [node.loc.start.line, node.loc.start.column];
+  },
+  filename: () => fallbackFilename,
+});
 
 function containsUseGpuDirective(
   node: t.FunctionDeclaration | t.FunctionExpression | t.ArrowFunctionExpression,
@@ -589,7 +594,7 @@ function transpile(
   if (ctx.opts.unstable_sourceMaps) {
     const result = transpileBabelFn(rootNode, {
       verboseNodes: true,
-      sourceMap: ctx.originalPositionFor,
+      sourceMap: ctx.sourceTracker?.position,
     });
     return { ...result, body: embedSourceMap(result.body, result.sourceMap) };
   }
@@ -721,26 +726,42 @@ export const functionVisitor: TraverseOptions<PluginState> = {
   },
 };
 
-export function originalMappingFor(
-  combinedMap: SourceMap | EncodedSourceMap,
-): NodePositionProvider {
-  const tracer = new TraceMap({
+export function originalMappingFor(combinedMap: SourceMap | EncodedSourceMap): SourceTracker {
+  const tracker = new TraceMap({
     ...combinedMap,
     version: 3,
     file: combinedMap.file ?? null,
     sourcesContent: combinedMap.sourcesContent ?? [],
   });
-  return (node) => {
+
+  const sourceFor = (node: t.Node) => {
     if (!node.loc) {
       return undefined;
     }
-    const { line, column } = originalPositionFor(tracer, {
+    const {
+      line,
+      column,
+      source: filename,
+    } = originalPositionFor(tracker, {
       line: node.loc.start.line,
       column: node.loc.start.column,
     });
-    if (line === null || column === null) {
+    if (line === null || column === null || filename === null) {
       return undefined;
     }
-    return [line, column];
+    return { line, column, filename };
+  };
+
+  return {
+    position: (node) => {
+      const source = sourceFor(node);
+      if (source) {
+        return [source.line, source.column];
+      }
+    },
+    filename: (node) => {
+      const source = sourceFor(node);
+      return source?.filename;
+    },
   };
 }

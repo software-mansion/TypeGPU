@@ -53,6 +53,7 @@ export type Transpilers<TNode extends JsNode> = Partial<{
 }>;
 
 export type NodePositionProvider<TNode extends JsNode = JsNode> = (
+  this: void,
   node: TNode,
 ) => [line: number, column: number] | undefined;
 

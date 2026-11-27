@@ -119,14 +119,14 @@ export class TgpuLaidOutSamplerImpl<
           const id = ctx.makeUniqueIdentifier(getName(this), 'global');
           const group = ctx.allocateLayoutEntry(this.#membership.layout);
 
-          ctx.addDeclaration(
-            `@group(${group}) @binding(${this.#membership.idx}) var ${id}: ${
-              ctx.resolve(this.schema).value
-            };`,
+          return ctx.gen.declareGlobalVar({
+            group,
+            binding: this.#membership.idx,
+            scope: 'handle',
             id,
-          );
-
-          return snip(id, this.schema, /* origin */ 'handle');
+            dataType: this.schema,
+            init: undefined,
+          });
         },
       }),
       {
@@ -185,12 +185,14 @@ class TgpuFixedSamplerImpl<T extends WgslSampler | WgslComparisonSampler> implem
             this,
           );
 
-          ctx.addDeclaration(
-            `@group(${group}) @binding(${binding}) var ${id}: ${ctx.resolve(this.schema).value};`,
+          return ctx.gen.declareGlobalVar({
+            group,
+            binding,
+            scope: 'handle',
             id,
-          );
-
-          return snip(id, this.schema, /* origin */ 'handle');
+            dataType: this.schema,
+            init: undefined,
+          });
         },
       }),
       {

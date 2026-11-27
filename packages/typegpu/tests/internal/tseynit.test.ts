@@ -330,6 +330,22 @@ describe('ast to JS transformation', () => {
       `);
     });
 
+    it('handles for loop with a literal `false` condition', () => {
+      const fn = () => {
+        'use gpu';
+        for (let i = 0; false; i++) {
+          const j = i;
+        }
+      };
+      expect(stringifyNode(getBodyAst(fn))).toMatchInlineSnapshot(`
+        "{
+          for (let i = 0; false; i++) {
+            const j = i;
+          }
+        }"
+      `);
+    });
+
     it('handles while loop', () => {
       const fn = () => {
         'use gpu';

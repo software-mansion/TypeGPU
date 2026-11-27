@@ -10,6 +10,10 @@ import generatedSdfPreview from '../../../assets/docs/typegpu-radiance-cascades-
 
 `@typegpu/radiance-cascades` computes **lighting for 2D scenes**. You describe the scene with GPU functions, and the package gives you back a texture holding the light that reaches every pixel. All that is left is to sample it in your own rendering shader.
 
+:::tip
+For lighting 3D scenes with a sun, a sky, fog and point lights, see the [lighting](https://docs.swmansion.com/typegpu-kit/kit/lighting/) module of [TypeGPU Kit](/TypeGPU/ecosystem/typegpu-kit).
+:::
+
 There are two runners to choose from:
 
 - **Holographic** (`@typegpu/radiance-cascades/holographic`) lights a grid of pixels that emit and absorb light. It suits raster scenes, thin occluders and participating media such as fog or smoke.

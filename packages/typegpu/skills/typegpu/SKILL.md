@@ -125,7 +125,6 @@ These cause most build errors and wrong results. Details in [shaders](references
 9. **A runtime ternary is `select`**: both sides evaluate, so keep them cheap, side-effect-free scalars or vectors. Use `if` / `else` for structs, arrays and expensive branches. A condition known at compile time prunes the other branch.
 10. **Brace every `if` body**, including a single `return`.
 11. **Fragment colour outputs have 4 components**: `d.vec4f` for float and unorm targets, even `r8unorm` or `rg16float`, and `d.vec4u` / `d.vec4i` for integer targets (these need a `tgpu.fragmentFn` shell).
-12. **Pass textures and samplers straight into calls**: `std.textureSample(layout.$.tex, layout.$.samp, uv)`. Keep them out of variables.
 
 ## Checking the result
 

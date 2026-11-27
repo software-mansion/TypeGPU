@@ -134,11 +134,6 @@ const sidebar = stripFalsy([
         badge: { text: 'new' },
       },
       DEV && {
-        label: 'Naming Convention',
-        slug: 'advanced/naming-convention',
-        badge: { text: 'dev', variant: 'note' },
-      },
-      DEV && {
         label: 'Explaining the Magic',
         slug: 'advanced/explaining-the-magic',
         badge: { text: 'dev', variant: 'note' },
@@ -180,6 +175,11 @@ const sidebar = stripFalsy([
     label: 'Ecosystem',
     items: stripFalsy([
       {
+        label: 'TypeGPU Kit',
+        slug: 'ecosystem/typegpu-kit',
+        badge: { text: 'new' },
+      },
+      {
         label: '@typegpu/noise',
         slug: 'ecosystem/typegpu-noise',
       },
@@ -215,21 +215,6 @@ const sidebar = stripFalsy([
         badge: { text: 'dev', variant: 'note' },
       },
     ]),
-  },
-  DEV && {
-    label: 'Tutorials',
-    items: [
-      {
-        label: 'From a Triangle to Simulating Boids: Step-by-step Tutorial',
-        slug: 'tutorials/triangle-to-boids',
-        badge: { text: 'dev', variant: 'note' },
-      },
-      {
-        label: 'Game of life tutorial',
-        slug: 'tutorials/game-of-life',
-        badge: { text: 'dev', variant: 'note' },
-      },
-    ],
   },
   {
     label: 'Tooling',
@@ -424,6 +409,7 @@ export default defineConfig({
       components: {
         Footer: './src/components/starlight/Footer.astro',
         Head: './src/components/starlight/Head.astro',
+        Banner: './src/components/starlight/Banner.astro',
         Header: './src/components/starlight/SiteHeader.astro',
         MobileMenuToggle: './src/components/starlight/MobileMenuToggle.astro',
         Sidebar: './src/components/starlight/Sidebar.astro',

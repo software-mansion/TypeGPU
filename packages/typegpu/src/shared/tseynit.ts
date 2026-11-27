@@ -58,9 +58,9 @@ function stringifyStatement(
   }
 
   if (node[0] === NODE.for) {
-    const init = node[1] ? stringifyStatement(node[1], '') : ';';
-    const cond = node[2] ? stringifyExpression(node[2]) : '';
-    const update = node[3] ? stringifyStatement(node[3], '') : '';
+    const init = node[1] !== null ? stringifyStatement(node[1], '') : ';';
+    const cond = node[2] !== null ? stringifyExpression(node[2]) : '';
+    const update = node[3] !== null ? stringifyStatement(node[3], '') : '';
     const body = stringifyStatement(node[4], indent, true);
     return `${initialIndent}for (${init} ${cond}; ${update.slice(0, -1) /* trim the ';' */}) ${body}`;
   }
