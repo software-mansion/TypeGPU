@@ -1,4 +1,3 @@
-import defu from 'defu';
 import MagicString from 'magic-string';
 import { getBabelParserOptions, getLang } from 'ast-kit';
 import type { UnpluginBuildContext, UnpluginContext, UnpluginFactory } from 'unplugin';
@@ -9,12 +8,11 @@ import * as t from '@babel/types';
 import { METADATA_FORMAT_VERSION } from './version.ts';
 import type { SourceMap } from 'rollup';
 import {
-  defaultOptions,
   getEarlyPruneRegex,
   initPluginState,
+  resolveOptions,
   functionVisitor,
   getBlockScope,
-  checkOpts,
   originalMappingFor,
   fallbackSourceTracker,
 } from './common.ts';
@@ -209,7 +207,7 @@ function tryGetSourceTracker(
 }
 
 export const unpluginFactory = ((rawOptions, _meta) => {
-  const options = checkOpts(defu(rawOptions, defaultOptions));
+  const options = resolveOptions(rawOptions);
 
   return {
     name: 'unplugin-typegpu' as const,

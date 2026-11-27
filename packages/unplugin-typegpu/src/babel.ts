@@ -1,5 +1,4 @@
 import type { NodePath, TraverseOptions } from '@babel/traverse';
-import defu from 'defu';
 import type { Externals } from 'tinyest-for-wgsl';
 import * as t from '@babel/types';
 import type { EncodedSourceMap } from '@jridgewell/trace-mapping';
@@ -7,14 +6,13 @@ import { METADATA_FORMAT_VERSION } from './core/version.ts';
 import {
   type PluginState,
   type PluginTranspilationResult,
-  checkOpts,
-  defaultOptions,
   fallbackSourceTracker,
   functionVisitor,
   getBlockScope,
   getEarlyPruneRegex,
   initPluginState,
   originalMappingFor,
+  resolveOptions,
 } from './core/common.ts';
 import type { FunctionAst, FunctionExternals } from './core/embeddedMetadata.ts';
 import { createFilterForId } from './core/filter.ts';
@@ -194,7 +192,7 @@ export default function TypeGPUPlugin() {
   return {
     name: 'typegpu',
     pre(this: PluginState, file: BabelFile) {
-      this.opts = checkOpts(defu(this.opts, defaultOptions));
+      this.opts = resolveOptions(this.opts);
       if (this.opts.unstable_sourceMaps) {
         const inputMap = file.inputMap?.toObject();
         this.sourceTracker = inputMap

@@ -2,7 +2,7 @@ import { registerHooks, type ModuleHooks } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import remapping from '@jridgewell/remapping';
 import type { UnpluginBuildContext, UnpluginContext } from 'unplugin';
-import { getEarlyPruneRegex, type Options } from './core/common.ts';
+import { getEarlyPruneRegex, resolveOptions, type Options } from './core/common.ts';
 import { unpluginFactory } from './core/factory.ts';
 import { createFilterForId } from './core/filter.ts';
 
@@ -47,13 +47,10 @@ export function extractSourceMapURL(source: string): string | undefined {
  * `deno run --import ./preload.mjs main.ts`).
  */
 export default function install(rawOptions?: Options): ModuleHooks {
-  const plugin = unpluginFactory(
-    // An explicit `include: undefined` means the default, like any other option
-    { ...rawOptions, include: rawOptions?.include ?? /\.[cm]?[jt]sx?$/ },
-    { framework: 'unloader' },
-  );
+  const options = resolveOptions(rawOptions, { include: /\.[cm]?[jt]sx?$/ });
+  const plugin = unpluginFactory(options, { framework: 'unloader' });
   const filter = createFilterForId(plugin.transform.filter.id);
-  const earlyPruneRegex = getEarlyPruneRegex(rawOptions?.unstable_obfuscate ?? false);
+  const earlyPruneRegex = getEarlyPruneRegex(options.unstable_obfuscate);
   const transformContext = {
     warn: (message: string) => console.warn(message),
   } as UnpluginBuildContext & UnpluginContext;
@@ -72,7 +69,7 @@ export default function install(rawOptions?: Options): ModuleHooks {
 
       const code =
         typeof result.source === 'string' ? result.source : new TextDecoder().decode(result.source);
-      if (rawOptions?.earlyPruning !== false && earlyPruneRegex.every((p) => !p.test(code))) {
+      if (options.earlyPruning && earlyPruneRegex.every((p) => !p.test(code))) {
         return result;
       }
 
