@@ -739,19 +739,7 @@ export function textureExternal() {
   })) as WgslExternalTexture;
 }
 
-export function isWgslTexture(value: unknown): value is WgslTexture {
-  return (
-    !!(value as WgslTexture)[$internal] && typeof (value as WgslTexture).multisampled === 'boolean'
-  );
-}
-
-export function isWgslStorageTexture(value: unknown): value is WgslStorageTexture {
-  return (
-    !!(value as WgslStorageTexture)[$internal] &&
-    typeof (value as WgslStorageTexture).format === 'string' &&
-    typeof (value as WgslStorageTexture).access === 'string'
-  );
-}
+export { isWgslStorageTexture, isWgslTexture } from './texturePredicates.ts';
 
 export function isWgslExternalTexture(value: unknown): value is WgslExternalTexture {
   return (

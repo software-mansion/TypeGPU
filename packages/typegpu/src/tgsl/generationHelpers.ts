@@ -1,4 +1,4 @@
-import { UnknownData } from '../data/dataTypes.ts';
+import { undecorate, UnknownData } from '../data/dataTypes.ts';
 import { abstractFloat, abstractInt, bool, f32, i32 } from '../data/numeric.ts';
 import { isRef } from '../data/ref.ts';
 import { isSnippet, isStoredInMemory, snip, withDataType } from '../data/snippet.ts';
@@ -11,6 +11,7 @@ import {
   isMatInstance,
   isNaturallyEphemeral,
   isVecInstance,
+  isWgslArray,
   type WgslArray,
   WORKAROUND_getSchema,
 } from '../data/wgslTypes.ts';
@@ -26,6 +27,7 @@ import { WgslTypeError } from '../errors.ts';
 import { $comptimeValueOf, $internal, $resolve } from '../shared/symbols.ts';
 import { DEV } from '../shared/env.ts';
 import { logger } from '../tgpuLogger.ts';
+import { ArrayConversionError, arraysHaveSameType } from './conversion.ts';
 import { stringifySnippet } from './stringifySnippet.ts';
 
 export function numericLiteralToSnippet(value: number): Snippet {
@@ -139,6 +141,21 @@ export class ArrayExpression implements SelfResolvable, WithComptimeValue {
         throw new WgslTypeError(
           `'${snippetStr}' reference cannot be used in an array constructor.\n-----\nTry '${snippetType}(${snippetStr})' or 'arrayOf(${snippetType}, count)([...])' to copy the value instead.\n-----`,
         );
+      }
+    }
+
+    // Untyped array literals are unified permissively so comptime consumers can
+    // read them as JS arrays. Here the elements are emitted as WGSL, so every
+    // element must actually have the array's element type. A mismatched array
+    // element would otherwise be labelled with the common type while its value
+    // keeps its own, producing invalid WGSL.
+    const expectedType = undecorate(this.type.elementType);
+    if (isWgslArray(expectedType)) {
+      for (const elem of this.elements) {
+        const elemType = undecorate(elem.dataType as BaseData);
+        if (isWgslArray(elemType) && !arraysHaveSameType(elemType, expectedType)) {
+          throw new ArrayConversionError(elemType, expectedType);
+        }
       }
     }
 
