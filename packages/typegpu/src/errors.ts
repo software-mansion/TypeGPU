@@ -116,6 +116,9 @@ export class ResolutionError extends Error {
     Object.setPrototypeOf(this, ResolutionError.prototype);
   }
 
+  /**
+   * Exact error source, undefined if exact source is unknown.
+   */
   get source(): Source | undefined {
     return this.node ? this.sourceMap?.get(this.node) : undefined;
   }
