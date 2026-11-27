@@ -144,6 +144,22 @@ export interface TransformMethods {
   replaceWithBinaryOverload(path: NodePath<t.BinaryExpression>, runtimeFn: string): void;
 }
 
+/** Per-file state stored as bits in {@link PluginState.fileContextFlags}. */
+const FileContextFlag = {
+  WARNED_UNSUPPORTED_METADATA_VERSION: 1 << 0,
+  WARNED_SOURCE_MAPPED_FUNCTION: 1 << 1,
+} as const;
+
+type FileContextFlag = (typeof FileContextFlag)[keyof typeof FileContextFlag];
+
+function hasFlag(state: PluginState, flag: FileContextFlag): boolean {
+  return (state.fileContextFlags & flag) !== 0;
+}
+
+function setFlag(state: PluginState, flag: FileContextFlag): void {
+  state.fileContextFlags |= flag;
+}
+
 export interface PluginState extends TransformMethods {
   /**
    * How the `tgpu` object is used in code. Since it can be aliased, we
@@ -167,11 +183,10 @@ export interface PluginState extends TransformMethods {
 
   sourceTracker?: SourceTracker | undefined;
 
-  /** Used to warn about unsupported metadata versions at most once per file. */
-  warnedAboutMetadataVersion: boolean;
-
-  /** Used to warn about skipping source-mapped functions at most once per file. */
-  warnedAboutSourceMaps: boolean;
+  /**
+   * Bit set of {@link FileContextFlag}s for the current file.
+   */
+  fileContextFlags: number;
 }
 
 export type SourceTracker = {
@@ -195,13 +210,12 @@ export function initPluginState(state: PluginState, methods: TransformMethods): 
   state.tgpuAliases = new Set<string>(state.opts.forceTgpuAlias ? [state.opts.forceTgpuAlias] : []);
   state.autoNamingEnabled = state.opts.autoNamingEnabled ?? true;
   state.inUseGpuScope = false;
-  state.warnedAboutMetadataVersion = false;
-  state.warnedAboutSourceMaps = false;
+  state.fileContextFlags = 0;
   Object.assign(state, methods);
 }
 
 /** Regular expressions used for early pruning (to avoid unnecessary parsing, which is expensive) */
-export const getEarlyPruneRegex = (obfuscate: boolean) => {
+export const getEarlyPruneRegex = (obfuscate: boolean | undefined) => {
   const baseRegex = [/["']use gpu["']/, /t(ype)?gpu/];
   if (obfuscate) {
     baseRegex.push(/__TYPEGPU_META__/);
@@ -549,22 +563,19 @@ function isSourceMapped(ast: FunctionAst): boolean {
   return sourceMap.size > 0;
 }
 
-function warnOnce(
-  state: PluginState,
-  flag: 'warnedAboutMetadataVersion' | 'warnedAboutSourceMaps',
-  message: string,
-): void {
-  if (!state[flag]) {
-    state[flag] = true;
-    state.warn(message);
+function warnOnce(state: PluginState, flag: FileContextFlag, message: string): void {
+  if (hasFlag(state, flag)) {
+    return;
   }
+  setFlag(state, flag);
+  state.warn(message);
 }
 
 function reobfuscateEmbedded(state: PluginState, metadata: EmbeddedTypegpuMetadata) {
   if (metadata.v !== METADATA_FORMAT_VERSION || metadata.function === undefined) {
     warnOnce(
       state,
-      'warnedAboutMetadataVersion',
+      FileContextFlag.WARNED_UNSUPPORTED_METADATA_VERSION,
       `[unplugin-typegpu] Cannot obfuscate already transformed functions in ${state.filename ?? '<unknown>'}: unsupported metadata version ${metadata.v} (expected ${METADATA_FORMAT_VERSION}).`,
     );
     return;
@@ -575,7 +586,7 @@ function reobfuscateEmbedded(state: PluginState, metadata: EmbeddedTypegpuMetada
   if (isSourceMapped(ast)) {
     warnOnce(
       state,
-      'warnedAboutSourceMaps',
+      FileContextFlag.WARNED_SOURCE_MAPPED_FUNCTION,
       `[unplugin-typegpu] Skipped obfuscation of already transformed functions in ${state.filename ?? '<unknown>'}: functions built with source maps are not supported yet.`,
     );
     return;

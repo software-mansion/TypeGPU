@@ -12,6 +12,7 @@ import {
   fallbackSourceTracker,
   functionVisitor,
   getBlockScope,
+  getEarlyPruneRegex,
   initPluginState,
   originalMappingFor,
 } from './core/common.ts';
@@ -213,6 +214,15 @@ export default function TypeGPUPlugin() {
       Program(path, state) {
         const filter = createFilterForId(state.opts);
         if (state.filename && filter && !filter?.(state.filename)) {
+          return;
+        }
+
+        const code = path.hub.getCode();
+        if (
+          state.opts.earlyPruning &&
+          code &&
+          getEarlyPruneRegex(state.opts.unstable_obfuscate).every((pattern) => !pattern.test(code))
+        ) {
           return;
         }
 
