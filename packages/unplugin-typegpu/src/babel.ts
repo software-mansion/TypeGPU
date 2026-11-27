@@ -9,7 +9,7 @@ import {
   type PluginTranspilationResult,
   checkOpts,
   defaultOptions,
-  fallbackSourceTracer,
+  fallbackSourceTracker,
   functionVisitor,
   getBlockScope,
   initPluginState,
@@ -169,7 +169,7 @@ function replaceWithBinaryOverload(path: NodePath<t.BinaryExpression>, runtimeFn
 }
 
 interface BabelFile {
-  inputMap?: { toObject(): EncodedSourceMap } | null;
+  inputMap: { toObject(): EncodedSourceMap } | null;
 }
 
 export default function TypeGPUPlugin() {
@@ -181,7 +181,7 @@ export default function TypeGPUPlugin() {
         const inputMap = file.inputMap?.toObject();
         this.sourceTracker = inputMap
           ? originalMappingFor(inputMap)
-          : fallbackSourceTracer(this.filename);
+          : fallbackSourceTracker(this.filename);
       }
       initPluginState(this, {
         warn: (message) => console.warn(message),

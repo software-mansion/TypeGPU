@@ -16,7 +16,7 @@ import {
   getBlockScope,
   checkOpts,
   originalMappingFor,
-  fallbackSourceTracer,
+  fallbackSourceTracker,
 } from './common.ts';
 
 import type {
@@ -187,7 +187,7 @@ function tryGetSourceTracker(
 ): SourceTracker {
   if (!supportsCombinedSourcemap(ctx)) {
     warnAboutSourceMapsOnce();
-    return fallbackSourceTracer(fallbackFilename);
+    return fallbackSourceTracker(fallbackFilename);
   }
 
   const combinedMap = ctx.getCombinedSourcemap();
@@ -255,7 +255,7 @@ export const unpluginFactory = ((rawOptions, _meta) => {
               return magicString.generateMap({
                 source: id,
                 includeContent: true,
-                hires: options.unstable_sourceMaps ? true : 'boundary',
+                hires: 'boundary',
               });
             },
           };

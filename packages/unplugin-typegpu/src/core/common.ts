@@ -152,7 +152,7 @@ export interface PluginState extends TransformMethods {
   /**
    * Used for source mapping during transpilation.
    */
-  sourceTracker?: SourceTracker;
+  sourceTracker?: SourceTracker | undefined;
 }
 
 export type SourceTracker = {
@@ -494,7 +494,7 @@ const operators = {
   '%=': '__tsover_mod',
 };
 
-export const fallbackSourceTracer = (fallbackFilename: string | undefined): SourceTracker => ({
+export const fallbackSourceTracker = (fallbackFilename: string | undefined): SourceTracker => ({
   position: (node) => {
     if (!node.loc) {
       return undefined;

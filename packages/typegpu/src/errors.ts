@@ -3,7 +3,7 @@ import type { TgpuSlot } from './core/slot/slotTypes.ts';
 import type { TgpuVertexLayout } from './core/vertexLayout/vertexLayout.ts';
 import type { BaseData } from './data/wgslTypes.ts';
 import { getName, hasTinyestMetadata } from './shared/meta.ts';
-import { DEV, INCLUDE_SOURCE, TEST } from './shared/env.ts';
+import { DEV, INCLUDE_SOURCE } from './shared/env.ts';
 import type { TgpuBindGroupLayout } from './tgpuBindGroupLayout.ts';
 import type * as tinyest from 'tinyest';
 import { stringifyNode } from './shared/tseynit.ts';
