@@ -224,7 +224,7 @@ export function createFnCore(
       }
       const [body, sourceMap] = stripSourceMap(ast.body) as [Block, SourceMap];
       if (pluginData.filename !== undefined) {
-        ctx.addSourceMap(sourceMap, pluginData.filename);
+        ctx.addSourceMap(this, body, sourceMap, pluginData.filename);
       }
 
       // If an entrypoint implementation has a second argument, it represents the output schema.

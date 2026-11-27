@@ -3,7 +3,7 @@ import type { BaseData } from '../../data/wgslTypes.ts';
 import { getName } from '../../shared/meta.ts';
 import { $getNameForward, $internal, $resolve } from '../../shared/symbols.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
-import { createFnCore } from './fnCore.ts';
+import { createFnCore, type FnCore } from './fnCore.ts';
 
 /**
  * Shell-less functions are possible because we can infer the signature based solely on the context
@@ -24,6 +24,7 @@ import { createFnCore } from './fnCore.ts';
 export interface ShelllessImpl extends SelfResolvable {
   readonly resourceType: 'shellless-impl';
   readonly argTypes: BaseData[];
+  readonly [$internal]: { fnCore: FnCore };
   readonly [$getNameForward]: unknown;
 }
 
@@ -38,7 +39,7 @@ export function createShelllessImpl(
   const core = createFnCore(implementation, 'normal');
 
   return {
-    [$internal]: true,
+    [$internal]: { fnCore: core },
     [$getNameForward]: core,
     resourceType: 'shellless-impl' as const,
     argTypes,

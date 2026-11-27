@@ -80,7 +80,7 @@ export interface TgpuVertexFn<
   in VertexIn extends TgpuVertexFn.In = never,
   out VertexOut extends TgpuVertexFn.Out = TgpuVertexFn.Out,
 > extends TgpuNamable {
-  readonly [$internal]: true;
+  readonly [$internal]: { fnCore: FnCore };
   readonly shell: TgpuVertexFnShellHeader<VertexIn, VertexOut>;
   $uses(dependencyMap: Record<string, unknown>): this;
 }
@@ -158,7 +158,6 @@ function createVertexFn(
 ): TgpuVertexFn<VertexInConstrained, VertexOutConstrained> {
   type This = TgpuVertexFn<VertexInConstrained, VertexOutConstrained> &
     SelfResolvable & {
-      [$internal]: true;
       [$getNameForward]: FnCore;
     };
 
@@ -173,7 +172,7 @@ function createVertexFn(
       return this;
     },
 
-    [$internal]: true,
+    [$internal]: { fnCore: core },
     [$getNameForward]: core,
     $name(newLabel: string): This {
       setName(this, newLabel);
