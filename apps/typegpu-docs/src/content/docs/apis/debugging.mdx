@@ -1,0 +1,176 @@
+---
+title: Debugging
+description: A list of APIs helping with debugging TypeGPU programs.
+---
+
+Writing shaders is hard! We provide some tools for easier debugging.
+
+## Source maps
+
+Not every JavaScript function can be executed on the GPU,
+and TypeGPU tries to catch and report them early by throwing resolution errors.
+
+[unplugin-typegpu](/TypeGPU/tooling/unplugin-typegpu/) provides an `unstable_sourceMaps` setting,
+which when set to `true`, records additional info in each function that will allow errors to be mapped directly to their origin.
+
+```diff lang=ts
+// vitest.config.mts, or other config file
+export default defineConfig({
+-  plugins: [typegpu({})],
++  plugins: [typegpu({ unstable_sourceMaps: true })],
+});
+```
+
+For example, given the following code:
+
+```ts twoslash
+import { tgpu, d, std } from 'typegpu';
+
+const root = await tgpu.init();
+// ---cut---
+const clampToOne = (n: number) => std.min(n, 1); // no 'use gpu' directive!
+
+const state = tgpu.privateVar(d.vec2u);
+const nextFib = tgpu.fn([], d.u32)(() => {
+  const next = clampToOne(state.$.x + state.$.y);
+  state.$.x = state.$.y;
+  state.$.y = next;
+  return next;
+});
+
+const compute = tgpu.computeFn({ workgroupSize: [1, 1, 1] })(() => {
+  'use gpu';
+  const fib1 = nextFib();
+  const fib2 = nextFib();
+});
+
+const fibonacciPipeline = root.createComputePipeline({ compute });
+fibonacciPipeline.dispatchWorkgroups(1);
+
+```
+
+The error will contain extra information:
+
+```txt ins=/[(].*at [^)]+[)]/
+Uncaught ResolutionError: Resolution of the following tree failed:
+- computePipelineCore
+- computeFn:compute (defined at /Users/me/tgpu-project/src/main.ts:19:68)
+- fn:nextFib (at /Users/me/tgpu-project/src/main.ts:12:16):
+Function 'clampToOne' is not marked with the 'use gpu' directive and cannot be used in a shader
+    at ResolutionError.appendToTrace (errors.js:85:16)
+    // JS stack trace...
+    at ComputePipelineCore.initSync (computePipeline.js:266:66)
+```
+
+:::tip
+If you enable console forwarding for your DEV server, 
+you will be able to click the error source in IDE's console to immediately jump to that place.
+
+```diff lang=ts
+// vite.config.ts
+export default defineConfig({
+  plugins: [typegpu({ unstable_sourceMaps: true })],
++  server: { forwardConsole: true },
+});
+```
+:::
+
+:::caution
+This functionality should never be enabled in production.
+:::
+
+:::caution
+This functionality is currently unstable.
+Source maps may fail to be collected in certain repo setups, or may be corrupted.
+Some errors may not include sources.
+:::
+
+## *console.log*
+
+Yes, you read that correctly, TypeGPU implements logging to the console on the GPU!
+Just call `console.log` like you would in plain JavaScript, and open the console to see the results.
+
+```ts twoslash
+import { tgpu, d } from 'typegpu';
+
+const root = await tgpu.init();
+// ---cut---
+const callCountMutable = root.createMutable(d.u32, 0);
+const compute = root.createGuardedComputePipeline(() => {
+  'use gpu';
+  callCountMutable.$ += 1;
+  console.log('Call number', callCountMutable.$);
+});
+
+compute.dispatchThreads();
+compute.dispatchThreads();
+
+// Eventually...
+// "[GPU] Call number 1"
+// "[GPU] Call number 2"
+```
+
+Currently supported data types for logging include scalars, vectors, matrices, structs, and fixed-size arrays.
+
+Under the hood, TypeGPU translates `console.log` to a series of serializing functions that write the logged arguments to a buffer that is read and deserialized after every draw/dispatch call.
+
+The buffer is of fixed size, which may limit the total amount of information that can be logged; if the buffer overflows, additional logs are dropped.
+If that's an issue, you may specify the size manually when creating the `root` object.
+
+```ts twoslash
+import { tgpu, d } from 'typegpu';
+
+const presentationFormat = undefined as any;
+const canvas = undefined as any;
+const context = canvas.getContext('webgpu') as any;
+// ---cut---
+const root = await tgpu.init({
+  unstable_logOptions: {
+    logCountLimit: 32,
+    logSizeLimit: 8, // in bytes, enough to fit 2*u32
+  },
+});
+
+/* vertex shader */
+
+const mainFragment = tgpu.fragmentFn({
+  in: { pos: d.builtin.position },
+  out: d.vec4f,
+})(({ pos }) => {
+  // this log fits in 8 bytes
+  // static strings do not count towards the serialized log size
+  console.log('X:', d.u32(pos.x), 'Y:', d.u32(pos.y));
+  return d.vec4f(0, 1, 1, 1);
+});
+
+/* pipeline creation and draw call */
+```
+
+:::note
+The logs are written to console only after the dispatch finishes and the buffer is read.
+This may happen with a noticeable delay.
+:::
+
+:::caution
+When using `console.log`, atomic operations are injected into the WGSL code to safely synchronize logging from multiple threads.
+This synchronization can introduce overhead and significantly impact shader performance.
+:::
+
+Other supported `console` functionalities include `console.debug`, `console.info`, `console.warn`, `console.error` and `console.clear`.
+
+There are some limitations (some of which we intend to alleviate in the future):
+
+- `console.log` only works when used in TypeGPU functions that are transitively called in a TypeGPU pipeline.
+Otherwise, for example when using `tgpu.resolve` on a WGSL template, logs are ignored.
+- `console.log` only works in fragment and compute shaders.
+This is due to a [WebGPU limitation](https://www.w3.org/TR/WGSL/#address-space) that does not allow modifying buffers during the vertex shader stage.
+- `console.log` currently does not support template literals (but you can use [string substitutions](https://developer.mozilla.org/en-US/docs/Web/API/console#using_string_substitutions), or just pass multiple arguments instead).
+
+## Peeking at the WGSL code
+
+When in trouble, you can always call `tgpu.resolve` to see the exact WGSL code
+generated by TypeGPU. See [resolve docs](/TypeGPU/apis/resolve) for more info.
+
+## Timing pipelines
+
+When tuning performance, consider [timing your pipelines](/TypeGPU/advanced/timestamp-queries/) to see what works best.

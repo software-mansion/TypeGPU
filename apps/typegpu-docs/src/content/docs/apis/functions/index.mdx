@@ -322,7 +322,7 @@ Without it, you can still use operators for numbers,
 but for vectors and matrices you have to use supplementary functions from `typegpu/std` (*add, mul, eq, lt, ge...*), or use a fluent interface (*abc.mul(xyz), ...*)
 
 * **Calling other functions** --
-Only functions marked with `'use gpu'` can be called from within a shader. There are two exceptions to that rule: [`console.log`](/TypeGPU/apis/utils#consolelog), which allows for tracking runtime behavior
+Only functions marked with `'use gpu'` can be called from within a shader. There are two exceptions to that rule: [`console.log`](/TypeGPU/apis/debugging#consolelog), which allows for tracking runtime behavior
 of shaders in a familiar way, as well as most `Math` functions.
 
 :::caution
