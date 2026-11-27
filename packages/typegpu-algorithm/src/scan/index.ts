@@ -1,3 +1,4 @@
+export { type ChunkedScanOptions, type ChunkedScanPlan, createChunkedScan } from './chunkedScan.ts';
 export {
   createPrefixScan,
   prefixScan,

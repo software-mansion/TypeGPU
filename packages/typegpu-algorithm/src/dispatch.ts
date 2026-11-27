@@ -1,6 +1,6 @@
 import { d } from 'typegpu';
 
-const MAX_WORKGROUPS_PER_DIMENSION = 65535;
+export const MAX_WORKGROUPS_PER_DIMENSION = 65535;
 
 /**
  * Decomposes a total workgroup count into a 3D dispatch grid (x, y, z),

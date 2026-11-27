@@ -1,4 +1,4 @@
-export interface BinaryOp {
-  operation: (a: number, b: number) => number;
-  identityElement: number;
+export interface BinaryOp<TValue = number> {
+  operation: (a: TValue, b: TValue) => TValue;
+  identityElement: TValue;
 }

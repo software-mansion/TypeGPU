@@ -13,10 +13,13 @@ export function makeScanSchemas(elementType: ScanElementType) {
     scanLayout: tgpu.bindGroupLayout({
       input: { storage: d.arrayOf(elementType), access: 'mutable' },
       sums: { storage: d.arrayOf(elementType), access: 'mutable' },
+      // The bound buffer can be larger than the array, so `arrayLength` is not the element count.
+      count: { uniform: d.u32 },
     }),
     applySumsLayout: tgpu.bindGroupLayout({
       input: { storage: d.arrayOf(elementType), access: 'mutable' },
       sums: { storage: d.arrayOf(elementType), access: 'readonly' },
+      count: { uniform: d.u32 },
     }),
     workgroupMemory: tgpu.workgroupVar(d.arrayOf(elementType, WORKGROUP_SIZE)),
     tile: tgpu.workgroupVar(d.arrayOf(elementType, TILE_SLOTS)),

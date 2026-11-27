@@ -1,23 +1,38 @@
 import {
   d,
   type StorageFlag,
+  type TgpuBindGroup,
   type TgpuBuffer,
   type TgpuComputePipeline,
   type TgpuRoot,
+  type UniformFlag,
 } from 'typegpu';
 import { decomposeWorkgroups } from '../dispatch.ts';
 import { type DispatchStep, stepRunner } from '../runPass.ts';
 import type { RunOptions } from '../types.ts';
+import {
+  makeElementApplySumsKernel,
+  makeElementScanKernel,
+  makeElementScanSchemas,
+} from './elementKernels.ts';
 import { makeApplySumsKernel, makeScanKernel } from './kernels.ts';
-import { BLOCK_SIZE, makeScanSchemas, type ScanElementType, type ScanSchemas } from './schemas.ts';
+import { BLOCK_SIZE, makeScanSchemas, type ScanElementType } from './schemas.ts';
 import type { BinaryOp } from './types.ts';
 
-export type ScanBuffer<TElement extends ScanElementType = ScanElementType> = TgpuBuffer<
+export type ScanBuffer<TElement extends d.AnyWgslData = ScanElementType> = TgpuBuffer<
   d.WgslArray<TElement>
 > &
   StorageFlag;
 
-export interface PrefixScanOptions extends BinaryOp {
+type AnyScanBuffer = ScanBuffer<d.AnyWgslData>;
+
+interface Destroyable {
+  destroy(): void;
+}
+
+type CountBuffer = TgpuBuffer<d.U32> & UniformFlag;
+
+export interface PrefixScanOptions<TValue = number> extends BinaryOp<TValue> {
   /** Computes only the aggregate of the buffer instead of the full scan. Defaults to false */
   reduceOnly?: boolean;
 }
@@ -26,7 +41,7 @@ export interface PrefixScanOptions extends BinaryOp {
  * A reusable execution plan for scanning a specific buffer. All scratch buffers and
  * bind groups are created once, so `run` only records dispatches.
  */
-export interface PrefixScanPlan<TElement extends ScanElementType = ScanElementType> {
+export interface PrefixScanPlan<TElement extends d.AnyWgslData = ScanElementType> {
   /**
    * The buffer holding the result after `run`. For a full prefix scan this is the scanned
    * buffer itself, for a reduction it is a single-element buffer owned by the plan.
@@ -43,9 +58,11 @@ export interface PrefixScanPlan<TElement extends ScanElementType = ScanElementTy
 }
 
 interface ScanPipelines {
-  schemas: ScanSchemas;
+  blockSize: number;
   scan: TgpuComputePipeline;
   applySums: TgpuComputePipeline;
+  bindScan(input: AnyScanBuffer, sums: AnyScanBuffer, count: CountBuffer): TgpuBindGroup;
+  bindApplySums(input: AnyScanBuffer, sums: AnyScanBuffer, count: CountBuffer): TgpuBindGroup;
 }
 
 interface CacheLike<K, V> {
@@ -69,7 +86,13 @@ const pipelineCache = new WeakMap<
   WeakMap<BinaryOp['operation'], Map<string, ScanPipelines>>
 >();
 
-function pipelinesFor(
+const SCALAR_TYPES = ['f32', 'u32', 'i32'];
+
+function isScalar(elementType: d.AnyWgslData): elementType is ScanElementType {
+  return SCALAR_TYPES.includes(elementType.type);
+}
+
+function scalarPipelines(
   root: TgpuRoot,
   elementType: ScanElementType,
   options: PrefixScanOptions,
@@ -82,40 +105,93 @@ function pipelinesFor(
   return getOrCreate(byVariant, `${elementType.type}_${identityElement}_${reduceOnly}`, () => {
     const schemas = makeScanSchemas(elementType);
     return {
-      schemas,
+      blockSize: BLOCK_SIZE,
       scan: root.createComputePipeline({
         compute: makeScanKernel(schemas, operation, identityElement, reduceOnly),
       }),
       applySums: root.createComputePipeline({
         compute: makeApplySumsKernel(schemas, operation),
       }),
+      bindScan: (input, sums, count) =>
+        root.createBindGroup(schemas.scanLayout, {
+          input: input as ScanBuffer,
+          sums: sums as ScanBuffer,
+          count,
+        }),
+      bindApplySums: (input, sums, count) =>
+        root.createBindGroup(schemas.applySumsLayout, {
+          input: input as ScanBuffer,
+          sums: sums as ScanBuffer,
+          count,
+        }),
     };
   });
 }
 
-function prepare(root: TgpuRoot, buffer: ScanBuffer, options: PrefixScanOptions) {
+/** Vectors, matrices and structs. These pipelines are not shared between plans. */
+function elementPipelines(
+  root: TgpuRoot,
+  elementType: d.AnyWgslData,
+  options: PrefixScanOptions<unknown>,
+  reduceOnly: boolean,
+): ScanPipelines {
+  const schemas = makeElementScanSchemas(elementType);
+  return {
+    blockSize: schemas.blockSize,
+    scan: root.createComputePipeline({
+      compute: makeElementScanKernel(
+        schemas,
+        options.operation,
+        options.identityElement,
+        reduceOnly,
+      ),
+    }),
+    applySums: root.createComputePipeline({
+      compute: makeElementApplySumsKernel(schemas, options.operation),
+    }),
+    bindScan: (input, sums, count) =>
+      root.createBindGroup(schemas.scanLayout, { input, sums, count }),
+    bindApplySums: (input, sums, count) =>
+      root.createBindGroup(schemas.applySumsLayout, { input, sums, count }),
+  };
+}
+
+/** The dispatches of a scan of `buffer` in place, without a plan around them. */
+export function prepareScanSteps(
+  root: TgpuRoot,
+  buffer: AnyScanBuffer,
+  options: PrefixScanOptions<unknown>,
+) {
   if (buffer.dataType.elementCount === 0) {
     throw new Error('Cannot scan an empty buffer.');
   }
 
   const reduceOnly = options.reduceOnly ?? false;
   const elementType = buffer.dataType.elementType;
-  const { schemas, scan, applySums } = pipelinesFor(root, elementType, options, reduceOnly);
+  const pipelines = isScalar(elementType)
+    ? scalarPipelines(root, elementType, options as PrefixScanOptions, reduceOnly)
+    : elementPipelines(root, elementType, options, reduceOnly);
 
   const steps: DispatchStep[] = [];
-  const scratch: ScanBuffer[] = [];
-  const applyLevels: { target: ScanBuffer; sums: ScanBuffer; numWorkgroups: number }[] = [];
+  const scratch: Destroyable[] = [];
+  const applyLevels: {
+    target: AnyScanBuffer;
+    sums: AnyScanBuffer;
+    count: CountBuffer;
+    numWorkgroups: number;
+  }[] = [];
 
-  let current: ScanBuffer = buffer;
-  let resultBuffer: ScanBuffer = buffer;
+  let current = buffer;
+  let resultBuffer = buffer;
 
   for (;;) {
-    const numWorkgroups = Math.ceil(current.dataType.elementCount / BLOCK_SIZE);
+    const numWorkgroups = Math.ceil(current.dataType.elementCount / pipelines.blockSize);
     const sums = root.createBuffer(d.arrayOf(elementType, numWorkgroups)).$usage('storage');
-    scratch.push(sums);
+    const count = root.createBuffer(d.u32, current.dataType.elementCount).$usage('uniform');
+    scratch.push(sums, count);
 
     steps.push({
-      pipeline: scan.with(root.createBindGroup(schemas.scanLayout, { input: current, sums })),
+      pipeline: pipelines.scan.with(pipelines.bindScan(current, sums, count)),
       workgroups: decomposeWorkgroups(numWorkgroups),
     });
 
@@ -126,22 +202,28 @@ function prepare(root: TgpuRoot, buffer: ScanBuffer, options: PrefixScanOptions)
       break;
     }
 
-    applyLevels.push({ target: current, sums, numWorkgroups });
+    applyLevels.push({ target: current, sums, count, numWorkgroups });
     current = sums;
   }
 
   if (!reduceOnly) {
     for (const level of applyLevels.toReversed()) {
       steps.push({
-        pipeline: applySums.with(
-          root.createBindGroup(schemas.applySumsLayout, { input: level.target, sums: level.sums }),
+        pipeline: pipelines.applySums.with(
+          pipelines.bindApplySums(level.target, level.sums, level.count),
         ),
         workgroups: decomposeWorkgroups(level.numWorkgroups),
       });
     }
   }
 
-  const plan: PrefixScanPlan = {
+  return { steps, scratch, resultBuffer };
+}
+
+function prepare(root: TgpuRoot, buffer: AnyScanBuffer, options: PrefixScanOptions<unknown>) {
+  const { steps, scratch, resultBuffer } = prepareScanSteps(root, buffer, options);
+
+  const plan: PrefixScanPlan<d.AnyWgslData> = {
     resultBuffer,
     ...stepRunner(root.device, steps),
 
@@ -157,22 +239,25 @@ function prepare(root: TgpuRoot, buffer: ScanBuffer, options: PrefixScanOptions)
 
 /**
  * Creates a reusable plan for an exclusive prefix scan (or, with `reduceOnly`, a reduction)
- * of `buffer` in place with the given associative operation. Pipelines are shared between
- * plans created for the same `root`, `operation`, `identityElement` and element type.
+ * of `buffer` in place with the given associative operation, which need not be commutative.
+ * Elements can be scalars, vectors, matrices or structs of up to 1024 bytes. Scalar pipelines
+ * are shared between plans created for the same `root`, `operation`, `identityElement` and
+ * element type.
  */
-export function createPrefixScan<TElement extends ScanElementType>(
+export function createPrefixScan<TElement extends d.AnyWgslData>(
   root: TgpuRoot,
   buffer: ScanBuffer<TElement>,
-  options: PrefixScanOptions,
+  options: PrefixScanOptions<d.Infer<TElement>>,
 ): PrefixScanPlan<TElement> {
-  return prepare(root, buffer as ScanBuffer, options).plan as PrefixScanPlan<TElement>;
+  return prepare(root, buffer as AnyScanBuffer, options as PrefixScanOptions<unknown>)
+    .plan as PrefixScanPlan<TElement>;
 }
 
 /** Performs an exclusive prefix scan of `buffer` in place and returns it */
-export function prefixScan<TElement extends ScanElementType>(
+export function prefixScan<TElement extends d.AnyWgslData>(
   root: TgpuRoot,
   buffer: ScanBuffer<TElement>,
-  binaryOp: BinaryOp,
+  binaryOp: BinaryOp<d.Infer<TElement>>,
 ): ScanBuffer<TElement> {
   const plan = createPrefixScan(root, buffer, binaryOp);
   plan.run();
@@ -184,12 +269,15 @@ export function prefixScan<TElement extends ScanElementType>(
  * Reduces `buffer` with the given associative operation, returning a single-element buffer
  * with the aggregate. The input is left untouched and the caller owns the returned buffer.
  */
-export function reduce<TElement extends ScanElementType>(
+export function reduce<TElement extends d.AnyWgslData>(
   root: TgpuRoot,
   buffer: ScanBuffer<TElement>,
-  binaryOp: BinaryOp,
+  binaryOp: BinaryOp<d.Infer<TElement>>,
 ): ScanBuffer<TElement> {
-  const { plan, scratch } = prepare(root, buffer as ScanBuffer, { ...binaryOp, reduceOnly: true });
+  const { plan, scratch } = prepare(root, buffer as AnyScanBuffer, {
+    ...(binaryOp as BinaryOp<unknown>),
+    reduceOnly: true,
+  });
   plan.run();
   for (const scratchBuffer of scratch) {
     if (scratchBuffer !== plan.resultBuffer) {
