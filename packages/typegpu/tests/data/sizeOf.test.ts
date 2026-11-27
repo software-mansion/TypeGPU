@@ -19,4 +19,22 @@ describe('d.sizeOf', () => {
       }"
     `);
   });
+
+  it('ignores @size on a schema that is not a struct member', () => {
+    const Sized = d.size(32, d.u32);
+
+    const sizeFn = tgpu.fn(
+      [],
+      d.u32,
+    )(() => {
+      'use gpu';
+      return d.sizeOf(Sized);
+    });
+
+    expect(tgpu.resolve([sizeFn])).toMatchInlineSnapshot(`
+      "fn sizeFn() -> u32 {
+        return 4u;
+      }"
+    `);
+  });
 });

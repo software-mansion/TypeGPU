@@ -62,6 +62,29 @@ describe('d.size', () => {
     expect(d.sizeOf(AlignedStruct)).toBe(24);
   });
 
+  it('does not change the size of a schema that is not a struct member', () => {
+    // WGSL only applies @size to struct members, so it has no effect here
+    expect(d.sizeOf(d.size(32, d.u32))).toBe(4);
+    expect(d.sizeOf(d.size(32, d.vec3f))).toBe(12);
+    expect(d.sizeOf(d.size(64, d.struct({ a: d.u32, b: d.vec2f })))).toBe(16);
+
+    // the custom size still applies once the schema is used as a member
+    const Struct = d.struct({ a: d.size(32, d.u32), b: d.u32 });
+    expect(d.sizeOf(Struct)).toBe(36);
+    expect(d.memoryLayoutOf(Struct, (s) => s.b).offset).toBe(32);
+  });
+
+  it('does not change the size of a loose schema that is not an unstruct member', () => {
+    expect(d.sizeOf(d.size(32, d.unstruct({ a: d.u32 })))).toBe(4);
+    expect(d.sizeOf(d.size(32, d.disarrayOf(d.u32, 2)))).toBe(8);
+    expect(d.sizeOf(d.size(16, d.unorm8x4))).toBe(4);
+
+    // the custom size still applies once the schema is used as a member
+    const Unstruct = d.unstruct({ a: d.size(32, d.unstruct({ x: d.u32 })), b: d.u32 });
+    expect(d.sizeOf(Unstruct)).toBe(36);
+    expect(d.memoryLayoutOf(Unstruct, (s) => s.b).offset).toBe(32);
+  });
+
   it('throws for invalid size values', () => {
     expect(() => d.size(3, d.u32)).toThrow();
     d.size(4, d.u32);
