@@ -2,6 +2,6 @@
   "title": "Oklab (Color Space)",
   "description": "Compares perceptual Oklab color interpolation with standard RGB mixing through an interactive GPU-rendered gradient.",
   "category": "simple",
-  "tags": ["basics", "color", "ecosystem", "interaction"],
+  "tags": ["basics"],
   "coolFactor": 6
 }

@@ -147,6 +147,43 @@ describe('TgpuBindGroupLayout', () => {
     });
   });
 
+  it('makes only read-only storage textures visible to vertex shaders by default', ({ root }) => {
+    const layout = tgpu.bindGroupLayout({
+      readOnly: { storageTexture: d.textureStorage2d('rgba8unorm', 'read-only') },
+      writeOnly: { storageTexture: d.textureStorage2d('rgba8unorm', 'write-only') },
+      readWrite: { storageTexture: d.textureStorage2d('r32float', 'read-write') },
+      defaultAccess: { storageTexture: d.textureStorage2d('rgba8unorm') },
+    });
+
+    root.unwrap(layout);
+
+    expect(root.device.createBindGroupLayout).toBeCalledWith({
+      label: 'layout',
+      entries: [
+        {
+          binding: 0,
+          visibility: DEFAULT_READONLY_VISIBILITY_FLAGS,
+          storageTexture: { access: 'read-only', format: 'rgba8unorm', viewDimension: '2d' },
+        },
+        {
+          binding: 1,
+          visibility: DEFAULT_MUTABLE_VISIBILITY_FLAGS,
+          storageTexture: { access: 'write-only', format: 'rgba8unorm', viewDimension: '2d' },
+        },
+        {
+          binding: 2,
+          visibility: DEFAULT_MUTABLE_VISIBILITY_FLAGS,
+          storageTexture: { access: 'read-write', format: 'r32float', viewDimension: '2d' },
+        },
+        {
+          binding: 3,
+          visibility: DEFAULT_MUTABLE_VISIBILITY_FLAGS,
+          storageTexture: { access: 'write-only', format: 'rgba8unorm', viewDimension: '2d' },
+        },
+      ],
+    });
+  });
+
   it('resolves textures to valid WGSL code', () => {
     const layout = tgpu.bindGroupLayout({
       fooTexture: { texture: d.texture1d(d.f32) },

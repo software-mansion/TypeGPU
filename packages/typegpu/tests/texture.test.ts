@@ -216,6 +216,35 @@ describe('TgpuTexture', () => {
     >();
   });
 
+  it('wraps an existing GPUTexture without creating or destroying one', ({ root, device }) => {
+    const rawTexture = root.device.createTexture({
+      size: [64, 32],
+      format: 'rgba16float',
+      usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.RENDER_ATTACHMENT,
+    });
+    device.mock.createTexture.mockClear();
+
+    const texture = root
+      .createTexture({ size: [64, 32], format: 'rgba16float' }, rawTexture)
+      .$usage('sampled', 'render');
+
+    expectTypeOf(texture).toEqualTypeOf<
+      TgpuTexture<{ size: [64, 32]; format: 'rgba16float' }> & SampledFlag & RenderFlag
+    >();
+    expect(root.unwrap(texture)).toBe(rawTexture);
+
+    root.unwrap(texture.createView(d.texture2d(d.f32)));
+    expect(rawTexture.createView).toHaveBeenCalledOnce();
+
+    expect(() => texture.$overrideFlags(GPUTextureUsage.STORAGE_BINDING)).toThrow(
+      'Cannot override flags of a texture that is not managed by TypeGPU.',
+    );
+
+    texture.destroy();
+    expect(rawTexture.destroy).not.toHaveBeenCalled();
+    expect(device.mock.createTexture).not.toHaveBeenCalled();
+  });
+
   it('creates transient textures with the exact WebGPU usage bits', ({ root, device }) => {
     const texture = root
       .createTexture({
@@ -451,7 +480,7 @@ Overload 3 of 4, '(schema: "(Error) Texture not usable as storage, call $usage('
         entries: [
           {
             binding: 0,
-            visibility: GPUShaderStage.COMPUTE | GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+            visibility: GPUShaderStage.COMPUTE,
             texture: { sampleType: 'unfilterable-float', viewDimension: '2d', multisampled: false },
           },
         ],

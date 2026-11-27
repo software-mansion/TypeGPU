@@ -69,17 +69,17 @@ const uniforms = root.createUniform(Uniforms);
 
 // functions
 
-const getBoxIntersection = tgpu
-  .fn(
-    [AxisAlignedBounds, Ray],
-    IntersectionStruct,
-  )(/* wgsl */ `(bounds, ray) {
-  var tMin: f32;
-  var tMax: f32;
-  var tMinY: f32;
-  var tMaxY: f32;
-  var tMinZ: f32;
-  var tMaxZ: f32;
+const getBoxIntersection = tgpu.fn(
+  [AxisAlignedBounds, Ray],
+  IntersectionStruct,
+)((bounds, ray) => {
+  'use gpu';
+  let tMin = d.f32();
+  let tMax = d.f32();
+  let tMinY = d.f32();
+  let tMaxY = d.f32();
+  let tMinZ = d.f32();
+  let tMaxZ = d.f32();
 
   if (ray.direction.x >= 0) {
     tMin = (bounds.min.x - ray.origin.x) / ray.direction.x;
@@ -97,7 +97,7 @@ const getBoxIntersection = tgpu
     tMaxY = (bounds.min.y - ray.origin.y) / ray.direction.y;
   }
 
-  if (tMin > tMaxY) || (tMinY > tMax) {
+  if (tMin > tMaxY || tMinY > tMax) {
     return IntersectionStruct();
   }
 
@@ -117,21 +117,20 @@ const getBoxIntersection = tgpu
     tMaxZ = (bounds.min.z - ray.origin.z) / ray.direction.z;
   }
 
-  if (tMin > tMaxZ) || (tMinZ > tMax) {
+  if (tMin > tMaxZ || tMinZ > tMax) {
     return IntersectionStruct();
   }
 
-  if tMinZ > tMin {
+  if (tMinZ > tMin) {
     tMin = tMinZ;
   }
 
-  if tMaxZ < tMax {
+  if (tMaxZ < tMax) {
     tMax = tMaxZ;
   }
 
-  return IntersectionStruct(tMin > 0 && tMax > 0, tMin, tMax);
-}`)
-  .$uses({ IntersectionStruct });
+  return IntersectionStruct({ intersects: tMin > 0 && tMax > 0, tMin, tMax });
+});
 
 const mainVertex = ({ $vertexIndex: vid }: TgpuVertexFn.AutoIn<{}>) => {
   'use gpu';

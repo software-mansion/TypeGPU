@@ -16,7 +16,7 @@ import {
   getBlockScope,
   checkOpts,
   originalMappingFor,
-  fallbackSourceTracer,
+  fallbackSourceTracker,
 } from './common.ts';
 
 import type {
@@ -25,7 +25,7 @@ import type {
   MetadatableFunction,
   NodeLocation,
   PluginTranspilationResult,
-  SourceTracer,
+  SourceTracker,
 } from './common.ts';
 
 // I love CommonJS 💔
@@ -184,10 +184,10 @@ If another plugin modifies the code, source maps may point to modified locations
 function tryGetSourceTracker(
   ctx: UnpluginBuildContext & UnpluginContext,
   fallbackFilename: string,
-): SourceTracer {
+): SourceTracker {
   if (!supportsCombinedSourcemap(ctx)) {
     warnAboutSourceMapsOnce();
-    return fallbackSourceTracer(fallbackFilename);
+    return fallbackSourceTracker(fallbackFilename);
   }
 
   const combinedMap = ctx.getCombinedSourcemap();
@@ -255,7 +255,7 @@ export const unpluginFactory = ((rawOptions, _meta) => {
               return magicString.generateMap({
                 source: id,
                 includeContent: true,
-                hires: options.unstable_sourceMaps ? true : 'boundary',
+                hires: 'boundary',
               });
             },
           };

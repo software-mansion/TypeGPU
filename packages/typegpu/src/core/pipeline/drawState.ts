@@ -1,6 +1,7 @@
 import { MissingBindGroupsError, MissingVertexBuffersError } from '../../errors.ts';
 import type { BaseData } from '../../data/wgslTypes.ts';
 import { $internal } from '../../shared/symbols.ts';
+import { DEV } from '../../shared/env.ts';
 import { logger } from '../../tgpuLogger.ts';
 import {
   isBindGroup,
@@ -218,12 +219,14 @@ export function requireIndexBuffer(indexBuffer: IndexBufferEntry | undefined): v
 }
 
 function warnAboutUnreachableSubmission(core: object, what: string): void {
-  logger.warnOnce(
-    'suspicious',
-    core,
-    what,
-    `${what} is ignored when recording into a raw GPUCommandEncoder, since there is no submission to report after. Use root.createCommandEncoder() instead.`,
-  );
+  if (DEV) {
+    logger.warnOnce(
+      'suspicious',
+      core,
+      what,
+      `${what} is ignored when recording into a raw or wrapped GPUCommandEncoder, since there is no submission to report after. Use root.createCommandEncoder() without an existing encoder instead.`,
+    );
+  }
 }
 
 /** Returns false when there is no encoder to defer the read to, meaning the output is lost */
@@ -261,12 +264,12 @@ export function finalizeOwnEncoder(
 const PassKindWording = {
   render: {
     into: 'drawing into a render pass',
-    intoRaw: 'drawing into a raw render pass',
+    intoRaw: 'drawing into a render pass of a raw or wrapped GPUCommandEncoder',
     begin: 'beginRenderPass',
   },
   compute: {
     into: 'dispatching into a compute pass',
-    intoRaw: 'dispatching into a raw compute pass',
+    intoRaw: 'dispatching into a compute pass of a raw or wrapped GPUCommandEncoder',
     begin: 'beginComputePass',
   },
 } as const;
@@ -281,7 +284,7 @@ function reportIgnoredPriors(
 ): void {
   const wording = PassKindWording[passKind];
 
-  if (hasAttachments) {
+  if (DEV && hasAttachments) {
     logger.warnOnce(
       'suspicious',
       core,
@@ -290,7 +293,7 @@ function reportIgnoredPriors(
     );
   }
 
-  if (hasTimestampWrites) {
+  if (DEV && hasTimestampWrites) {
     logger.warnOnce(
       'suspicious',
       core,
@@ -300,12 +303,14 @@ function reportIgnoredPriors(
   }
 
   if (logResources && !queueLogDrain(owner, logResources)) {
-    logger.warnOnce(
-      'suspicious',
-      core,
-      'logs',
-      `Shader console.log output is ignored when ${wording.intoRaw} encoder, since there is no submission to read it back after.`,
-    );
+    if (DEV) {
+      logger.warnOnce(
+        'suspicious',
+        core,
+        'logs',
+        `Shader console.log output is ignored when ${wording.intoRaw}, since there is no submission to read it back after.`,
+      );
+    }
   }
 }
 

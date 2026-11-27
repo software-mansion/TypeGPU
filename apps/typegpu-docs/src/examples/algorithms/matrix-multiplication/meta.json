@@ -1,7 +1,7 @@
 {
   "title": "Matrix Multiplication",
-  "description": "Multiplies configurable matrices in a compute shader and displays the input and result data for comparison.",
+  "description": "Multiplies configurable matrices with a tiled shared-memory compute shader, a simple compute shader, or the CPU, and compares their timings.",
   "category": "algorithms",
-  "tags": ["linear algebra"],
-  "coolFactor": 4
+  "tags": [],
+  "coolFactor": 5
 }

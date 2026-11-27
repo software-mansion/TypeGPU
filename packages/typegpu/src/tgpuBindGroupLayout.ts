@@ -75,7 +75,7 @@ export type TgpuLayoutEntryBase = {
    * By default, each resource is visible to all shader stage types, but
    * depending on the underlying implementation, this may have performance implications.
    *
-   * @default ['compute','fragment'] for mutable resources
+   * @default ['compute','fragment'] for mutable storage buffers and writable storage textures
    * @default ['compute','vertex','fragment'] for everything else
    */
   visibility?: ShaderStage[];
@@ -315,6 +315,16 @@ export class MissingBindingError extends Error {
 const DEFAULT_MUTABLE_VISIBILITY: ShaderStage[] = ['compute', 'fragment'];
 const DEFAULT_READONLY_VISIBILITY: ShaderStage[] = ['compute', 'vertex', 'fragment'];
 
+export function visibilityOf(entry: TgpuLayoutEntry): ShaderStage[] {
+  if (entry.visibility) {
+    return entry.visibility;
+  }
+  const writable =
+    ('storage' in entry && entry.access === 'mutable') ||
+    ('storageTexture' in entry && entry.storageTexture.access !== 'read-only');
+  return writable ? DEFAULT_MUTABLE_VISIBILITY : DEFAULT_READONLY_VISIBILITY;
+}
+
 class TgpuBindGroupLayoutImpl<
   Entries extends Record<string, TgpuLayoutEntry | null>,
 > implements TgpuBindGroupLayout<Entries> {
@@ -424,38 +434,26 @@ class TgpuBindGroupLayoutImpl<
             return null;
           }
 
-          let visibility = entry.visibility;
-
+          const visibility = visibilityOf(entry);
           const binding: GPUBindGroupLayoutEntry = {
             binding: idx,
             visibility: 0,
           };
 
           if ('uniform' in entry) {
-            visibility = visibility ?? DEFAULT_READONLY_VISIBILITY;
-
             binding.buffer = {
               type: 'uniform' as const,
             };
           } else if ('storage' in entry) {
-            visibility =
-              visibility ??
-              (entry.access === 'mutable'
-                ? DEFAULT_MUTABLE_VISIBILITY
-                : DEFAULT_READONLY_VISIBILITY);
-
             binding.buffer = {
               type:
                 entry.access === 'mutable' ? ('storage' as const) : ('read-only-storage' as const),
             };
           } else if ('sampler' in entry) {
-            visibility = visibility ?? DEFAULT_READONLY_VISIBILITY;
-
             binding.sampler = {
               type: entry.sampler,
             };
           } else if ('texture' in entry) {
-            visibility = visibility ?? DEFAULT_READONLY_VISIBILITY;
             const { multisampled, dimension, bindingSampleType } = entry.texture;
             binding.texture = {
               sampleType: entry.sampleType ?? bindingSampleType[0],
@@ -463,7 +461,6 @@ class TgpuBindGroupLayoutImpl<
               multisampled,
             } satisfies Required<GPUTextureBindingLayout>;
           } else if ('storageTexture' in entry) {
-            visibility = visibility ?? DEFAULT_MUTABLE_VISIBILITY;
             const { dimension, access, format } = entry.storageTexture;
             binding.storageTexture = {
               access,
@@ -471,17 +468,16 @@ class TgpuBindGroupLayoutImpl<
               viewDimension: dimension,
             } satisfies Required<GPUStorageTextureBindingLayout>;
           } else if ('externalTexture' in entry) {
-            visibility = visibility ?? DEFAULT_READONLY_VISIBILITY;
             binding.externalTexture = {};
           }
 
-          if (visibility?.includes('compute')) {
+          if (visibility.includes('compute')) {
             binding.visibility |= GPUShaderStage.COMPUTE;
           }
-          if (visibility?.includes('vertex')) {
+          if (visibility.includes('vertex')) {
             binding.visibility |= GPUShaderStage.VERTEX;
           }
-          if (visibility?.includes('fragment')) {
+          if (visibility.includes('fragment')) {
             binding.visibility |= GPUShaderStage.FRAGMENT;
           }
 

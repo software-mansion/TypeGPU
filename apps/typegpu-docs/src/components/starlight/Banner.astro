@@ -1,0 +1,29 @@
+---
+// A page's own `banner` frontmatter wins. Every other docs page carries the TypeGPU Kit promo,
+// except the pages that already introduce Kit in their content.
+import VanillaBanner from '@astrojs/starlight/components/Banner.astro';
+import KitPromo from '../kit/KitPromo.astro';
+
+const KIT_PAGES = ['getting-started', 'ecosystem/typegpu-kit'];
+
+const { entry, id } = Astro.locals.starlightRoute;
+const showKit = !entry.data.banner && !KIT_PAGES.includes(id);
+---
+
+{
+  showKit ? (
+    <div class="kit-banner">
+      <KitPromo variant="bar" dismissKey="docs-banner" />
+    </div>
+  ) : (
+    <VanillaBanner />
+  )
+}
+
+<style>
+  /* Edge to edge across the content column, under the site header */
+  .kit-banner :global(.kit-promo) {
+    border-top: 0;
+    border-inline: 0;
+  }
+</style>

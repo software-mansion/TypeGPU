@@ -10,7 +10,6 @@ import { $internal, $resolve } from '../../shared/symbols.ts';
 import type { Assume, RemoveIndexSignature } from '../../shared/utilityTypes.ts';
 import type { TgpuVertexAttrib } from '../../shared/vertexFormat.ts';
 import type { ResolutionCtx, SelfResolvable } from '../../types.ts';
-import { shaderStageSlot } from '../slot/internalSlots.ts';
 import { createFnCore, type FnCore } from './fnCore.ts';
 import type { BaseIOData } from './fnTypes.ts';
 
@@ -101,7 +100,7 @@ export class AutoFragmentFn implements SelfResolvable {
   }
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
-    return ctx.withSlots([[shaderStageSlot, 'fragment']], () =>
+    return ctx.withShaderStage('fragment', () =>
       this[$internal].fnCore.resolve(ctx, [this.autoIn], this.autoOut),
     );
   }
@@ -150,7 +149,7 @@ export class AutoVertexFn implements SelfResolvable {
   }
 
   [$resolve](ctx: ResolutionCtx): ResolvedSnippet {
-    return ctx.withSlots([[shaderStageSlot, 'vertex']], () =>
+    return ctx.withShaderStage('vertex', () =>
       this[$internal].fnCore.resolve(ctx, [this.autoIn], this.autoOut),
     );
   }

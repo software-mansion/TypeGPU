@@ -2,6 +2,6 @@
   "title": "Triangle (WebGL fallback)",
   "description": "Renders the foundational colored triangle through TypeGPU's WebGL fallback path.",
   "category": "simple",
-  "tags": ["basics", "primitives", "webgl"],
+  "tags": ["basics"],
   "coolFactor": 3
 }

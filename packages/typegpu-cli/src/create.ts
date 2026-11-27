@@ -7,6 +7,7 @@ import { scaffoldProject, prepareDirectory } from './utils/files.ts';
 import { getProjectName, isValidPackageName, getPackageName } from './utils/inputs.ts';
 import { detect, resolveCommand } from 'package-manager-detector';
 import { addAgentSkills, askForAgentSkills } from './steps/skills.ts';
+import { writeAgentRules } from './steps/agents.ts';
 import {
   DEFAULT_PROJECT_TEMPLATE,
   DEFAULT_PROJECT_DIR,
@@ -77,7 +78,7 @@ export async function createProject(cwd: string, options?: CreateProjectOptions)
     '../templates',
     `template-${projectTemplate}`,
   );
-  await scaffoldProject(
+  const pkg = await scaffoldProject(
     templateDir,
     root,
     packageName,
@@ -102,6 +103,8 @@ export async function createProject(cwd: string, options?: CreateProjectOptions)
   if (shouldInstall) {
     pmInstall(pm);
   }
+
+  writeAgentRules(root, pm, pkg);
 
   if (nonInteractive) {
     addAgentSkills(pm, { nonInteractive: true });

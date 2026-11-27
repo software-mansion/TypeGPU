@@ -328,3 +328,63 @@ test('should give different names to global declaration accessed inside nested f
     }"
   `);
 });
+
+test('should give variables new names if they collide with predeclared types', () => {
+  const main = () => {
+    'use gpu';
+    const vec2f = d.vec2f(1);
+    const other = d.vec2f(2);
+    return vec2f + other;
+  };
+
+  expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+    "fn main() -> vec2f {
+      let vec2f_1 = vec2f(1);
+      let other = vec2f(2);
+      return (vec2f_1 + other);
+    }"
+  `);
+});
+
+test('should give new names to functions that collide with predeclared types', () => {
+  const mat4x4f = tgpu
+    .fn(
+      [],
+      d.f32,
+    )(() => 1)
+    .$name('mat4x4f');
+
+  const main = () => {
+    'use gpu';
+    return d.mat4x4f().columns[0].x + mat4x4f();
+  };
+
+  expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+    "fn mat4x4f_1() -> f32 {
+      return 1f;
+    }
+
+    fn main() -> f32 {
+      return (mat4x4f(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)[0i].x + mat4x4f_1());
+    }"
+  `);
+});
+
+test('should give new names to structs that collide with predeclared types', () => {
+  const Foo = d.struct({ texture_2d: d.u32 }).$name('texture_2d');
+
+  const main = () => {
+    'use gpu';
+    return Foo({ texture_2d: 1 });
+  };
+
+  expect(tgpu.resolve([main])).toMatchInlineSnapshot(`
+    "struct texture_2d_1 {
+      texture_2d: u32,
+    }
+
+    fn main() -> texture_2d_1 {
+      return texture_2d_1(1u);
+    }"
+  `);
+});

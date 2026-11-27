@@ -19,7 +19,7 @@ const context = root.configureContext({ canvas, alphaMode: 'premultiplied' });
 let gameSize = 64;
 const gameSizeUniform = root.createUniform(d.u32, gameSize);
 const timeUniform = root.createUniform(d.f32, 0);
-const nearestSampler = root.device.createSampler({
+const nearestSampler = root.createSampler({
   magFilter: 'nearest',
   minFilter: 'nearest',
   addressModeU: 'repeat',

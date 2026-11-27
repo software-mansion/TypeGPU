@@ -663,6 +663,81 @@ describe('tgpu resolveWithContext', () => {
 
     expect(consoleWarnSpy).toHaveBeenCalledTimes(0);
   });
+
+  it('makes automatic bindings visible only to the stages using them', ({ root }) => {
+    const offset = root.createUniform(d.vec2f);
+    const color = root.createUniform(d.vec4f);
+    const scale = root.createReadonly(d.f32);
+
+    const getScale = () => {
+      'use gpu';
+      return scale.$;
+    };
+    const scaled = (value: number) => {
+      'use gpu';
+      return value * getScale();
+    };
+
+    const pipeline = root.createRenderPipeline({
+      vertex: ({ $vertexIndex }) => {
+        'use gpu';
+        const x = scaled(d.f32($vertexIndex));
+        return { $position: d.vec4f(d.vec2f(x, 0) + offset.$, 0, 1) };
+      },
+      fragment: () => {
+        'use gpu';
+        return color.$ * scaled(1);
+      },
+      targets: { format: 'rgba8unorm' },
+    });
+
+    const { catchall } = tgpu.resolveWithContext([pipeline]);
+    expect(catchall?.[1].layout.entries).toStrictEqual({
+      0: { storage: d.f32, access: 'readonly', visibility: ['vertex', 'fragment'] },
+      1: { uniform: d.vec2f, visibility: ['vertex'] },
+      2: { uniform: d.vec4f, visibility: ['fragment'] },
+    });
+  });
+
+  it('keeps automatic binding visibility when resolving an entry function twice', ({ root }) => {
+    const time = root.createUniform(d.f32);
+    const main = tgpu.vertexFn({ out: { position: d.builtin.position } })(() => {
+      'use gpu';
+      return { position: d.vec4f(time.$, 0, 0, 1) };
+    });
+
+    const { catchall } = tgpu.resolveWithContext([main, main]);
+    expect(catchall?.[1].layout.entries).toStrictEqual({
+      0: { uniform: d.f32, visibility: ['vertex'] },
+    });
+  });
+
+  it('keeps automatic bindings visible to every stage outside entry functions', ({ root }) => {
+    const scale = root.createUniform(d.f32);
+    const doubled = () => {
+      'use gpu';
+      return 2 * scale.$;
+    };
+
+    const { catchall } = tgpu.resolveWithContext([doubled]);
+    expect(catchall?.[1].layout.entries).toStrictEqual({ 0: { uniform: d.f32 } });
+  });
+
+  it('keeps automatic binding visibility of plain functions resolved by an entry function', ({
+    root,
+  }) => {
+    const scale = root.createUniform(d.f32);
+    const doubled = () => {
+      'use gpu';
+      return 2 * scale.$;
+    };
+    const main = tgpu.computeFn({ workgroupSize: [1] })`{ let x = doubled(); }`.$uses({ doubled });
+
+    const { catchall } = tgpu.resolveWithContext([main]);
+    expect(catchall?.[1].layout.entries).toStrictEqual({
+      0: { uniform: d.f32, visibility: ['compute'] },
+    });
+  });
 });
 
 describe('resolve without template', () => {

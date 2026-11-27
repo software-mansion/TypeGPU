@@ -121,12 +121,30 @@ export function getPatchInstructions<TData extends wgsl.BaseData>(
         return;
       }
 
+      // Runtime-sized arrays are bounded by how many elements fit in the target buffer.
+      // Disarrays always occupy exactly `sizeOf` bytes, so an empty one keeps a bound of 0.
+      const elementCount =
+        isWgslArray(node) && arrSchema.elementCount === 0
+          ? Math.max(
+              0,
+              Math.floor((buf.byteLength - offset - sizeOf(arrSchema.elementType)) / elementSize) +
+                1,
+            )
+          : arrSchema.elementCount;
+
       const sparse = value as Record<string, unknown>;
       for (const key of Object.keys(sparse)) {
         const idx = Number(key);
-        if (!Number.isNaN(idx)) {
-          collect(arrSchema.elementType, sparse[key], offset + idx * elementSize, elementPadding);
+        // Only keys that are written like an index count as one ('' or '0x1' do not)
+        if (Number.isNaN(idx) || String(idx) !== key) {
+          throw new Error(`'${key}' is not a valid array index.`);
         }
+        if (!Number.isInteger(idx) || idx < 0 || idx >= elementCount) {
+          throw new Error(
+            `Index ${key} is out of bounds for an array of ${elementCount} elements.`,
+          );
+        }
+        collect(arrSchema.elementType, sparse[key], offset + idx * elementSize, elementPadding);
       }
       return;
     }

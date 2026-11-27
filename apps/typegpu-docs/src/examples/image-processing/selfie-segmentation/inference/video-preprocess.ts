@@ -1,5 +1,5 @@
 import { tgpu, d, std } from 'typegpu';
-import type { TgpuBindGroup, TgpuRoot } from 'typegpu';
+import type { TgpuBindGroup, TgpuComputePass, TgpuRoot } from 'typegpu';
 import { FrameCropParams, initialFrameCropParams, type VideoFrameCrop } from '../frame.ts';
 import { WORKGROUP_SIZE, type Vec4Buffer } from './kernels/types.ts';
 
@@ -26,7 +26,7 @@ const videoFrameOutputLayout = tgpu.bindGroupLayout({
 
 export interface VideoPreprocessor {
   encode(
-    pass: GPUComputePassEncoder,
+    pass: TgpuComputePass,
     externalTexture: GPUExternalTexture,
     crop: VideoFrameCrop,
     dst: Vec4Buffer,

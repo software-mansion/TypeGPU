@@ -1,0 +1,15 @@
+{
+  "title": "Jelly Knob",
+  "description": "Builds a tactile rotary control from ray-marched SDF geometry, with springy jelly deformation and a frosted-glass LED progress ring.",
+  "category": "advanced",
+  "tags": [
+    "3d",
+    "interactive",
+    "lighting",
+    "post-processing",
+    "ray marching",
+    "refraction",
+    "shadows"
+  ],
+  "coolFactor": 9.9
+}
