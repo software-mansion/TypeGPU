@@ -3,16 +3,14 @@ import type { Snippet } from '../data/snippet.ts';
 import { stringifyNode } from '../shared/tseynit.ts';
 
 /**
- * The JS expression that first produced a given snippet.
+ * The JS expression that produced a given snippet.
  * Snippets can be shared (e.g. every reference to a variable returns the same snippet),
- * so only the first, most specific node is remembered.
+ * so only the most recent node is remembered.
  */
 const sourceNodes = new WeakMap<Snippet, tinyest.Expression>();
 
 export function setSourceNode(snippet: Snippet, node: tinyest.Expression): Snippet {
-  if (!sourceNodes.has(snippet)) {
-    sourceNodes.set(snippet, node);
-  }
+  sourceNodes.set(snippet, node);
   return snippet;
 }
 
