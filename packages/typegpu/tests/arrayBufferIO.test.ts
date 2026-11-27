@@ -286,5 +286,13 @@ describe('arrayBufferIO', () => {
       patchArrayBuffer(buffer, Schema, { b: new Uint32Array([1, 2, 3]) });
       expect([...new Uint32Array(buffer)]).toStrictEqual([0, 0, 0, 0, 1, 2, 3, 0]);
     });
+
+    it('does not clamp to element sizeof', () => {
+      const Schema = d.arrayOf(d.vec3u, 0);
+      const buffer = new ArrayBuffer(28);
+
+      patchArrayBuffer(buffer, Schema, new Uint32Array([1, 2, 3, 4, 5, 6, 7, 8]));
+      expect([...new Uint32Array(buffer)]).toStrictEqual([1, 2, 3, 4, 5, 6, 7]);
+    });
   });
 });

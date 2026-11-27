@@ -102,19 +102,23 @@ export function getPatchInstructions<TData extends wgsl.BaseData>(
     }
 
     if (isWgslArray(inner) || isDisarray(inner)) {
-      const elementSize = strideOf(inner);
-      const elementPadding = elementSize - sizeOf(inner.elementType);
+      const elementStride = strideOf(inner);
+      const elementPadding = elementStride - sizeOf(inner.elementType);
 
       const elementCount =
         isWgslArray(inner) && inner.elementCount === 0
           ? Math.max(
               0,
-              Math.floor((buf.byteLength - offset - sizeOf(inner.elementType)) / elementSize) + 1,
+              Math.floor((buf.byteLength - offset - sizeOf(inner.elementType)) / elementStride) + 1,
             )
           : inner.elementCount;
 
       if (ArrayBuffer.isView(value)) {
-        const copyLen = Math.min(value.byteLength, elementCount * elementSize);
+        const copyLen = Math.min(
+          value.byteLength,
+          elementCount * elementStride,
+          buf.byteLength - offset,
+        );
         pendingWrites.push(() => {
           new Uint8Array(buf, offset, copyLen).set(
             new Uint8Array(value.buffer, value.byteOffset, copyLen),
@@ -126,7 +130,7 @@ export function getPatchInstructions<TData extends wgsl.BaseData>(
 
       if (Array.isArray(value)) {
         for (let i = 0; i < Math.min(elementCount, value.length); i++) {
-          collect(inner.elementType, value[i], offset + i * elementSize, elementPadding);
+          collect(inner.elementType, value[i], offset + i * elementStride, elementPadding);
         }
         return;
       }
@@ -143,7 +147,7 @@ export function getPatchInstructions<TData extends wgsl.BaseData>(
             `Index ${key} is out of bounds for an array of ${elementCount} elements.`,
           );
         }
-        collect(inner.elementType, sparse[key], offset + idx * elementSize, elementPadding);
+        collect(inner.elementType, sparse[key], offset + idx * elementStride, elementPadding);
       }
       return;
     }
