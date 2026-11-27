@@ -465,7 +465,6 @@ export class ResolutionCtxImpl implements ResolutionCtx {
    */
   public readonly bindGroupLayoutsToPlaceholderMap = new Map<TgpuBindGroupLayout, string>();
   private _nextFreeLayoutPlaceholderIdx = 0;
-  public readonly fixedBindings: FixedBindingConfig[] = [];
   // --
 
   #topProbeFrame: ProbeFrame = new ProbeFrame();
@@ -837,6 +836,14 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     let placeholderKey = memoMap.get(layout);
 
     if (!placeholderKey) {
+      // Checked while resolving, so the item using the layout is never memoized
+      // in the shared namespace and a retry hits the same error.
+      const catchallIdx = this.#namespaceInternal.catchallGroupIndex;
+      if (catchallIdx !== undefined && layout.index === catchallIdx) {
+        throw new Error(
+          `The shared namespace already reserved group index ${catchallIdx} for the catch-all bind group.`,
+        );
+      }
       placeholderKey = `#BIND_GROUP_LAYOUT_${this._nextFreeLayoutPlaceholderIdx++}#`;
       memoMap.set(layout, placeholderKey);
     }
@@ -848,9 +855,9 @@ export class ResolutionCtxImpl implements ResolutionCtx {
     layoutEntry: TgpuLayoutEntry,
     resource: object,
   ): { group: string; binding: number } {
-    const binding = this.fixedBindings.length;
+    const binding = this.#namespaceInternal.fixedBindings.length;
     const config: FixedBindingConfig = { layoutEntry, resource };
-    this.fixedBindings.push(config);
+    this.#namespaceInternal.fixedBindings.push(config);
     this.report(bindingUseProbe, { binding: config, entryStage: 'none' });
 
     return {
@@ -1245,6 +1252,8 @@ export interface ResolvedDeclaration {
  *  included (memoized ones are not re-emitted).
  * @param usedBindGroupLayouts - List of used `tgpu.bindGroupLayout`s.
  * @param catchall - Automatically constructed bind group for buffer usages and buffer bindings, preceded by its index.
+ *  Includes bindings used by this resolution, including memoized dependencies. The group index and
+ *  binding indices remain stable across resolutions sharing a namespace. Undefined when no catch-all bindings are used.
  * @param logResources - Buffers and information about used console.logs needed to decode the raw data.
  * @param usedImmediate - The immediate variable used by the shader, if any.
  */
@@ -1258,6 +1267,7 @@ export interface ResolutionResult {
 }
 
 export function resolve(item: Wgsl, options: ResolutionCtxImplOptions): ResolutionResult {
+  const namespace = options.namespace[$internal];
   const ctx = new ResolutionCtxImpl(options);
   const snippet = options.config
     ? ctx.withSlots(options.config(new ConfigurableImpl([])).bindings, () => ctx.resolve(item))
@@ -1269,14 +1279,36 @@ export function resolve(item: Wgsl, options: ResolutionCtxImplOptions): Resoluti
   const takenIndices = new Set<number>(
     [...memoMap.keys()].map((layout) => layout.index).filter((v): v is number => v !== undefined),
   );
+  if (namespace.catchallGroupIndex !== undefined) {
+    if (takenIndices.has(namespace.catchallGroupIndex)) {
+      throw new Error(
+        `The shared namespace already reserved group index ${namespace.catchallGroupIndex} for the catch-all bind group.`,
+      );
+    }
+    takenIndices.add(namespace.catchallGroupIndex);
+  }
+  // Group indices automatically assigned by earlier resolves sharing the namespace
+  // stay reserved, so their memoized declarations never collide with new ones.
+  for (const idx of namespace.automaticLayoutIndices.values()) {
+    takenIndices.add(idx);
+  }
 
   const automaticIds = naturalsExcept(takenIndices);
 
   const bindingUses = [...ctx.rootProbes.get(bindingUseProbe)];
-  const layoutEntries = ctx.fixedBindings.map(
-    (binding, idx) =>
-      [String(idx), layoutEntryForUses(binding, bindingUses)] as [string, TgpuLayoutEntry],
+  const usedBindings = new Set(bindingUses.map((use) => use.binding));
+  const fixedBindings = [...namespace.fixedBindings.entries()].filter(([, binding]) =>
+    usedBindings.has(binding),
   );
+  // Layout unwrapping assigns binding numbers by entry position, so indices
+  // used by other resolves sharing the namespace are kept as `null` holes.
+  const layoutEntries: [string, TgpuLayoutEntry | null][] = Array.from(
+    { length: (fixedBindings.at(-1)?.[0] ?? -1) + 1 },
+    (_, idx) => [String(idx), null],
+  );
+  for (const [idx, binding] of fixedBindings) {
+    layoutEntries[idx] = [String(idx), layoutEntryForUses(binding, bindingUses)];
+  }
 
   // Bind group indices are only known now, so the same placeholder
   // replacements applied to `code` are recorded and re-applied to each
@@ -1284,7 +1316,7 @@ export function resolve(item: Wgsl, options: ResolutionCtxImplOptions): Resoluti
   const bindingReplacements: [placeholder: string, index: string][] = [];
 
   const createCatchallGroup = () => {
-    const catchallIdx = automaticIds.next().value;
+    const catchallIdx = (namespace.catchallGroupIndex ??= automaticIds.next().value);
     const catchallLayout = bindGroupLayout(Object.fromEntries(layoutEntries));
     usedBindGroupLayouts[catchallIdx] = catchallLayout;
     code = code.replaceAll(CATCHALL_BIND_GROUP_IDX_MARKER, String(catchallIdx));
@@ -1298,7 +1330,7 @@ export function resolve(item: Wgsl, options: ResolutionCtxImplOptions): Resoluti
         catchallLayout,
         Object.fromEntries(
           // oxlint-disable-next-line typescript/no-explicit-any -- it's fine
-          ctx.fixedBindings.map((binding, idx) => [String(idx), binding.resource] as [string, any]),
+          fixedBindings.map(([idx, binding]) => [String(idx), binding.resource] as [string, any]),
         ),
       ),
     ] as [number, TgpuBindGroup];
@@ -1306,10 +1338,14 @@ export function resolve(item: Wgsl, options: ResolutionCtxImplOptions): Resoluti
 
   // Retrieving the catch-all binding index first, because it's inherently
   // the least swapped bind group (fixed and cannot be swapped).
-  const catchall = layoutEntries.length > 0 ? createCatchallGroup() : undefined;
+  const catchall = fixedBindings.length > 0 ? createCatchallGroup() : undefined;
 
   for (const [layout, placeholder] of memoMap.entries()) {
-    const idx = layout.index ?? automaticIds.next().value;
+    let idx = layout.index ?? namespace.automaticLayoutIndices.get(layout);
+    if (idx === undefined) {
+      idx = automaticIds.next().value;
+      namespace.automaticLayoutIndices.set(layout, idx);
+    }
     usedBindGroupLayouts[idx] = layout;
     code = code.replaceAll(placeholder, String(idx));
     bindingReplacements.push([placeholder, String(idx)]);
