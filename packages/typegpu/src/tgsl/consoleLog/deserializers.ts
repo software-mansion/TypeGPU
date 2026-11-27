@@ -1,4 +1,4 @@
-import { mat2x2f, mat3x3f, mat4x4f } from '../../data/matrix.ts';
+import { mat2x2f, mat2x2h, mat3x3f, mat3x3h, mat4x4f, mat4x4h } from '../../data/matrix.ts';
 import { f32, i32, u32 } from '../../data/numeric.ts';
 import { sizeOf } from '../../data/sizeOf.ts';
 import {
@@ -21,6 +21,7 @@ import {
 import {
   type AnyWgslData,
   type BaseData,
+  type v2f,
   isWgslArray,
   isWgslData,
   isWgslStruct,
@@ -92,6 +93,35 @@ const deserializerMap: DeserializerMap = {
       toF(d[8]),  toF(d[9]),  toF(d[10]), toF(d[11]),
       toF(d[12]), toF(d[13]), toF(d[14]), toF(d[15]),
     ),
+  mat2x2h(d: Uint32Array) {
+    const c0 = unpack(d[0]);
+    const c1 = unpack(d[1]);
+    return mat2x2h(c0.x, c0.y, c1.x, c1.y);
+  },
+  mat3x3h(d: Uint32Array) {
+    const [c0xy, c0z, c1xy, c1z, c2xy, c2z] = [0, 1, 2, 3, 4, 5].map((i) => unpack(d[i])) as [
+      v2f,
+      v2f,
+      v2f,
+      v2f,
+      v2f,
+      v2f,
+    ];
+    // oxfmt-ignore
+    return mat3x3h(
+      c0xy.x, c0xy.y, c0z.x,
+      c1xy.x, c1xy.y, c1z.x,
+      c2xy.x, c2xy.y, c2z.x,
+    );
+  },
+  mat4x4h(d: Uint32Array) {
+    const col = (i: number) => {
+      const xy = unpack(d[2 * i]);
+      const zw = unpack(d[2 * i + 1]);
+      return vec4h(xy.x, xy.y, zw.x, zw.y);
+    };
+    return mat4x4h(col(0), col(1), col(2), col(3));
+  },
 };
 
 // -------

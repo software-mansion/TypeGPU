@@ -40,11 +40,21 @@ export const vec4h = (() => (assignInfixOperators(), _vec4h))();
 export const vec4i = (() => (assignInfixOperators(), _vec4i))();
 export const vec4u = (() => (assignInfixOperators(), _vec4u))();
 
-import { mat2x2f as _mat2x2f, mat3x3f as _mat3x3f, mat4x4f as _mat4x4f } from './matrix.ts';
+import {
+  mat2x2f as _mat2x2f,
+  mat2x2h as _mat2x2h,
+  mat3x3f as _mat3x3f,
+  mat3x3h as _mat3x3h,
+  mat4x4f as _mat4x4f,
+  mat4x4h as _mat4x4h,
+} from './matrix.ts';
 
 export const mat2x2f = (() => (assignInfixOperators(), _mat2x2f))();
 export const mat3x3f = (() => (assignInfixOperators(), _mat3x3f))();
 export const mat4x4f = (() => (assignInfixOperators(), _mat4x4f))();
+export const mat2x2h = (() => (assignInfixOperators(), _mat2x2h))();
+export const mat3x3h = (() => (assignInfixOperators(), _mat3x3h))();
+export const mat4x4h = (() => (assignInfixOperators(), _mat4x4h))();
 
 export { abstractFloat, abstractInt, bool, f16, f32, i32, u16, u32 } from './numeric.ts';
 export {
@@ -84,11 +94,17 @@ export type {
   Invariant,
   Location,
   m2x2f,
+  m2x2h,
   m3x3f,
+  m3x3h,
   m4x4f,
+  m4x4h,
   Mat2x2f,
+  Mat2x2h,
   Mat3x3f,
+  Mat3x3h,
   Mat4x4f,
+  Mat4x4h,
   matBase,
   Ptr,
   Size,

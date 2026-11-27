@@ -7,6 +7,9 @@ import type {
   Mat2x2f,
   Mat3x3f,
   Mat4x4f,
+  Mat2x2h,
+  Mat3x3h,
+  Mat4x4h,
   U16,
   U32,
   Vec2b,
@@ -46,6 +49,9 @@ type KindToSchemaMap = {
   mat2x2f: Mat2x2f;
   mat3x3f: Mat3x3f;
   mat4x4f: Mat4x4f;
+  mat2x2h: Mat2x2h;
+  mat3x3h: Mat3x3h;
+  mat4x4h: Mat4x4h;
 };
 
 /**

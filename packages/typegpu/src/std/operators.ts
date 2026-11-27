@@ -21,7 +21,7 @@ import {
   type BaseData,
   type mBaseForVec,
   type vBaseForMat,
-  isFloat32VecInstance,
+  isFloatVecInstance,
   isMat,
   isMatInstance,
   isVec,
@@ -188,16 +188,16 @@ function cpuMul(lhs: number | NumVec | Mat, rhs: number | NumVec | Mat) {
     assertEqualKinds(lhs, rhs);
     return generalizeFn((a, b) => a * b, [lhs, rhs]); // component-wise
   }
-  if (isFloat32VecInstance(lhs) && isMatInstance(rhs)) {
-    if (lhs.length !== rhs.columns.length) {
+  if (isFloatVecInstance(lhs) && isMatInstance(rhs)) {
+    if (lhs.length !== rhs.columns.length || lhs.kind.at(-1) !== rhs.kind.at(-1)) {
       throw new WgslTypeError(
         `Unsupported signature. Kind '${kindOf(lhs)}' cannot be multiplied by '${kindOf(rhs)}'.`,
       );
     }
     return VectorOps.mulVxM[rhs.kind](lhs, rhs); // row-vector-matrix
   }
-  if (isMatInstance(lhs) && isFloat32VecInstance(rhs)) {
-    if (lhs.columns.length !== rhs.length) {
+  if (isMatInstance(lhs) && isFloatVecInstance(rhs)) {
+    if (lhs.columns.length !== rhs.length || lhs.kind.at(-1) !== rhs.kind.at(-1)) {
       throw new WgslTypeError(
         `Unsupported signature. Kind '${kindOf(lhs)}' cannot be multiplied by '${kindOf(rhs)}'.`,
       );

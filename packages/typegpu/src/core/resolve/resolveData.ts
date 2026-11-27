@@ -17,6 +17,9 @@ import type {
   F32,
   I32,
   Mat2x2f,
+  Mat2x2h,
+  Mat3x3h,
+  Mat4x4h,
   Mat3x3f,
   Mat4x4f,
   U32,
@@ -72,6 +75,9 @@ const identityTypes = [
   'mat2x2f',
   'mat3x3f',
   'mat4x4f',
+  'mat2x2h',
+  'mat3x3h',
+  'mat4x4h',
   'texture_external',
 ];
 
@@ -99,6 +105,9 @@ type IdentityType =
   | Mat2x2f
   | Mat3x3f
   | Mat4x4f
+  | Mat2x2h
+  | Mat3x3h
+  | Mat4x4h
   | WgslExternalTexture;
 
 function isIdentityType(data: BaseData): data is IdentityType {

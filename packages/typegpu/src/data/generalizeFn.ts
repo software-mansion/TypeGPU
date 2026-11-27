@@ -1,5 +1,5 @@
 import { vec2b, vec3b, vec4b, vecTypeToConstructor } from './vector.ts';
-import { mat2x2f, mat3x3f, mat4x4f } from './matrix.ts';
+import { mat2x2f, mat2x2h, mat3x3f, mat3x3h, mat4x4f, mat4x4h } from './matrix.ts';
 import {
   isVecInstance,
   type AnyBooleanVecInstance,
@@ -53,6 +53,9 @@ const constructorFor = {
   mat2x2f,
   mat3x3f,
   mat4x4f,
+  mat2x2h,
+  mat3x3h,
+  mat4x4h,
 } as const;
 
 function getConstructorFor(mode: Mode, kind: Kind) {
@@ -151,7 +154,14 @@ const i32Kind: Set<Kind> = new Set(['number', 'vec2i', 'vec3i', 'vec4i']);
 export const u32Kind: Set<Kind> = new Set(['number', 'vec2u', 'vec3u', 'vec4u']);
 export const f32Kind: Set<Kind> = new Set(['number', 'vec2f', 'vec3f', 'vec4f']);
 export const f16Kind: Set<Kind> = new Set(['number', 'vec2h', 'vec3h', 'vec4h']);
-export const matrixKind: Set<Kind> = new Set(['mat2x2f', 'mat3x3f', 'mat4x4f']);
+export const matrixKind: Set<Kind> = new Set([
+  'mat2x2f',
+  'mat3x3f',
+  'mat4x4f',
+  'mat2x2h',
+  'mat3x3h',
+  'mat4x4h',
+]);
 export const booleanKind: Set<Kind> = new Set([
   'boolean',
   'vec2<bool>',
