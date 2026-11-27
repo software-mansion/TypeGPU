@@ -147,6 +147,17 @@ describe('convertPartialToPatch', () => {
     expect(result.b).toEqual({ 0: 1.0, 2: 3.0 });
   });
 
+  it('should look through decorated schemas', () => {
+    const schema = d.struct({
+      a: d.size(8, d.u32),
+      b: d.align(16, d.arrayOf(d.f32, 3)),
+    });
+    const partial = { b: [{ idx: 2, value: 3.0 }] };
+
+    const result = convertPartialToPatch(schema, partial) as Record<string, unknown>;
+    expect(result.b).toEqual({ 2: 3.0 });
+  });
+
   it('should pass through leaves unchanged', () => {
     expect(convertPartialToPatch(d.u32, 42)).toBe(42);
     expect(convertPartialToPatch(d.f32, undefined)).toBeUndefined();

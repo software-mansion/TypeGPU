@@ -1,7 +1,7 @@
 import { BufferWriter, getSystemEndianness } from 'typed-binary';
 import { getCompiledWriter } from './compiledIO.ts';
 import { writeData } from './dataIO.ts';
-import { isDisarray, isUnstruct } from './dataTypes.ts';
+import { isDisarray, isUnstruct, undecorate } from './dataTypes.ts';
 import { offsetsForProps } from './offsets.ts';
 import { sizeOf } from './sizeOf.ts';
 import { strideOf } from './schemaMemoryLayout.ts';
@@ -24,11 +24,13 @@ export function convertPartialToPatch(schema: wgsl.BaseData, data: unknown): unk
     return data;
   }
 
-  if (isWgslStruct(schema) || isUnstruct(schema)) {
+  const inner = undecorate(schema);
+
+  if (isWgslStruct(inner) || isUnstruct(inner)) {
     const result: Record<string, unknown> = {};
     const record = data as Record<string, unknown>;
-    for (const key of Object.keys(schema.propTypes)) {
-      const subSchema = schema.propTypes[key];
+    for (const key of Object.keys(inner.propTypes)) {
+      const subSchema = inner.propTypes[key];
       const value = record[key];
       if (value !== undefined && subSchema) {
         result[key] = convertPartialToPatch(subSchema, value);
@@ -37,11 +39,10 @@ export function convertPartialToPatch(schema: wgsl.BaseData, data: unknown): unk
     return result;
   }
 
-  if (isWgslArray(schema) || isDisarray(schema)) {
-    const arrSchema = schema as wgsl.WgslArray;
+  if (isWgslArray(inner) || isDisarray(inner)) {
     const result: Record<number, unknown> = {};
     for (const { idx, value } of data as { idx: number; value: unknown }[]) {
-      result[idx] = convertPartialToPatch(arrSchema.elementType, value);
+      result[idx] = convertPartialToPatch(inner.elementType, value);
     }
     return result;
   }
@@ -86,11 +87,13 @@ export function getPatchInstructions<TData extends wgsl.BaseData>(
       return;
     }
 
-    if (isWgslStruct(node) || isUnstruct(node)) {
-      const propOffsets = offsetsForProps(node);
+    const inner = undecorate(node);
+
+    if (isWgslStruct(inner) || isUnstruct(inner)) {
+      const propOffsets = offsetsForProps(inner);
       for (const [key, propOffset] of Object.entries(propOffsets)) {
         const childValue = (value as Record<string, unknown>)[key];
-        const subSchema = node.propTypes[key];
+        const subSchema = inner.propTypes[key];
         if (childValue !== undefined && subSchema) {
           collect(subSchema, childValue, offset + propOffset.offset, propOffset.padding ?? padding);
         }
@@ -98,13 +101,24 @@ export function getPatchInstructions<TData extends wgsl.BaseData>(
       return;
     }
 
-    if (isWgslArray(node) || isDisarray(node)) {
-      const arrSchema = node as wgsl.WgslArray;
-      const elementSize = strideOf(arrSchema);
-      const elementPadding = elementSize - sizeOf(arrSchema.elementType);
+    if (isWgslArray(inner) || isDisarray(inner)) {
+      const elementStride = strideOf(inner);
+      const elementPadding = elementStride - sizeOf(inner.elementType);
+
+      const elementCount =
+        isWgslArray(inner) && inner.elementCount === 0
+          ? Math.max(
+              0,
+              Math.floor((buf.byteLength - offset - sizeOf(inner.elementType)) / elementStride) + 1,
+            )
+          : inner.elementCount;
 
       if (ArrayBuffer.isView(value)) {
-        const copyLen = Math.min(value.byteLength, arrSchema.elementCount * elementSize);
+        const copyLen = Math.min(
+          value.byteLength,
+          elementCount * elementStride,
+          buf.byteLength - offset,
+        );
         pendingWrites.push(() => {
           new Uint8Array(buf, offset, copyLen).set(
             new Uint8Array(value.buffer, value.byteOffset, copyLen),
@@ -115,22 +129,11 @@ export function getPatchInstructions<TData extends wgsl.BaseData>(
       }
 
       if (Array.isArray(value)) {
-        for (let i = 0; i < Math.min(arrSchema.elementCount, value.length); i++) {
-          collect(arrSchema.elementType, value[i], offset + i * elementSize, elementPadding);
+        for (let i = 0; i < Math.min(elementCount, value.length); i++) {
+          collect(inner.elementType, value[i], offset + i * elementStride, elementPadding);
         }
         return;
       }
-
-      // Runtime-sized arrays are bounded by how many elements fit in the target buffer.
-      // Disarrays always occupy exactly `sizeOf` bytes, so an empty one keeps a bound of 0.
-      const elementCount =
-        isWgslArray(node) && arrSchema.elementCount === 0
-          ? Math.max(
-              0,
-              Math.floor((buf.byteLength - offset - sizeOf(arrSchema.elementType)) / elementSize) +
-                1,
-            )
-          : arrSchema.elementCount;
 
       const sparse = value as Record<string, unknown>;
       for (const key of Object.keys(sparse)) {
@@ -144,7 +147,7 @@ export function getPatchInstructions<TData extends wgsl.BaseData>(
             `Index ${key} is out of bounds for an array of ${elementCount} elements.`,
           );
         }
-        collect(arrSchema.elementType, sparse[key], offset + idx * elementSize, elementPadding);
+        collect(inner.elementType, sparse[key], offset + idx * elementStride, elementPadding);
       }
       return;
     }

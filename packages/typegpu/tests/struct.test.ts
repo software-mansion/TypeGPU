@@ -229,6 +229,22 @@ describe('struct', () => {
     expect(readFromArrayBuffer(buffer2, TestStruct2)).toStrictEqual(value2);
   });
 
+  it('supports decorated runtime-sized props', () => {
+    const Struct = d.struct({
+      a: d.u32,
+      b: d.align(32, d.arrayOf(d.f32, 0)),
+    });
+
+    expect(d.sizeOf(Struct)).toBeNaN();
+    expect(d.alignmentOf(Struct)).toBe(32);
+    expect(tgpu.resolve([Struct])).toMatchInlineSnapshot(`
+      "struct Struct {
+        a: u32,
+        @align(32) b: array<f32>,
+      }"
+    `);
+  });
+
   it('can be called to create an object', () => {
     const TestStruct = struct({
       x: u32,
