@@ -66,7 +66,7 @@ import type {
 import { CodegenState, isSelfResolvable, NormalState, type FunctionArgument } from './types.ts';
 import type { WgslEnableExtension } from './wgslExtensions.ts';
 import { getName, hasTinyestMetadata, isNamable, setName } from './shared/meta.ts';
-import { extractIdentifierString, isObjectPattern } from 'tinyest';
+import { unwrapId, isObjectPattern } from 'tinyest';
 import { accessProp } from './tgsl/accessProp.ts';
 import { createIoSchema } from './core/function/ioSchema.ts';
 import { isShelllessImpl } from './core/function/shelllessImpl.ts';
@@ -667,7 +667,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
             if (isObjectPattern(alias)) {
               throw new Error('Nested destructuring is not supported yet.');
             }
-            const aliasName = extractIdentifierString(alias);
+            const aliasName = unwrapId(alias);
             const argInfo = positionalArgs.find((a) => a.schemaKey === name);
             if (argInfo) {
               const arg = createArgument(
@@ -690,7 +690,7 @@ export class ResolutionCtxImpl implements ResolutionCtx {
             proxyEntries.push({ schemaKey: a.schemaKey, arg: arg.access });
           }
           const router = new EntryInputRouter(structArg?.access, proxyEntries);
-          scope.argAccess[extractIdentifierString(firstParam)] = () =>
+          scope.argAccess[unwrapId(firstParam)] = () =>
             snip('N/A', router, 'argument', /* possibleSideEffects */ false);
         } else {
           // No first param: push positional args with schema key names.
@@ -746,11 +746,11 @@ export class ResolutionCtxImpl implements ResolutionCtx {
               if (isObjectPattern(alias)) {
                 throw new Error('Nested destructuring is not supported yet.');
               }
-              const aliasName = extractIdentifierString(alias);
+              const aliasName = unwrapId(alias);
               scope.argAccess[aliasName] = createArgumentPropAccess(objArg.access, name);
             }
           } else {
-            const paramName = extractIdentifierString(astParam);
+            const paramName = unwrapId(astParam);
             const arg = createArgument(
               this.makeUniqueIdentifier(paramName, 'block'),
               argType,

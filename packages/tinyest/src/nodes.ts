@@ -43,7 +43,7 @@ export type NodeTypeCatalog = typeof NodeTypeCatalog;
 
 /** Identifier can either be encoded as a node, or as a plain string */
 export type Identifier = string | readonly [type: NodeTypeCatalog['identifier'], id: string];
-export const extractIdentifierString = (ident: Identifier): string =>
+export const unwrapId = (ident: Identifier): string =>
   typeof ident === 'string' ? ident : ident[1];
 
 /**
@@ -69,15 +69,15 @@ export type Block = readonly [type: NodeTypeCatalog['block'], Statement[]];
  * Represents a let statement
  */
 export type Let =
-  | readonly [type: NodeTypeCatalog['let'], binding: BindingName]
-  | readonly [type: NodeTypeCatalog['let'], binding: BindingName, value: Expression];
+  | readonly [type: NodeTypeCatalog['let'], binding: Pattern]
+  | readonly [type: NodeTypeCatalog['let'], binding: Pattern, value: Expression];
 
 /**
  * Represents a const statement
  */
 export type Const =
-  | readonly [type: NodeTypeCatalog['const'], binding: BindingName]
-  | readonly [type: NodeTypeCatalog['const'], binding: BindingName, value: Expression];
+  | readonly [type: NodeTypeCatalog['const'], binding: Pattern]
+  | readonly [type: NodeTypeCatalog['const'], binding: Pattern, value: Expression];
 
 export type For = readonly [
   type: NodeTypeCatalog['for'],
@@ -282,7 +282,7 @@ export type Expression =
   | Call
   | Literal;
 
-export type AnyNode = Statement | Expression | BindingPattern;
+export type AnyNode = Statement | Expression | Pattern;
 
 /** @deprecated Use {@link FuncParameter} instead */
 export const FuncParameterType = {
@@ -306,16 +306,14 @@ export type LegacyFuncParameter =
 
 export type ObjectPattern = readonly [
   type: NodeTypeCatalog['objectPattern'],
-  props: readonly [name: string, binding: BindingElement][],
+  props: readonly [name: string, binding: Pattern][],
 ];
 
-export const isObjectPattern = (binding: BindingName): binding is ObjectPattern =>
+export const isObjectPattern = (binding: Pattern): binding is ObjectPattern =>
   typeof binding !== 'string' && binding[0] === NodeTypeCatalog.objectPattern;
 
-export type BindingPattern = ObjectPattern;
-export type BindingName = Identifier | BindingPattern;
-export type BindingElement = BindingName;
-export type FuncParameter = BindingElement;
+export type Pattern = Identifier | ObjectPattern;
+export type FuncParameter = Pattern;
 
 /**
  * Map from an array/node to its source.

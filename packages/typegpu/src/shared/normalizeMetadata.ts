@@ -1,10 +1,4 @@
-import type {
-  BindingElement,
-  Block,
-  FuncParameter,
-  LegacyFuncParameter,
-  SourceMappedNode,
-} from 'tinyest';
+import type { Block, FuncParameter, LegacyFuncParameter, Pattern, SourceMappedNode } from 'tinyest';
 import { NodeTypeCatalog } from 'tinyest';
 import { safeStringify } from './stringify.ts';
 
@@ -88,6 +82,6 @@ function normalizeParameter(param: FuncParameter | LegacyFuncParameter): FuncPar
 
   return [
     NodeTypeCatalog.objectPattern,
-    param.props.map(({ name, alias }): [string, BindingElement] => [name, alias]),
+    param.props.map(({ name, alias }): [string, Pattern] => [name, alias]),
   ];
 }

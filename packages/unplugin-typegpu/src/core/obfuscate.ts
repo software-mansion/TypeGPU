@@ -197,7 +197,7 @@ const visitors = {
     // We cannot obfuscate destructured property names, because WGSL generation relies on them (e.g. `$instanceIndex`).
     return [
       NODE.objectPattern,
-      node[1].map(([name, binding]): [string, tinyest.BindingElement] => [
+      node[1].map(([name, binding]): [string, tinyest.Pattern] => [
         /* intentionally omitted */ name,
         obf(ctx, binding),
       ]),

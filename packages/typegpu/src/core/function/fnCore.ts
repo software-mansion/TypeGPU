@@ -1,10 +1,4 @@
-import {
-  extractIdentifierString,
-  isObjectPattern,
-  stripSourceMap,
-  type Block,
-  type SourceMap,
-} from 'tinyest';
+import { unwrapId, isObjectPattern, stripSourceMap, type Block, type SourceMap } from 'tinyest';
 import { getAttributesString } from '../../data/attributes.ts';
 import { undecorate } from '../../data/dataTypes.ts';
 import { type ResolvedSnippet, snip } from '../../data/snippet.ts';
@@ -236,7 +230,7 @@ export function createFnCore(
       if (maybeSecondArg && !isObjectPattern(maybeSecondArg) && functionType !== 'normal') {
         this.setExternals('out', {
           // oxlint-disable-next-line typescript/no-non-null-assertion -- entry functions cannot be shellless
-          [extractIdentifierString(maybeSecondArg)]: undecorate(returnType!),
+          [unwrapId(maybeSecondArg)]: undecorate(returnType!),
         });
       }
 

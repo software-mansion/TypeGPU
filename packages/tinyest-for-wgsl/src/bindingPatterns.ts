@@ -9,7 +9,7 @@ export function parseObjectPattern(
 ): tinyest.ObjectPattern {
   return [
     tinyest.NodeTypeCatalog.objectPattern,
-    node.properties.map((prop): [name: string, binding: tinyest.BindingElement] => {
+    node.properties.map((prop): [name: string, binding: tinyest.Pattern] => {
       if (
         (prop.type !== 'Property' && prop.type !== 'ObjectProperty') ||
         prop.computed ||
@@ -24,7 +24,7 @@ export function parseObjectPattern(
   ];
 }
 
-export function parseBindingElement(node: babel.LVal | acorn.Pattern): tinyest.BindingElement {
+export function parsePattern(node: babel.LVal | acorn.Pattern): tinyest.Pattern {
   if (node.type === 'Identifier') {
     return node.name;
   }
@@ -36,9 +36,9 @@ export function parseBindingElement(node: babel.LVal | acorn.Pattern): tinyest.B
   return parseObjectPattern(node);
 }
 
-export function extractBoundNames(binding: tinyest.BindingElement): string[] {
+export function extractBoundNames(binding: tinyest.Pattern): string[] {
   if (tinyest.isObjectPattern(binding)) {
     return binding[1].flatMap(([, element]) => extractBoundNames(element));
   }
-  return [tinyest.extractIdentifierString(binding)];
+  return [tinyest.unwrapId(binding)];
 }

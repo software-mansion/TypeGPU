@@ -159,7 +159,7 @@ export const baseTranspilers = {
     }
 
     const decl = node.declarations[0];
-    let binding: tinyest.BindingName;
+    let binding: tinyest.Pattern;
     if (decl.id.type === 'Identifier') {
       ctx.ignoreExternalDepth++;
       binding = transpile(ctx, decl.id) as tinyest.Identifier;

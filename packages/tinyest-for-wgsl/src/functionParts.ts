@@ -2,7 +2,7 @@ import type * as babel from '@babel/types';
 import type * as acorn from 'acorn';
 import * as tinyest from 'tinyest';
 import type { JsNode } from './types.ts';
-import { parseBindingElement } from './bindingPatterns.ts';
+import { parsePattern } from './bindingPatterns.ts';
 
 type FunctionNode =
   | acorn.ArrowFunctionExpression
@@ -89,7 +89,7 @@ function parseParams(functionNode: FunctionNode): tinyest.FuncParameter[] {
       | babel.ObjectPattern
       | acorn.ObjectPattern
     )[]
-  ).map(parseBindingElement);
+  ).map(parsePattern);
 }
 
 export function extractFunctionParts(rootNode: JsNode): {
