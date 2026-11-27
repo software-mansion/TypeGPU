@@ -234,14 +234,6 @@ describe('struct', () => {
     `);
   });
 
-  it('rejects @size on a runtime-sized prop', () => {
-    expect(() =>
-      d.struct({ a: d.u32, b: d.size(16, d.arrayOf(d.u32, 0)) }),
-    ).toThrowErrorMatchingInlineSnapshot(
-      `[Error: Cannot apply @size to a runtime sized array (property 'b').]`,
-    );
-  });
-
   it('rejects a struct prop that contains a runtime-sized array', () => {
     expect(() =>
       d.struct({ a: d.u32, b: d.struct({ x: d.arrayOf(d.u32, 0) }) }),

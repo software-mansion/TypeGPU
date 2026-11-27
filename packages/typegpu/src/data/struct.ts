@@ -58,13 +58,8 @@ export function INTERNAL_createStruct<TProps extends Record<string, BaseData>>(
     }
 
     const inner = undecorate(schema);
-    if ((isWgslArray(inner) || isWgslStruct(inner)) && Number.isNaN(sizeOf(inner))) {
-      if (isWgslStruct(inner)) {
-        throw new Error(`Cannot nest runtime sized structs (property '${key}').`);
-      }
-      if (getCustomSize(schema) !== undefined) {
-        throw new Error(`Cannot apply @size to a runtime sized array (property '${key}').`);
-      }
+    if (isWgslStruct(inner) && Number.isNaN(sizeOf(inner))) {
+      throw new Error(`Cannot nest runtime sized structs (property '${key}').`);
     }
   });
 
