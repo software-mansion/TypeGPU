@@ -2,16 +2,19 @@ import * as t from '@babel/types';
 import type { NodePath, TraverseOptions } from '@babel/traverse';
 import type { FilterPattern } from 'unplugin';
 import MagicString from 'magic-string';
-import {
-  transpileBabelFn,
-  type NodePositionProvider,
-  type TranspilationResult,
-} from 'tinyest-for-wgsl';
-import { getEmbeddedTypegpuMetadata } from './embeddedMetadata.ts';
-import { obfuscate } from './obfuscate.ts';
-import { embedSourceMap, type Block, type SourceMappedNode } from 'tinyest';
+import type { NodePositionProvider, TranspilationResult } from 'tinyest-for-wgsl';
+import { transpileBabelFn } from 'tinyest-for-wgsl';
+import { embedSourceMap, stripSourceMap, type Block, type SourceMappedNode } from 'tinyest';
 import { originalPositionFor, TraceMap, type EncodedSourceMap } from '@jridgewell/trace-mapping';
 import type { SourceMap } from 'rollup';
+import type {
+  EmbeddedTypegpuMetadata,
+  FunctionAst,
+  FunctionExternals,
+} from './embeddedMetadata.ts';
+import { getEmbeddedTypegpuMetadata } from './embeddedMetadata.ts';
+import { obfuscate, obfuscateAst } from './obfuscate.ts';
+import { METADATA_FORMAT_VERSION } from './version.ts';
 
 export interface Options {
   /**
@@ -51,8 +54,8 @@ export interface Options {
 
   /**
    * Skipping files that don't contain "typegpu", "tgpu" or "use gpu".
-   * In case this early pruning hinders transformation, you
-   * can disable it.
+   * When `unstable_obfuscate` is enabled, files containing `__TYPEGPU_META__` are also processed.
+   * In case this early pruning hinders transformation, you can disable it.
    *
    * @default true
    */
@@ -121,6 +124,19 @@ export interface TransformMethods {
     ast: PluginTranspilationResult,
   ): void;
 
+  /**
+   * Replaces the embedded AST and the keys of the externals object of an
+   * already transformed function with their obfuscated versions.
+   * Externals' values (getters) are left untouched.
+   */
+  replaceWithObfuscated(
+    this: PluginState,
+    astPath: NodePath<t.ObjectExpression>,
+    obfuscatedAst: FunctionAst,
+    embeddedExternals: FunctionExternals,
+    externalKeyToObfuscatedMap: Map<string, string>,
+  ): void;
+
   wrapInAutoName(this: PluginState, path: NodePath<t.Expression>, name: string): void;
 
   replaceWithAssignmentOverload(path: NodePath<t.AssignmentExpression>, runtimeFn: string): void;
@@ -149,10 +165,13 @@ export interface PluginState extends TransformMethods {
 
   inUseGpuScope: boolean;
 
-  /**
-   * Used for source mapping during transpilation.
-   */
   sourceTracker?: SourceTracker | undefined;
+
+  /** Used to warn about unsupported metadata versions at most once per file. */
+  warnedAboutMetadataVersion: boolean;
+
+  /** Used to warn about skipping source-mapped functions at most once per file. */
+  warnedAboutSourceMaps: boolean;
 }
 
 export type SourceTracker = {
@@ -176,11 +195,19 @@ export function initPluginState(state: PluginState, methods: TransformMethods): 
   state.tgpuAliases = new Set<string>(state.opts.forceTgpuAlias ? [state.opts.forceTgpuAlias] : []);
   state.autoNamingEnabled = state.opts.autoNamingEnabled ?? true;
   state.inUseGpuScope = false;
+  state.warnedAboutMetadataVersion = false;
+  state.warnedAboutSourceMaps = false;
   Object.assign(state, methods);
 }
 
 /** Regular expressions used for early pruning (to avoid unnecessary parsing, which is expensive) */
-export const earlyPruneRegex = [/["']use gpu["']/, /t(ype)?gpu/];
+export const getEarlyPruneRegex = (obfuscate: boolean) => {
+  const baseRegex = [/["']use gpu["']/, /t(ype)?gpu/];
+  if (obfuscate) {
+    baseRegex.push(/__TYPEGPU_META__/);
+  }
+  return baseRegex;
+};
 
 export const defaultOptions = {
   include: /\.m?[jt]sx?(?:\?.*)?$/,
@@ -517,12 +544,62 @@ const fnNodeToTranspiledMap = new WeakMap<
   PluginTranspilationResult
 >();
 
-function functionOnExit(
-  path: NodePath<t.FunctionDeclaration | t.FunctionExpression | t.ArrowFunctionExpression>,
+function isSourceMapped(ast: FunctionAst): boolean {
+  const [, sourceMap] = stripSourceMap(ast.body);
+  return sourceMap.size > 0;
+}
+
+function warnOnce(
   state: PluginState,
-) {
+  flag: 'warnedAboutMetadataVersion' | 'warnedAboutSourceMaps',
+  message: string,
+): void {
+  if (!state[flag]) {
+    state[flag] = true;
+    state.warn(message);
+  }
+}
+
+function reobfuscateEmbedded(state: PluginState, metadata: EmbeddedTypegpuMetadata) {
+  if (metadata.v !== METADATA_FORMAT_VERSION || metadata.function === undefined) {
+    warnOnce(
+      state,
+      'warnedAboutMetadataVersion',
+      `[unplugin-typegpu] Cannot obfuscate already transformed functions in ${state.filename ?? '<unknown>'}: unsupported metadata version ${metadata.v} (expected ${METADATA_FORMAT_VERSION}).`,
+    );
+    return;
+  }
+
+  const { ast, astPath, externals } = metadata.function;
+
+  if (isSourceMapped(ast)) {
+    warnOnce(
+      state,
+      'warnedAboutSourceMaps',
+      `[unplugin-typegpu] Skipped obfuscation of already transformed functions in ${state.filename ?? '<unknown>'}: functions built with source maps are not supported yet.`,
+    );
+    return;
+  }
+
+  const obfuscated = obfuscateAst(ast, externals.keys());
+  state.replaceWithObfuscated(astPath, obfuscated.ast, externals, obfuscated.externalKeyMap);
+}
+
+function functionOnExit(path: NodePath<MetadatableFunction>, state: PluginState) {
   const node = path.node;
-  if (!containsUseGpuDirective(node) || getEmbeddedTypegpuMetadata(path) !== undefined) {
+  const hasDirective = containsUseGpuDirective(node);
+  const obfuscate = state.opts.unstable_obfuscate;
+
+  if (!hasDirective && !obfuscate) {
+    return;
+  }
+
+  const metadata = getEmbeddedTypegpuMetadata(path);
+  if (metadata !== undefined && obfuscate) {
+    reobfuscateEmbedded(state, metadata);
+  }
+
+  if (!hasDirective || metadata !== undefined) {
     return;
   }
 

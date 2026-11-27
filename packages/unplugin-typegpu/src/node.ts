@@ -2,7 +2,7 @@ import { registerHooks, type ModuleHooks } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import remapping from '@jridgewell/remapping';
 import type { UnpluginBuildContext, UnpluginContext } from 'unplugin';
-import { earlyPruneRegex, type Options } from './core/common.ts';
+import { getEarlyPruneRegex, type Options } from './core/common.ts';
 import { unpluginFactory } from './core/factory.ts';
 import { createFilterForId } from './core/filter.ts';
 
@@ -53,8 +53,9 @@ export default function install(rawOptions?: Options): ModuleHooks {
     { framework: 'unloader' },
   );
   const filter = createFilterForId(plugin.transform.filter.id);
+  const earlyPruneRegex = getEarlyPruneRegex(rawOptions?.unstable_obfuscate ?? false);
   const transformContext = {
-    warn: (message: string) => console.warn(`[unplugin-typegpu] ${message}`),
+    warn: (message: string) => console.warn(message),
   } as UnpluginBuildContext & UnpluginContext;
 
   return registerHooks({
@@ -90,7 +91,9 @@ export default function install(rawOptions?: Options): ModuleHooks {
             () => null,
           ).toString();
         } catch {
-          transformContext.warn(`Failed to compose the inline source map for ${id}`);
+          transformContext.warn(
+            `[unplugin-typegpu] Failed to compose the inline source map for ${id}`,
+          );
         }
       }
 

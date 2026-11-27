@@ -169,7 +169,16 @@ patterns, and `exclude` are unsupported. By default, it skips files without `typ
 
 ## Plugin options
 
-```ts
+```ts twoslash
+import type { Options as RealOptions } from 'unplugin-typegpu';
+
+type FilterPattern = NonNullable<RealOptions['include']>;
+
+type Equals<A, B> =
+  (<T>() => T extends A ? 1 : 2) extends (<T>() => T extends B ? 1 : 2) ? true : false;
+const _optionsInSync: Equals<Options, RealOptions> = true;
+
+// ---cut---
 interface Options {
   /** @default /\.m?[jt]sx?(?:\?.*)?$/ */
   include?: FilterPattern | undefined;
@@ -185,15 +194,23 @@ interface Options {
   /**
    * Obfuscate the generated AST.
    * This results in obfuscation of the generated WGSL, and in smaller bundle sizes.
+   * Cannot be combined with `autoNamingEnabled`.
    *
    * @default false
    */
-  unstable_obfuscate?: boolean | undefined;
+  unstable_obfuscate?: boolean;
 
   /**
-   * Skipping files that don't contain 'typegpu', 'tgpu' or 'use gpu'.
-   * In case this early pruning hinders transformation, you
-   * can disable it.
+    * Keep the source map info so that resolve errors link to an appropriate source.
+    *
+    * @default false
+    */
+  unstable_sourceMaps?: boolean | undefined;
+
+  /**
+   * Skipping files that don't contain "typegpu", "tgpu" or "use gpu".
+   * When `unstable_obfuscate` is enabled, files containing `__TYPEGPU_META__` are also processed.
+   * In case this early pruning hinders transformation, you can disable it.
    *
    * @default true
    */
