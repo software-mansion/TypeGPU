@@ -38,7 +38,7 @@ A shader that resolves has valid TypeGPU semantics. WGSL validation and pipeline
 
 The message starts with `Resolution of the following tree failed:`, then lists the path from `<root>` down to the failing function, then the cause. Plain callbacks appear as `fn*:name(argTypes)`, which shows the specialization that failed (`fn*:foo(i32)` when a caller passed an integer where `f32` was meant). Some causes add a `Try ...` suggestion between `-----` lines.
 
-Unsupported syntax (`var`, prefix `++i`, destructuring declarations, arrow functions inside the body) fails earlier, in the build plugin, with the file name.
+Unsupported syntax (`var`, prefix `++i`, array/nested destructuring, arrow functions inside the body) fails earlier, in the build plugin, with the file name.
 
 | Message contains | Cause | Fix |
 |---|---|---|

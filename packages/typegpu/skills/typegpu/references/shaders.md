@@ -5,7 +5,7 @@ Docs: https://docs.swmansion.com/TypeGPU/apis/functions.md and https://docs.swma
 ## Contents
 
 - **`tgpu.fn` vs plain callback** — when to pin a signature; WGSL-bodied functions
-- **Syntax limitations inside `'use gpu'`** — unsupported TS features; ternaries; `&&` and `||`; `switch`
+- **Syntax limitations inside `'use gpu'`** — unsupported TS features; ternaries; `&&` and `||`; `switch`; object destructuring
 - **Arithmetic operators** — vectors and matrices, division, bitwise, `**`
 - **Textures and samplers**
 - **Iteration** — `for...of`, `std.range`
@@ -68,7 +68,7 @@ const getGradient = tgpu.fn([d.f32], d.vec3f)`(t) {
 | `let x;` without initializer | `let x = d.f32(0)` - type must be inferrable |
 | Update as expression (`const a = i++`, `c ? a++ : b`), prefix `++i` | Postfix `i++` as its own statement |
 | `var`; several declarators (`let a = 0, b = 1`) | One `let`/`const` per statement |
-| Destructuring declarations (`const { pos } = p`) | `const pos = p.pos` (one level of object destructuring in parameters is fine) |
+| Destructuring: array, nested, assignments, in `for`/`for...of` | Access fields explicitly, or destructure one level at a time in `const`/`let` |
 | Default or rest parameters | Pass every argument explicitly |
 | Object literals without a target type (`return { a, b }` from a plain callback) | Wrap in the struct schema: `return Result({ a, b })` |
 
@@ -109,6 +109,22 @@ switch (mode.$) {
 - **Loops:** `continue` inside a switch continues the enclosing loop. Inside a `tgpu.unroll` body, any `break` in a switch is rejected ("Cannot unroll loop containing `break`"). Write those cases without `break`, or use `if`/`else`.
 
 A selector and case values known at compile time keep only the matching case: see `references/compile-time.md`.
+
+### Object destructuring
+
+One-level object destructuring works in `const`/`let` declarations and function parameters:
+
+```ts
+const { pos, vel: v } = particles.$[idx];
+let { xy, z } = vec;
+const { params, items } = layout.$;
+
+const func = ({ x, y }: d.v2f) => {'use gpu';}
+```
+
+- **When to use:** pulling several fields from a struct, vector, `layout.$`, or function input 
+- **Semantics:** always behaves like separate `const a = src.a` / `let a = src.a` declarations, evaluates the source once
+- **Not supported:** array destructuring (`const [a, b] = ...`), nested patterns (`{ a: { b } }`), default values (`{ a = 1 }`), rest (`{ ...rest }`), computed or string-literal keys (`{ [k]: v }`, `{ 'a': v }`), destructuring assignments (`({ a } = obj)`), and destructuring in `for` / `for...of` headers.
 
 ---
 
