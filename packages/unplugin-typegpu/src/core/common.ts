@@ -4,7 +4,7 @@ import type { FilterPattern } from 'unplugin';
 import MagicString from 'magic-string';
 import type { NodePositionProvider, TranspilationResult } from 'tinyest-for-wgsl';
 import { transpileBabelFn } from 'tinyest-for-wgsl';
-import { embedSourceMap, type Block, type SourceMappedNode } from 'tinyest';
+import { embedSourceMap, stripSourceMap, type Block, type SourceMappedNode } from 'tinyest';
 import { originalPositionFor, TraceMap, type EncodedSourceMap } from '@jridgewell/trace-mapping';
 import type { SourceMap } from 'rollup';
 import type {
@@ -169,6 +169,9 @@ export interface PluginState extends TransformMethods {
 
   /** Used to warn about unsupported metadata versions at most once per file. */
   warnedAboutMetadataVersion: boolean;
+
+  /** Used to warn about skipping source-mapped functions at most once per file. */
+  warnedAboutSourceMaps: boolean;
 }
 
 export type SourceTracker = {
@@ -193,6 +196,7 @@ export function initPluginState(state: PluginState, methods: TransformMethods): 
   state.autoNamingEnabled = state.opts.autoNamingEnabled ?? true;
   state.inUseGpuScope = false;
   state.warnedAboutMetadataVersion = false;
+  state.warnedAboutSourceMaps = false;
   Object.assign(state, methods);
 }
 
@@ -540,22 +544,45 @@ const fnNodeToTranspiledMap = new WeakMap<
   PluginTranspilationResult
 >();
 
+function isSourceMapped(ast: FunctionAst): boolean {
+  const [, sourceMap] = stripSourceMap(ast.body);
+  return sourceMap.size > 0;
+}
+
+function warnOnce(
+  state: PluginState,
+  flag: 'warnedAboutMetadataVersion' | 'warnedAboutSourceMaps',
+  message: string,
+): void {
+  if (!state[flag]) {
+    state[flag] = true;
+    state.warn(message);
+  }
+}
+
 function reobfuscateEmbedded(state: PluginState, metadata: EmbeddedTypegpuMetadata) {
-  if (metadata.v === METADATA_FORMAT_VERSION && metadata.function !== undefined) {
-    const { ast, astPath, externals } = metadata.function;
-    const obfuscated = obfuscateAst(ast, externals.keys());
-    state.replaceWithObfuscated(astPath, obfuscated.ast, externals, obfuscated.externalKeyMap);
+  if (metadata.v !== METADATA_FORMAT_VERSION || metadata.function === undefined) {
+    warnOnce(
+      state,
+      'warnedAboutMetadataVersion',
+      `[unplugin-typegpu] Cannot obfuscate already transformed functions in ${state.filename ?? '<unknown>'}: unsupported metadata version ${metadata.v} (expected ${METADATA_FORMAT_VERSION}).`,
+    );
     return;
   }
 
-  if (state.warnedAboutMetadataVersion) {
+  const { ast, astPath, externals } = metadata.function;
+
+  if (isSourceMapped(ast)) {
+    warnOnce(
+      state,
+      'warnedAboutSourceMaps',
+      `[unplugin-typegpu] Skipped obfuscation of already transformed functions in ${state.filename ?? '<unknown>'}: functions built with source maps are not supported yet.`,
+    );
     return;
   }
 
-  state.warnedAboutMetadataVersion = true;
-  state.warn(
-    `[unplugin-typegpu] Cannot obfuscate already transformed functions in ${state.filename ?? '<unknown>'}: unsupported metadata version ${metadata.v} (expected ${METADATA_FORMAT_VERSION}).`,
-  );
+  const obfuscated = obfuscateAst(ast, externals.keys());
+  state.replaceWithObfuscated(astPath, obfuscated.ast, externals, obfuscated.externalKeyMap);
 }
 
 function functionOnExit(path: NodePath<MetadatableFunction>, state: PluginState) {

@@ -307,6 +307,43 @@ describe('plugin obfuscation', () => {
     });
   });
 
+  describe('skips and warns once per file about source-mapped functions', () => {
+    const code = `\
+      export const a = (argument) => {
+        'use gpu';
+        return argument * 2;
+      };
+      export const b = () => {
+        'use gpu';
+      };`;
+
+    test('[BABEL]', () => {
+      using warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      const built = babelTransform(code, { unstable_sourceMaps: true }) as string;
+      const reobfuscated = babelTransform(built, { unstable_obfuscate: true }) as string;
+
+      expect(reobfuscated).toBe(built);
+      expect(warn.mock.calls).toHaveLength(1);
+      expect(JSON.stringify(warn.mock.calls[0]?.[0])).toMatch(
+        /Skipped obfuscation of already transformed functions.*functions built with source maps are not supported yet/,
+      );
+    });
+
+    test('[ROLLUP]', async () => {
+      using warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+
+      const built = await rollupTransform(code, { unstable_sourceMaps: true });
+      const reobfuscated = await rollupTransform(built, { unstable_obfuscate: true });
+
+      expect(reobfuscated).toBe(built);
+      expect(warn.mock.calls).toHaveLength(1);
+      expect(warn.mock.calls[0]?.[0]).toMatch(
+        /Skipped obfuscation of already transformed functions.*functions built with source maps are not supported yet/,
+      );
+    });
+  });
+
   test('does not prune files that only contain embedded metadata when obfuscation is on', async () => {
     const code = `\
       const external = { n: 1 };
