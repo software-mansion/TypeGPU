@@ -1,12 +1,19 @@
 import type { d } from 'typegpu';
-import type { ExampleControlParam } from './exampleControlAtom.ts';
+import {
+  flattenControls,
+  isControlSection,
+  type ControlOptions,
+} from '../../examples/common/flattenControls.ts';
+import type { ExampleControlParam, SelectControlParam } from './exampleControlAtom.ts';
 import type { ExampleState } from './exampleState.ts';
 
-type Labelless<T> = T extends unknown ? Omit<T, 'label'> : never;
+type ControlDefinition<T> = T extends { isSection: true } ? never : Omit<T, 'label' | 'path'>;
+export type ExampleControlOptions = ControlOptions<ControlDefinition<ExampleControlParam>>;
 
 function initializeParam(param: ExampleControlParam) {
   if ('onSelectChange' in param) {
-    return param.onSelectChange(param.initial);
+    const select: SelectControlParam = param;
+    return select.onSelectChange(select.initial);
   }
   if ('onToggleChange' in param) {
     return param.onToggleChange(param.initial);
@@ -40,15 +47,17 @@ export async function executeExample(tsImport: () => unknown): Promise<ExampleSt
     }
   };
 
-  function addParameters(options: Record<string, Labelless<ExampleControlParam> | false>) {
-    for (const [label, value] of Object.entries(options)) {
-      if (!value) {
+  function addParameters(options: ExampleControlOptions) {
+    for (const { label, path, value } of flattenControls(options)) {
+      if (isControlSection(value)) {
+        controlParams.push({ label, path, isSection: true });
         continue;
       }
 
       const param = {
         ...value,
         label,
+        path,
       };
 
       controlParams.push(param);
@@ -60,7 +69,7 @@ export async function executeExample(tsImport: () => unknown): Promise<ExampleSt
 
   const entryExampleFile = await tsImport();
   const { controls, onCleanup } = entryExampleFile as {
-    controls?: Record<string, Labelless<ExampleControlParam> | false> | undefined;
+    controls?: ExampleControlOptions | undefined;
     onCleanup?: () => void;
   };
 

@@ -35,7 +35,7 @@ import {
   sourceLayout,
 } from './layouts.ts';
 import { createTextMask } from './text.ts';
-import { defineControls } from '../../common/defineControls.ts';
+import { defineControls, section } from '../../common/defineControls.ts';
 import { trackPointer } from './events.ts';
 
 const root = await tgpu.init();
@@ -316,181 +316,189 @@ animationFrameId = requestAnimationFrame(frame);
 
 // #region Example controls and cleanup
 export const controls = defineControls({
-  Text: {
-    initial: defaults.text,
-    onTextChange: textMask.setText,
-  },
-
-  'Blink Cursor': {
-    initial: defaults.cursorBlink,
-    onToggleChange: textMask.setCursorBlink,
-  },
-
-  'Texture Size': {
-    initial: String(defaults.textureSize) as (typeof textureSizeOptions)[number],
-    options: textureSizeOptions,
-    onSelectChange: (val) => {
-      updateTextureSize(Number(val));
+  'Text & Actions': section({
+    Text: {
+      initial: defaults.text,
+      onTextChange: textMask.setText,
     },
-  },
 
-  'Clear All Grids': {
-    onButtonClick: () => {
-      grids.clear();
-      particleBuffer.clear();
+    'Blink Cursor': {
+      initial: defaults.cursorBlink,
+      onToggleChange: textMask.setCursorBlink,
     },
-  },
 
-  'Brush Mode': {
-    initial: defaults.brushMode,
-    options: brushModes,
-    onSelectChange: (newMode) => {
-      brushMode = newMode;
+    'Texture Size': {
+      initial: String(defaults.textureSize) as (typeof textureSizeOptions)[number],
+      options: textureSizeOptions,
+      onSelectChange: (val) => {
+        updateTextureSize(Number(val));
+      },
     },
-  },
 
-  'Brush Radius': {
-    initial: defaults.brushRadius,
-    min: 1,
-    max: 200,
-    step: 1,
-    onSliderChange: (val) => {
-      brushUniform.patch({ radius: val });
+    'Clear All Grids': {
+      onButtonClick: () => {
+        grids.clear();
+        particleBuffer.clear();
+      },
     },
-  },
+  }),
 
-  'Soft Brush': {
-    initial: defaults.softBrush,
-    onToggleChange: (val) => {
-      brushUniform.patch({ isSoft: val ? 1 : 0 });
+  'Brush Settings': section({
+    'Brush Mode': {
+      initial: defaults.brushMode,
+      options: brushModes,
+      onSelectChange: (newMode) => {
+        brushMode = newMode;
+      },
     },
-  },
 
-  'Render Mode': {
-    initial: defaults.renderMode,
-    options: renderModes,
-    onSelectChange: (newMode) => {
-      renderMode = renderModes.indexOf(newMode);
+    'Brush Radius': {
+      initial: defaults.brushRadius,
+      min: 1,
+      max: 200,
+      step: 1,
+      onSliderChange: (val) => {
+        brushUniform.patch({ radius: val });
+      },
     },
-  },
 
-  'Flame Color': {
-    initial: defaults.fireColor,
-    onColorChange: (value) => {
-      const hsv = rgbToHsv(value);
-      shadingUniform.patch({ fireTint: [hsv.x - baseFireHsv.x, hsv.y / baseFireHsv.y] });
+    'Soft Brush': {
+      initial: defaults.softBrush,
+      onToggleChange: (val) => {
+        brushUniform.patch({ isSoft: val ? 1 : 0 });
+      },
     },
-  },
+  }),
 
-  'Flame Color Gamma': {
-    initial: defaults.tempPower,
-    min: 0.5,
-    max: 10,
-    step: 0.1,
-    onSliderChange: (val) => {
-      shadingUniform.patch({ tempPower: val });
+  'Rendering & Visuals': section({
+    'Render Mode': {
+      initial: defaults.renderMode,
+      options: renderModes,
+      onSelectChange: (newMode) => {
+        renderMode = renderModes.indexOf(newMode);
+      },
     },
-  },
 
-  'Particle Count': {
-    initial: defaults.numParticles,
-    min: 0,
-    max: defaults.maxParticles,
-    step: 1000,
-    onSliderChange: (val) => {
-      numParticles = val;
+    'Flame Color': {
+      initial: defaults.fireColor,
+      onColorChange: (value) => {
+        const hsv = rgbToHsv(value);
+        shadingUniform.patch({ fireTint: [hsv.x - baseFireHsv.x, hsv.y / baseFireHsv.y] });
+      },
     },
-  },
 
-  'Particle Size': {
-    initial: defaults.particleSize,
-    min: 0.1,
-    max: 5,
-    step: 0.1,
-    onSliderChange: (val) => {
-      shadingUniform.patch({ particleSize: val });
+    'Flame Color Gamma': {
+      initial: defaults.tempPower,
+      min: 0.5,
+      max: 10,
+      step: 0.1,
+      onSliderChange: (val) => {
+        shadingUniform.patch({ tempPower: val });
+      },
     },
-  },
 
-  'Timestep (dt)': {
-    initial: defaults.timestep,
-    min: 0,
-    max: 3,
-    step: 0.1,
-    onSliderChange: (val) => {
-      timestep = val;
+    'Particle Count': {
+      initial: defaults.numParticles,
+      min: 0,
+      max: defaults.maxParticles,
+      step: 1000,
+      onSliderChange: (val) => {
+        numParticles = val;
+      },
     },
-  },
 
-  'Solver Iterations': {
-    initial: defaults.solverIterations,
-    min: 1,
-    max: 300,
-    step: 2,
-    onSliderChange: (val) => {
-      solverIterations = val;
+    'Particle Size': {
+      initial: defaults.particleSize,
+      min: 0.1,
+      max: 5,
+      step: 0.1,
+      onSliderChange: (val) => {
+        shadingUniform.patch({ particleSize: val });
+      },
     },
-  },
+  }),
 
-  Buoyancy: {
-    initial: defaults.buoyancy,
-    min: 0,
-    max: 250,
-    step: 1,
-    onSliderChange: (val) => {
-      simUniform.patch({ buoyancy: val });
+  'Simulation & Physics': section({
+    'Timestep (dt)': {
+      initial: defaults.timestep,
+      min: 0,
+      max: 3,
+      step: 0.1,
+      onSliderChange: (val) => {
+        timestep = val;
+      },
     },
-  },
 
-  'Vorticity Confinement': {
-    initial: defaults.vorticityStrength,
-    min: 0,
-    max: 150,
-    step: 1,
-    onSliderChange: (val) => {
-      simUniform.patch({ vorticityStrength: val });
+    'Solver Iterations': {
+      initial: defaults.solverIterations,
+      min: 1,
+      max: 300,
+      step: 2,
+      onSliderChange: (val) => {
+        solverIterations = val;
+      },
     },
-  },
 
-  'Thermal Confinement': {
-    initial: defaults.thermalStrength,
-    min: 0,
-    max: 150,
-    step: 1,
-    onSliderChange: (val) => {
-      simUniform.patch({ thermalStrength: val });
+    Buoyancy: {
+      initial: defaults.buoyancy,
+      min: 0,
+      max: 250,
+      step: 1,
+      onSliderChange: (val) => {
+        simUniform.patch({ buoyancy: val });
+      },
     },
-  },
 
-  'Pressure Inside Text': {
-    initial: defaults.textInsidePressure,
-    min: -10,
-    max: 10,
-    step: 0.1,
-    onSliderChange: (val) => {
-      simUniform.patch({ textInsidePressure: val });
+    'Vorticity Confinement': {
+      initial: defaults.vorticityStrength,
+      min: 0,
+      max: 150,
+      step: 1,
+      onSliderChange: (val) => {
+        simUniform.patch({ vorticityStrength: val });
+      },
     },
-  },
 
-  'Density Retention': {
-    initial: defaults.densityDecay,
-    min: 0.9,
-    max: 1,
-    step: 0.0001,
-    onSliderChange: (val) => {
-      densityDecay = val;
+    'Thermal Confinement': {
+      initial: defaults.thermalStrength,
+      min: 0,
+      max: 150,
+      step: 1,
+      onSliderChange: (val) => {
+        simUniform.patch({ thermalStrength: val });
+      },
     },
-  },
 
-  'Heat Retention': {
-    initial: defaults.tempDecay,
-    min: 0.9,
-    max: 1,
-    step: 0.0001,
-    onSliderChange: (val) => {
-      tempDecay = val;
+    'Pressure Inside Text': {
+      initial: defaults.textInsidePressure,
+      min: -10,
+      max: 10,
+      step: 0.1,
+      onSliderChange: (val) => {
+        simUniform.patch({ textInsidePressure: val });
+      },
     },
-  },
+
+    'Density Retention': {
+      initial: defaults.densityDecay,
+      min: 0.9,
+      max: 1,
+      step: 0.0001,
+      onSliderChange: (val) => {
+        densityDecay = val;
+      },
+    },
+
+    'Heat Retention': {
+      initial: defaults.tempDecay,
+      min: 0.9,
+      max: 1,
+      step: 0.0001,
+      onSliderChange: (val) => {
+        tempDecay = val;
+      },
+    },
+  }),
 });
 
 export function onCleanup() {
