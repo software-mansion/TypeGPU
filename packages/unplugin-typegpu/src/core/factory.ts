@@ -3,7 +3,7 @@ import MagicString from 'magic-string';
 import { getBabelParserOptions, getLang } from 'ast-kit';
 import type { UnpluginBuildContext, UnpluginContext, UnpluginFactory } from 'unplugin';
 import _traverse, { type NodePath } from '@babel/traverse';
-import type { Externals, NodePositionProvider } from 'tinyest-for-wgsl';
+import type { Externals } from 'tinyest-for-wgsl';
 import * as parser from '@babel/parser';
 import * as t from '@babel/types';
 import { METADATA_FORMAT_VERSION } from './version.ts';
@@ -15,8 +15,8 @@ import {
   functionVisitor,
   getBlockScope,
   checkOpts,
-  nodePosition,
   originalMappingFor,
+  fallbackSourceTracker,
 } from './common.ts';
 
 import type {
@@ -25,6 +25,7 @@ import type {
   MetadatableFunction,
   NodeLocation,
   PluginTranspilationResult,
+  SourceTracker,
 } from './common.ts';
 
 // I love CommonJS 💔
@@ -53,11 +54,18 @@ function assignMetadata(
   name: string | undefined,
   ast: PluginTranspilationResult,
 ): void {
+  const filename = this.opts.unstable_sourceMaps && this.sourceTracker?.filename(path.node);
+
   const metadata = `{
     v: ${METADATA_FORMAT_VERSION},
     name: ${name ? `"${name}"` : 'undefined'},
     ast: ${embedJSON({ params: ast.params, body: ast.body })},
-    externals: ${externalsToString(ast.externalNames)}
+    externals: ${externalsToString(ast.externalNames)}${
+      filename
+        ? `,
+    filename: ${embedJSON(filename)}`
+        : ''
+    }
   }`;
 
   const visibility = t.isFunctionDeclaration(path.node)
@@ -173,12 +181,13 @@ If another plugin modifies the code, source maps may point to modified locations
   };
 })();
 
-function tryGetCombinedSourceMap(
+function tryGetSourceTracker(
   ctx: UnpluginBuildContext & UnpluginContext,
-): NodePositionProvider {
+  fallbackFilename: string,
+): SourceTracker {
   if (!supportsCombinedSourcemap(ctx)) {
     warnAboutSourceMapsOnce();
-    return nodePosition;
+    return fallbackSourceTracker(fallbackFilename);
   }
 
   const combinedMap = ctx.getCombinedSourcemap();
@@ -226,9 +235,7 @@ export const unpluginFactory = ((rawOptions, _meta) => {
           magicString,
           opts: options,
           ...NodeUtils,
-          originalPositionFor: options.unstable_sourceMaps
-            ? tryGetCombinedSourceMap(this)
-            : nodePosition,
+          sourceTracker: options.unstable_sourceMaps ? tryGetSourceTracker(this, id) : undefined,
         } as UnpluginPluginState;
 
         initPluginState(state, {
