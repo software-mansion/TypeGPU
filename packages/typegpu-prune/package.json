@@ -1,0 +1,100 @@
+{
+  "name": "@typegpu/prune",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Precompile TypeGPU code at build time, so that TypeGPU itself never reaches the bundle.",
+  "keywords": [
+    "precompile",
+    "typegpu",
+    "webgpu",
+    "wgsl"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/software-mansion/TypeGPU.git",
+    "directory": "packages/typegpu-prune"
+  },
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    "./package.json": "./package.json",
+    ".": "./src/index.ts",
+    "./runtime": "./src/runtime/index.ts",
+    "./capture": "./src/capture.ts",
+    "./vite": "./src/plugin/vite.ts",
+    "./rollup": "./src/plugin/rollup.ts",
+    "./rolldown": "./src/plugin/rolldown.ts",
+    "./esbuild": "./src/plugin/esbuild.ts",
+    "./webpack": "./src/plugin/webpack.ts"
+  },
+  "publishConfig": {
+    "access": "public",
+    "directory": "dist",
+    "exports": {
+      "./package.json": "./dist/package.json",
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "./runtime": {
+        "types": "./dist/runtime.d.ts",
+        "default": "./dist/runtime.js"
+      },
+      "./capture": {
+        "types": "./dist/capture.d.ts",
+        "default": "./dist/capture.js"
+      },
+      "./vite": {
+        "types": "./dist/vite.d.ts",
+        "default": "./dist/vite.js"
+      },
+      "./rollup": {
+        "types": "./dist/rollup.d.ts",
+        "default": "./dist/rollup.js"
+      },
+      "./rolldown": {
+        "types": "./dist/rolldown.d.ts",
+        "default": "./dist/rolldown.js"
+      },
+      "./esbuild": {
+        "types": "./dist/esbuild.d.ts",
+        "default": "./dist/esbuild.js"
+      },
+      "./webpack": {
+        "types": "./dist/webpack.d.ts",
+        "default": "./dist/webpack.js"
+      }
+    },
+    "linkDirectory": false,
+    "main": "./dist/index.js",
+    "types": "./dist/index.d.ts"
+  },
+  "scripts": {
+    "build": "tsdown",
+    "test:types": "pnpm tsc --p ./tsconfig.json --noEmit",
+    "prepublishOnly": "tgpu-dev-cli prepack"
+  },
+  "dependencies": {
+    "@babel/parser": "^7.29.0",
+    "@babel/traverse": "^7.29.0",
+    "@babel/types": "catalog:",
+    "@jridgewell/remapping": "^2.3.5",
+    "esbuild": "^0.25.11",
+    "magic-string": "^0.30.21",
+    "unplugin": "^3.0.0",
+    "unplugin-typegpu": "workspace:^"
+  },
+  "devDependencies": {
+    "@typegpu/tgpu-dev-cli": "workspace:*",
+    "@types/babel__traverse": "^7.20.7",
+    "@types/node": "catalog:types",
+    "@webgpu/types": "catalog:types",
+    "tsdown": "catalog:build",
+    "typegpu": "workspace:*",
+    "typescript": "catalog:types"
+  },
+  "peerDependencies": {
+    "typegpu": "workspace:^"
+  }
+}
