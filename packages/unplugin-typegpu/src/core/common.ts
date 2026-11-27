@@ -14,8 +14,12 @@ import { originalPositionFor, TraceMap, type EncodedSourceMap } from '@jridgewel
 import type { SourceMap } from 'rollup';
 
 export interface Options {
-  /** @default [/\.m?[jt]sx?$/] */
-  include?: FilterPattern;
+  /**
+   * The Node.js and Deno hooks (`unplugin-typegpu/node`) default to `/\.[cm]?[jt]sx?$/` instead.
+   *
+   * @default /\.m?[jt]sx?(?:\?.*)?$/
+   */
+  include?: FilterPattern | undefined;
 
   /** @default undefined */
   exclude?: FilterPattern | undefined;
@@ -27,22 +31,23 @@ export interface Options {
   forceTgpuAlias?: string | undefined;
 
   /** @default true */
-  autoNamingEnabled?: boolean;
+  autoNamingEnabled?: boolean | undefined;
 
   /**
    * Obfuscate the generated AST.
    * This results in obfuscation of the generated WGSL, and in smaller bundle sizes.
+   * Requires `autoNamingEnabled: false`.
    *
    * @default false
    */
-  unstable_obfuscate?: boolean;
+  unstable_obfuscate?: boolean | undefined;
 
   /**
    * Keep the source map info so that resolve errors link to an appropriate source.
    *
    * @default false
    */
-  unstable_sourceMaps?: boolean;
+  unstable_sourceMaps?: boolean | undefined;
 
   /**
    * Skipping files that don't contain "typegpu", "tgpu" or "use gpu".

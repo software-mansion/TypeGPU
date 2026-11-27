@@ -160,10 +160,13 @@ function handleResize() {
   renderBindGroups = createRenderBindGroups();
 }
 
-const resizeObserver = new ResizeObserver(() => {
-  handleResize();
+const autoResizer = common.attachAutoResizer({
+  root,
+  canvas,
+  onResize() {
+    handleResize();
+  },
 });
-resizeObserver.observe(canvas);
 
 animationFrameHandle = requestAnimationFrame(render);
 
@@ -319,7 +322,7 @@ export const controls = defineControls({
 export function onCleanup() {
   disposed = true;
   cancelAnimationFrame(animationFrameHandle);
-  resizeObserver.disconnect();
+  autoResizer.detach();
   phoneMotion.destroy();
   window.removeEventListener('mouseup', handleMouseUp);
   destroyRenderTextures();

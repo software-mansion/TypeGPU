@@ -1,5 +1,6 @@
 ---
 title: "@typegpu/radiance-cascades"
+description: '2D global illumination: describe a scene with GPU functions and get a texture with the light reaching every pixel.'
 ---
 
 import { Image } from 'astro:assets';
@@ -8,6 +9,10 @@ import basicPreview from '../../../assets/docs/typegpu-radiance-cascades-basic.p
 import generatedSdfPreview from '../../../assets/docs/typegpu-radiance-cascades-generated-sdf.png';
 
 `@typegpu/radiance-cascades` computes **lighting for 2D scenes**. You describe the scene with GPU functions, and the package gives you back a texture holding the light that reaches every pixel. All that is left is to sample it in your own rendering shader.
+
+:::tip
+For lighting 3D scenes with a sun, a sky, fog and point lights, see the [lighting](https://docs.swmansion.com/typegpu-kit/kit/lighting/) module of [TypeGPU Kit](/TypeGPU/ecosystem/typegpu-kit).
+:::
 
 There are two runners to choose from:
 

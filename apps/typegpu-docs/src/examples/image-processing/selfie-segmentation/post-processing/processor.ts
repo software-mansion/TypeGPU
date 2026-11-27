@@ -1,5 +1,5 @@
 import { d } from 'typegpu';
-import type { TgpuBindGroup, TgpuComputePipeline, TgpuRoot } from 'typegpu';
+import type { TgpuBindGroup, TgpuComputePass, TgpuComputePipeline, TgpuRoot } from 'typegpu';
 import type { VideoFrameCrop } from '../frame.ts';
 import {
   initialUpsampleParams,
@@ -101,7 +101,7 @@ export class MaskPostProcessor {
   }
 
   encode(
-    pass: GPUComputePassEncoder,
+    pass: TgpuComputePass,
     externalTexture: GPUExternalTexture,
     crop: VideoFrameCrop,
     outputSize: MaskOutputSize,
@@ -204,6 +204,6 @@ interface ComputeStage {
   workgroups: number;
 }
 
-function dispatchStage(pass: GPUComputePassEncoder, stage: ComputeStage): void {
+function dispatchStage(pass: TgpuComputePass, stage: ComputeStage): void {
   stage.pipeline.with(pass).with(stage.bindGroup).dispatchWorkgroups(stage.workgroups);
 }

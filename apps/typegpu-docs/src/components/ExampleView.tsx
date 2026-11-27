@@ -218,6 +218,9 @@ export function ExampleView({ example, common }: Props) {
           </div>
         )}
 
+        {/* The examples page moves its TypeGPU Kit banner in here, between the tags and the code */}
+        {!fullscreen && <div data-kit-strip-slot />}
+
         {!fullscreen && (
           <div className="border-tameplum-100 dark:border-white/10 relative overflow-hidden border">
             <div className="border-tameplum-100 bg-tameplum-100 dark:border-white/10 dark:bg-[#1b1f2c] flex h-10 items-stretch border-b">

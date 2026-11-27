@@ -116,6 +116,21 @@ describe('Node.js and Deno loader hooks', () => {
     expect(loadHook()(url, context, () => result)).toBe(result);
   });
 
+  it.each(['cts', 'cjs'])(
+    'keeps the Node.js include default for an explicit undefined (.%s)',
+    (extension) => {
+      const transformed = loadHook({ include: undefined })(
+        `file:///C:/shaders/shader.${extension}`,
+        context,
+        () => ({
+          source: shader,
+          format: 'module',
+        }),
+      );
+      expect(transformed.source).toContain('__TYPEGPU_META__');
+    },
+  );
+
   it('honors earlyPruning and autoNamingEnabled options', () => {
     const result = { source: 'const value = custom.fn([])(() => 1);', format: 'module' };
     const options = { forceTgpuAlias: 'custom' };

@@ -1,12 +1,13 @@
 {
   "name": "typegpu",
-  "version": "0.12.10",
+  "version": "0.12.12",
   "description": "A thin layer between JS and WebGPU/WGSL that improves development experience and allows for faster iteration.",
   "keywords": [
     "compute",
     "gpgpu",
     "shader",
     "shaders",
+    "tanstack-intent",
     "typescript",
     "webgpu",
     "wgpu",
