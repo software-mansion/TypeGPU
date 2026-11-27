@@ -1556,6 +1556,38 @@ describe('GlslGenerator - object destructuring', () => {
     `);
   });
 
+  it('hoists runtime index when destructuring non-ephemeral fields', () => {
+    const Particle = d.struct({ pos: d.vec2i, vel: d.vec2i });
+    const particles = tgpu.privateVar(d.arrayOf(Particle, 2));
+
+    const fn = () => {
+      'use gpu';
+      let i = 0;
+      const { pos, vel } = particles.$[i]!;
+      i = 1;
+      pos.x += vel.x;
+      return pos.x + i;
+    };
+
+    expect(tgpu.resolve([fn], glOptions())).toMatchInlineSnapshot(`
+      "struct Particle {
+        ivec2 pos;
+        ivec2 vel;
+      };
+
+      Particle particles[2];
+
+      int fn_1() {
+        int i = 0;
+        int idx = i;
+        int idx_1 = i;
+        i = 1;
+        particles[idx].pos.x += particles[idx_1].vel.x;
+        return (particles[idx].pos.x + i);
+      }"
+    `);
+  });
+
   it('destructures rvalue structs with let, comptime selection, and switch cases', () => {
     const Point = d.struct({ pos: d.vec2i, id: d.i32 });
     const useFirst = tgpu.slot(true);

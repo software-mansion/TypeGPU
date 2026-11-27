@@ -119,10 +119,10 @@ const { pos, vel: v } = particles.$[idx];
 let { xy, z } = vec;
 const { params, items } = layout.$;
 
-const func = ({ x, y }: d.v2f) => {'use gpu';}
+const func = ({ x, y }: d.v2f) => { 'use gpu'; }
 ```
 
-- **When to use:** pulling several fields from a struct, vector, `layout.$`, or function input 
+- **When to use:** pulling several fields from a struct, vector, `layout.$`, or function input
 - **Semantics:** always behaves like separate `const a = src.a` / `let a = src.a` declarations, evaluates the source once
 - **Not supported:** array destructuring (`const [a, b] = ...`), nested patterns (`{ a: { b } }`), default values (`{ a = 1 }`), rest (`{ ...rest }`), computed or string-literal keys (`{ [k]: v }`, `{ 'a': v }`), destructuring assignments (`({ a } = obj)`), and destructuring in `for` / `for...of` headers.
 

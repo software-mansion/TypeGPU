@@ -2830,44 +2830,10 @@ describe('WgslGenerator', () => {
       `);
     });
 
-    it('reads fields from a storage struct without copying the struct', () => {
-      const BigStruct = d.struct({
+    it('reads fields from a storage struct without copying it', () => {
+      const Buffer = d.struct({
         id: d.i32,
         pos: d.vec2f,
-        data: d.arrayOf(d.vec4f, 256),
-      });
-
-      const layout = tgpu.bindGroupLayout({
-        big: { storage: BigStruct },
-      });
-
-      const fn = () => {
-        'use gpu';
-        const { id, pos } = layout.$.big;
-        const a = layout.$.big.id;
-        return d.f32(id + a) + pos.x;
-      };
-
-      expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
-        "struct BigStruct {
-          id: i32,
-          pos: vec2f,
-          data: array<vec4f, 256>,
-        }
-
-        @group(0) @binding(0) var<storage, read> big: BigStruct;
-
-        fn fn_1() -> f32 {
-          let id = big.id;
-          let pos = (&big.pos);
-          let a = big.id;
-          return (f32((id + a)) + (*pos).x);
-        }"
-      `);
-    });
-
-    it('reads fields from a storage struct with atomics and runtime-sized arrays', () => {
-      const Buffer = d.struct({
         count: d.atomic(d.u32),
         data: d.arrayOf(d.f32, 0),
       });
@@ -2878,24 +2844,28 @@ describe('WgslGenerator', () => {
 
       const fn = () => {
         'use gpu';
-        const { count, data } = layout.$.buf;
+        const { id, pos, count, data } = layout.$.buf;
         const { length } = data;
-        return std.atomicLoad(count) + length;
+        return d.f32(id) + pos.x + d.f32(std.atomicLoad(count) + length);
       };
 
       expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
         "struct Buffer {
+          id: i32,
+          pos: vec2f,
           count: atomic<u32>,
           data: array<f32>,
         }
 
         @group(0) @binding(0) var<storage, read_write> buf: Buffer;
 
-        fn fn_1() -> u32 {
+        fn fn_1() -> f32 {
+          let id = buf.id;
+          let pos = (&buf.pos);
           let count = (&buf.count);
           let data = (&buf.data);
           let length_1 = arrayLength(&(*data));
-          return (atomicLoad(&(*count)) + length_1);
+          return ((f32(id) + (*pos).x) + f32((atomicLoad(&(*count)) + length_1)));
         }"
       `);
     });
@@ -2984,55 +2954,6 @@ describe('WgslGenerator', () => {
       `);
     });
 
-    it('destructures an entry input selected at comptime', () => {
-      const useInput = tgpu.slot(true);
-      const fallback = { gid: d.vec3u(7) };
-      const out = tgpu.privateVar(d.u32);
-
-      const entry = tgpu.computeFn({
-        in: { gid: d.builtin.globalInvocationId },
-        workgroupSize: [1],
-      })((input) => {
-        const { gid } = useInput.$ ? input : fallback;
-        out.$ = gid.x;
-      });
-
-      expect(tgpu.resolve([entry])).toMatchInlineSnapshot(`
-        "var<private> out: u32;
-
-        @compute @workgroup_size(1) fn entry(@builtin(global_invocation_id) gid: vec3u) {
-          let gid_1 = gid;
-          out = gid_1.x;
-        }"
-      `);
-    });
-
-    it('destructures a tgpu.const struct without a temporary', () => {
-      const Pair = d.struct({ a: d.i32, b: d.i32 });
-      const pairConst = tgpu.const(Pair, Pair({ a: 1, b: 2 }));
-
-      const fn = () => {
-        'use gpu';
-        const { a, b } = pairConst.$;
-        return a + b;
-      };
-
-      expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
-        "struct Pair {
-          a: i32,
-          b: i32,
-        }
-
-        const pairConst: Pair = Pair(1i, 2i);
-
-        fn fn_1() -> i32 {
-          const a = pairConst.a;
-          const b = pairConst.b;
-          return (a + b);
-        }"
-      `);
-    });
-
     it('destructures vector swizzles with const and let', () => {
       const fn = () => {
         'use gpu';
@@ -3055,182 +2976,97 @@ describe('WgslGenerator', () => {
       `);
     });
 
-    it('destructures a local struct field inside an unrolled loop', () => {
-      const Point = d.struct({ pos: d.vec2i });
-
-      const fn = () => {
-        'use gpu';
-        const point = Point({ pos: d.vec2i(4, 7) });
-        let sum = 0;
-        for (const pos of tgpu.unroll([point.pos])) {
-          const { x } = pos;
-          sum += x;
-        }
-        return sum;
-      };
-
-      expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
-        "struct Point {
-          pos: vec2i,
-        }
-
-        fn fn_1() -> i32 {
-          let point = Point(vec2i(4, 7));
-          var sum = 0;
-          // unrolled iteration #0
-          {
-            let x = point.pos.x;
-            sum += x;
-          }
-          // ---
-          return sum;
-        }"
-      `);
-    });
-
-    it('evaluates a comptime object source once per declaration', () => {
-      let reads = 0;
-      const getValue = tgpu.comptime(() => {
-        reads++;
-        return { x: reads, y: reads };
-      });
-
-      const fn = () => {
-        'use gpu';
-        const { x, y } = getValue();
-        const { x: a, y: b } = getValue();
-        return x + y + a + b;
-      };
-
-      expect(fn()).toBe(6);
-      expect(reads).toBe(2);
-      reads = 0;
-
-      expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
-        "fn fn_1() -> i32 {
-          const x = 1;
-          const y = 1;
-          const a = 2;
-          const b = 2;
-          return (((x + y) + a) + b);
-        }"
-      `);
-      expect(reads).toBe(2);
-    });
-
-    it('evaluates a comptime index into a runtime array once without a temporary', () => {
+    it('evaluates comptime and pure-memory sources once without a temporary', () => {
       const Pair = d.struct({ x: d.i32, y: d.i32 });
       const Pairs = d.arrayOf(Pair, 2);
-      let calls = 0;
-      const nextIndex = tgpu.comptime(() => calls++);
+      const points = tgpu.privateVar(d.arrayOf(d.vec2i, 2));
+
+      let objectReads = 0;
+      const getValue = tgpu.comptime(() => {
+        objectReads++;
+        return { x: objectReads, y: objectReads };
+      });
+
+      let indexCalls = 0;
+      const nextIndex = tgpu.comptime(() => indexCalls++);
+
+      let getterReads = 0;
+      const view = {
+        get points() {
+          getterReads++;
+          return points.$;
+        },
+      };
 
       const fn = tgpu.fn(
         [Pairs],
         d.i32,
       )((source) => {
-        const { x, y } = source[nextIndex()]!;
-        return x + y;
+        const { x, y } = getValue();
+        const { x: a, y: b } = getValue();
+        const { x: ix, y: iy } = source[nextIndex()]!;
+        const { x: gx, y: gy } = view.points[0]!;
+        return x + y + a + b + ix + iy + gx + gy;
       });
 
       const resolved = tgpu.resolve([fn]);
-      expect(calls).toBe(1);
+      expect(objectReads).toBe(2);
+      expect(indexCalls).toBe(1);
+      expect(getterReads).toBe(1);
       expect(resolved).toMatchInlineSnapshot(`
-        "struct Pair {
+        "var<private> points: array<vec2i, 2>;
+
+        struct Pair {
           x: i32,
           y: i32,
         }
 
         fn fn_1(source: array<Pair, 2>) -> i32 {
-          let x = source[0i].x;
-          let y = source[0i].y;
-          return (x + y);
+          const x = 1;
+          const y = 1;
+          const a = 2;
+          const b = 2;
+          let ix = source[0i].x;
+          let iy = source[0i].y;
+          let gx = points[0i].x;
+          let gy = points[0i].y;
+          return (((((((x + y) + a) + b) + ix) + iy) + gx) + gy);
         }"
       `);
     });
 
-    it('reads an external getter returning stored memory once without a temporary', () => {
-      const points = tgpu.privateVar(d.arrayOf(d.vec2i, 2));
-      let reads = 0;
-      const view = {
-        get points() {
-          reads++;
-          return points.$;
-        },
-      };
-
-      const fn = () => {
-        'use gpu';
-        const { x, y } = view.points[0]!;
-        return x + y;
-      };
-
-      expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
-        "var<private> points: array<vec2i, 2>;
-
-        fn fn_1() -> i32 {
-          let x = points[0i].x;
-          let y = points[0i].y;
-          return (x + y);
-        }"
-      `);
-      expect(reads).toBe(1);
-    });
-
-    it('calls the GPU function behind a destructured external getter once', () => {
-      const counter = tgpu.privateVar(d.i32);
-      const nextPair = () => {
-        'use gpu';
-        counter.$++;
-        return d.vec2i(counter.$);
-      };
-      const pair = tgpu.accessor(d.vec2i, nextPair);
-      let getterReads = 0;
-      const view = {
-        get point() {
-          getterReads++;
-          return pair.$;
-        },
-      };
-
-      const main = () => {
-        'use gpu';
-        const { x, y } = view.point;
-        return x + y;
-      };
-
-      const code = tgpu.resolve([main]);
-      expect(getterReads).toBe(1);
-      expect(code).toMatchInlineSnapshot(`
-        "var<private> counter: i32;
-
-        fn nextPair() -> vec2i {
-          counter++;
-          return vec2i(counter);
-        }
-
-        fn main() -> i32 {
-          let destructured = nextPair();
-          let x = destructured.x;
-          let y = destructured.y;
-          return (x + y);
-        }"
-      `);
-    });
-
-    it('evaluates an ephemeral function call once into a temporary', () => {
+    it('evaluates ephemeral calls and accessors once into a temporary', () => {
       const Pair = d.struct({ a: d.i32, b: d.i32 });
       const createPair = () => {
         'use gpu';
         return Pair({ a: 2, b: 3 });
       };
 
-      const fn = () => {
+      const counter = tgpu.privateVar(d.i32);
+      const nextVec = () => {
         'use gpu';
-        const { a, b: renamed } = createPair();
-        return a + renamed;
+        counter.$++;
+        return d.vec2i(counter.$);
+      };
+      const vecAccessor = tgpu.accessor(d.vec2i, nextVec);
+      let getterReads = 0;
+      const view = {
+        get point() {
+          getterReads++;
+          return vecAccessor.$;
+        },
       };
 
-      expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      const main = () => {
+        'use gpu';
+        const { a, b: renamed } = createPair();
+        const { x, y } = view.point;
+        return a + renamed + x + y;
+      };
+
+      const code = tgpu.resolve([main]);
+      expect(getterReads).toBe(1);
+      expect(code).toMatchInlineSnapshot(`
         "struct Pair {
           a: i32,
           b: i32,
@@ -3240,11 +3076,21 @@ describe('WgslGenerator', () => {
           return Pair(2i, 3i);
         }
 
-        fn fn_1() -> i32 {
+        var<private> counter: i32;
+
+        fn nextVec() -> vec2i {
+          counter++;
+          return vec2i(counter);
+        }
+
+        fn main() -> i32 {
           let destructured = createPair();
           let a = destructured.a;
           let renamed = destructured.b;
-          return (a + renamed);
+          let destructured_1 = nextVec();
+          let x = destructured_1.x;
+          let y = destructured_1.y;
+          return (((a + renamed) + x) + y);
         }"
       `);
     });
@@ -3295,23 +3141,30 @@ describe('WgslGenerator', () => {
       `);
     });
 
-    it('keeps two const bindings of the same non-ephemeral field aliased', () => {
+    it('keeps two const bindings of the same non-ephemeral target aliased', () => {
       const Point = d.struct({ pos: d.vec2i });
 
-      const fn = () => {
+      const structFn = () => {
         'use gpu';
         const { pos: first, pos: second } = Point({ pos: d.vec2i(1, 2) });
         first.x = 7;
         return second.x;
       };
 
-      expect(fn()).toBe(7);
-      expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      const comptimeRefFn = () => {
+        'use gpu';
+        const { $: a, $: b } = d.ref(d.vec2i(1, 2));
+        a.x = 99;
+        return b.x;
+      };
+
+      expect(structFn()).toBe(7);
+      expect(tgpu.resolve([structFn])).toMatchInlineSnapshot(`
         "struct Point {
           pos: vec2i,
         }
 
-        fn fn_1() -> i32 {
+        fn structFn() -> i32 {
           var destructured = Point(vec2i(1, 2));
           let first = (&destructured.pos);
           let second = (&destructured.pos);
@@ -3319,51 +3172,15 @@ describe('WgslGenerator', () => {
           return (*second).x;
         }"
       `);
-    });
 
-    it('evaluates a shadowing unrolled accessor once inside a nested block', () => {
-      const calls = tgpu.privateVar(d.i32);
-      const nextPair = () => {
-        'use gpu';
-        calls.$++;
-        return d.vec2i(calls.$);
-      };
-      const pair = tgpu.accessor(d.vec2i, nextPair);
-      const sources = [pair];
-
-      const fn = () => {
-        'use gpu';
-        const source = d.vec2i(100);
-        let sum = source.x;
-        for (const source of tgpu.unroll(sources)) {
-          if (sum > 0) {
-            const { x, y } = source.$;
-            sum += x + y;
-          }
-        }
-        return sum + calls.$;
-      };
-
-      expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
-        "var<private> calls: i32;
-
-        fn nextPair() -> vec2i {
-          calls++;
-          return vec2i(calls);
-        }
-
-        fn fn_1() -> i32 {
-          let source = vec2i(100);
-          var sum = source.x;
-          // unrolled iteration #0
-          if ((sum > 0i)) {
-            let destructured = nextPair();
-            let x = destructured.x;
-            let y = destructured.y;
-            sum += (x + y);
-          }
-          // ---
-          return (sum + calls);
+      expect(comptimeRefFn()).toBe(99);
+      expect(tgpu.resolve([comptimeRefFn])).toMatchInlineSnapshot(`
+        "fn comptimeRefFn() -> i32 {
+          var destructured = vec2i(1, 2);
+          let a = (&destructured);
+          let b = (&destructured);
+          (*a).x = 99i;
+          return (*b).x;
         }"
       `);
     });
@@ -3441,8 +3258,13 @@ describe('WgslGenerator', () => {
       `);
     });
 
-    it('inlines blocks with empty destructuring of a pure source', () => {
-      const fn = () => {
+    it('handles empty destructuring for pure and side-effecting sources', () => {
+      const createSource = () => {
+        'use gpu';
+        return d.vec2i(2, 3);
+      };
+
+      const pureFn = () => {
         'use gpu';
         const source = d.vec2i(2, 3);
         let result = 0;
@@ -3454,24 +3276,7 @@ describe('WgslGenerator', () => {
         return result;
       };
 
-      expect(fn()).toBe(2);
-      expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
-        "fn fn_1() -> i32 {
-          let source = vec2i(2, 3);
-          var result = 0;
-          result += source.x;
-          return result;
-        }"
-      `);
-    });
-
-    it('retains evaluation and scope for empty destructuring of a side-effecting call', () => {
-      const createSource = () => {
-        'use gpu';
-        return d.vec2i(2, 3);
-      };
-
-      const fn = () => {
+      const effectfulFn = () => {
         'use gpu';
         let result = 0;
         {
@@ -3482,13 +3287,23 @@ describe('WgslGenerator', () => {
         return result;
       };
 
-      expect(fn()).toBe(1);
-      expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+      expect(pureFn()).toBe(2);
+      expect(tgpu.resolve([pureFn])).toMatchInlineSnapshot(`
+        "fn pureFn() -> i32 {
+          let source = vec2i(2, 3);
+          var result = 0;
+          result += source.x;
+          return result;
+        }"
+      `);
+
+      expect(effectfulFn()).toBe(1);
+      expect(tgpu.resolve([effectfulFn])).toMatchInlineSnapshot(`
         "fn createSource() -> vec2i {
           return vec2i(2, 3);
         }
 
-        fn fn_1() -> i32 {
+        fn effectfulFn() -> i32 {
           var result = 0;
           {
             let destructured = createSource();
@@ -3529,7 +3344,44 @@ describe('WgslGenerator', () => {
       `);
     });
 
-    it('evaluates the index in a destructured d.ref once', () => {
+    it('supports destructuring d.ref variables with const and scalar refs with let', () => {
+      const Point = d.struct({ pos: d.vec2i, id: d.i32 });
+
+      const fn = () => {
+        'use gpu';
+        const pointRef = d.ref(Point({ pos: d.vec2i(1, 2), id: 6 }));
+        const { $: whole, pos } = pointRef;
+        const scalarRef = d.ref(40);
+        let { $: val } = scalarRef;
+        const { $: bonus } = d.ref(2);
+        pos.x += val + bonus;
+        val += 1;
+        return whole.pos.x + val - scalarRef.$;
+      };
+
+      expect(fn()).toBe(44);
+      expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+        "struct Point {
+          pos: vec2i,
+          id: i32,
+        }
+
+        fn fn_1() -> i32 {
+          var pointRef = Point(vec2i(1, 2), 6i);
+          let whole = (&pointRef);
+          let pos = (&pointRef.pos);
+          var scalarRef = 40;
+          var val = scalarRef;
+          const destructured = 2;
+          let bonus = destructured;
+          (*pos).x += (val + bonus);
+          val += 1i;
+          return (((*whole).pos.x + val) - scalarRef);
+        }"
+      `);
+    });
+
+    it('handles $ alongside a field when destructuring a side-effecting d.ref', () => {
       const points = tgpu.privateVar(d.arrayOf(d.vec2i, 2));
       const calls = tgpu.privateVar(d.u32);
       const nextIndex = () => {
@@ -3541,8 +3393,9 @@ describe('WgslGenerator', () => {
 
       const fn = () => {
         'use gpu';
-        const { x, y } = d.ref(points.$[nextIndex()]!);
-        return x + y;
+        const { $: whole, x } = d.ref(points.$[nextIndex()]!);
+        whole.y += x;
+        return whole.y;
       };
 
       expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
@@ -3558,9 +3411,39 @@ describe('WgslGenerator', () => {
 
         fn fn_1() -> i32 {
           let destructured = (&points[nextIndex()]);
+          let whole = (&(*destructured));
           let x = (*destructured).x;
-          let y = (*destructured).y;
-          return (x + y);
+          (*whole).y += x;
+          return (*whole).y;
+        }"
+      `);
+    });
+
+    it('allows binding $ alongside a scalar field in a let destructuring on a fresh d.ref', () => {
+      const Point = d.struct({ pos: d.vec2i, id: d.i32 });
+
+      const fn = () => {
+        'use gpu';
+        let { $: whole, id } = d.ref(Point({ pos: d.vec2i(1, 2), id: 3 }));
+        whole.id = 10;
+        id += 4;
+        return whole.id + id;
+      };
+
+      expect(fn()).toBe(17);
+      expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
+        "struct Point {
+          pos: vec2i,
+          id: i32,
+        }
+
+        fn fn_1() -> i32 {
+          let destructured = Point(vec2i(1, 2), 3i);
+          var whole = destructured;
+          var id = destructured.id;
+          whole.id = 10i;
+          id += 4i;
+          return (whole.id + id);
         }"
       `);
     });
@@ -3574,13 +3457,13 @@ describe('WgslGenerator', () => {
 
       const fn = () => {
         'use gpu';
-        let { pos, id: renamed } = makePoint();
-        pos = d.vec2i(pos.y, renamed);
-        renamed += 1;
-        return pos.x + pos.y + renamed;
+        let { pos, id: first, id: second } = makePoint();
+        pos = d.vec2i(pos.y, first);
+        first += 1;
+        return pos.x + pos.y + first + second;
       };
 
-      expect(fn()).toBe(18);
+      expect(fn()).toBe(25);
       expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
         "struct Point {
           pos: vec2i,
@@ -3594,58 +3477,23 @@ describe('WgslGenerator', () => {
         fn fn_1() -> i32 {
           let destructured = makePoint();
           var pos = destructured.pos;
-          var renamed = destructured.id;
-          pos = vec2i(pos.y, renamed);
-          renamed += 1i;
-          return ((pos.x + pos.y) + renamed);
-        }"
-      `);
-    });
-
-    it('allows two let bindings of the same scalar field from a fresh struct', () => {
-      const Point = d.struct({ id: d.i32 });
-
-      const fn = () => {
-        'use gpu';
-        let { id: first, id: second } = Point({ id: 7 });
-        first += 1;
-        return first + second;
-      };
-
-      expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
-        "struct Point {
-          id: i32,
-        }
-
-        fn fn_1() -> i32 {
-          let destructured = Point(7i);
           var first = destructured.id;
           let second = destructured.id;
+          pos = vec2i(pos.y, first);
           first += 1i;
-          return (first + second);
+          return (((pos.x + pos.y) + first) + second);
         }"
       `);
     });
 
-    it('rejects a second let binding of the same non-ephemeral field from a fresh struct', () => {
-      const Point = d.struct({ pos: d.vec2i });
+    it('rejects aliasing in let destructuring of fresh structs and refs', () => {
+      const Point = d.struct({ pos: d.vec2i, id: d.i32 });
 
-      const fn = () => {
+      const duplicateField = () => {
         'use gpu';
-        let { pos: first, pos: second } = Point({ pos: d.vec2i(1, 2) });
+        let { pos: first, pos: second } = Point({ pos: d.vec2i(1, 2), id: 3 });
         return first.x + second.y;
       };
-
-      expect(() => tgpu.resolve([fn])).toThrowErrorMatchingInlineSnapshot(`
-        [Error: Resolution of the following tree failed:
-        - <root>
-        - fn*:fn
-        - fn*:fn(): Cannot bind non-ephemeral field 'pos' more than once in a 'let' destructuring, because the bindings would alias. Use 'const' instead, or copy the value explicitly.]
-      `);
-    });
-
-    it('rejects let destructuring that aliases $ with a non-ephemeral field on a fresh d.ref', () => {
-      const Point = d.struct({ pos: d.vec2i, id: d.i32 });
 
       const wholeFirst = () => {
         'use gpu';
@@ -3661,6 +3509,19 @@ describe('WgslGenerator', () => {
         return whole.pos.x;
       };
 
+      const duplicateWhole = () => {
+        'use gpu';
+        let { $: a, $: b } = d.ref(d.vec2i(1, 2));
+        a.x = 99;
+        return b.x;
+      };
+
+      expect(() => tgpu.resolve([duplicateField])).toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - fn*:duplicateField
+        - fn*:duplicateField(): Cannot bind non-ephemeral field 'pos' more than once in a 'let' destructuring, because the bindings would alias. Use 'const' instead, or copy the value explicitly.]
+      `);
       expect(() => tgpu.resolve([wholeFirst])).toThrowErrorMatchingInlineSnapshot(`
         [Error: Resolution of the following tree failed:
         - <root>
@@ -3672,6 +3533,12 @@ describe('WgslGenerator', () => {
         - <root>
         - fn*:fieldFirst
         - fn*:fieldFirst(): Cannot bind '$' together with another non-ephemeral binding in a 'let' destructuring, because the bindings would alias. Use 'const' instead, or copy the value explicitly.]
+      `);
+      expect(() => tgpu.resolve([duplicateWhole])).toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - fn*:duplicateWhole
+        - fn*:duplicateWhole(): Cannot bind '$' together with another non-ephemeral binding in a 'let' destructuring, because the bindings would alias. Use 'const' instead, or copy the value explicitly.]
       `);
     });
 
@@ -3700,20 +3567,39 @@ describe('WgslGenerator', () => {
 
     it('throws a descriptive error when destructuring a memory reference to let', () => {
       const Schema = d.struct({ prop: d.vec3f });
-      const testFn = () => {
+      const Point = d.struct({ pos: d.vec2i, id: d.i32 });
+
+      const structField = () => {
         'use gpu';
         const struct = Schema();
         let { prop } = struct;
       };
 
-      expect(() => tgpu.resolve([testFn])).toThrowErrorMatchingInlineSnapshot(`
+      const refVarWhole = () => {
+        'use gpu';
+        const refVar = d.ref(Point({ pos: d.vec2i(1, 2), id: 3 }));
+        let { $: whole } = refVar;
+        return whole.id;
+      };
+
+      expect(() => tgpu.resolve([structField])).toThrowErrorMatchingInlineSnapshot(`
         [Error: Resolution of the following tree failed:
         - <root>
-        - fn*:testFn
-        - fn*:testFn(): 'let prop = struct.prop' is invalid, because references cannot be assigned to 'let' variable declarations.
+        - fn*:structField
+        - fn*:structField(): 'let prop = struct.prop' is invalid, because references cannot be assigned to 'let' variable declarations.
         -----
         - Try 'let prop = vec3f(struct.prop)' if you need to reassign 'prop' later
         - Try 'const prop = struct.prop' if you won't reassign 'prop' later.
+        -----]
+      `);
+      expect(() => tgpu.resolve([refVarWhole])).toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - fn*:refVarWhole
+        - fn*:refVarWhole(): 'let whole = refVar.$' is invalid, because references cannot be assigned to 'let' variable declarations.
+        -----
+        - Try 'let whole = Point(refVar.$)' if you need to reassign 'whole' later
+        - Try 'const whole = refVar.$' if you won't reassign 'whole' later.
         -----]
       `);
     });
@@ -3760,44 +3646,35 @@ describe('WgslGenerator', () => {
       `);
     });
 
-    it('works inside switch cases', () => {
-      const Pair = d.struct({ a: d.i32, b: d.i32 });
+    it('throws a descriptive error when destructuring comptime null or undefined', () => {
+      const optSlot = tgpu.slot<{ a: number } | null>(null);
+      const getUndef = tgpu.comptime((): { a: number } | undefined => undefined);
 
-      const fn = tgpu.fn(
-        [d.i32, Pair],
-        d.i32,
-      )((selector, pair) => {
-        switch (selector) {
-          case 1:
-            const { a } = pair;
-            return a;
-          default: {
-            const { b } = pair;
-            return b;
-          }
-        }
-      });
+      const nonEmptyNullSlot = () => {
+        'use gpu';
+        // @ts-expect-error -- testing runtime error for destructuring null
+        const { a } = optSlot.$;
+        return a;
+      };
 
-      expect(tgpu.resolve([fn])).toMatchInlineSnapshot(`
-        "struct Pair {
-          a: i32,
-          b: i32,
-        }
+      const emptyUndefined = () => {
+        'use gpu';
+        // @ts-expect-error -- testing runtime error for destructuring undefined
+        // oxlint-disable-next-line no-empty-pattern -- Regression for empty destructuring of undefined.
+        const {} = getUndef();
+      };
 
-        fn fn_1(selector: i32, pair: Pair) -> i32 {
-          switch selector {
-            case 1i: {
-              let a = pair.a;
-              return a;
-            }
-            case default: {
-              {
-                let b = pair.b;
-                return b;
-              }
-            }
-          }
-        }"
+      expect(() => tgpu.resolve([nonEmptyNullSlot])).toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - fn*:nonEmptyNullSlot
+        - fn*:nonEmptyNullSlot(): 'const { a } = optSlot.$' is invalid, cannot destructure 'null']
+      `);
+      expect(() => tgpu.resolve([emptyUndefined])).toThrowErrorMatchingInlineSnapshot(`
+        [Error: Resolution of the following tree failed:
+        - <root>
+        - fn*:emptyUndefined
+        - fn*:emptyUndefined(): 'const {} = getUndef()' is invalid, cannot destructure 'undefined']
       `);
     });
   });

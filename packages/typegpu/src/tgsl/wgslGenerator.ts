@@ -1484,8 +1484,10 @@ Try 'return ${typeStr}(${str});' instead.
     const source = isRef ? derefSnippet(eq) : eq;
 
     // User-facing AST node used for mutation tracking (`tryMarkModified`) and error messages.
-    const sourceNode = refOp
-      ? (getSourceNode(refOp.snippet) ?? eqNode)
+    // Inline `d.ref(x)` carries `x` on `refOp.snippet`, while a `d.ref` variable has no
+    // inner source node and needs `.$` appended so diagnostics reference `refVar.$`.
+    const sourceNode: tinyest.Expression = refOp
+      ? (getSourceNode(refOp.snippet) ?? [NODE.memberAccess, eqNode, '$'])
       : extractObject(eqNode) !== undefined
         ? eqNode
         : (getSourceNode(source) ?? eqNode);
@@ -1495,8 +1497,14 @@ Try 'return ${typeStr}(${str});' instead.
     let targetNode = sourceNode;
     let ownsFreshFields = false;
 
-    if (asComptime(source) !== undefined) {
+    const comptimeSource = asComptime(source);
+    if (comptimeSource !== undefined) {
       // Comptime values (plain JS objects, comptime structs/vectors): read properties directly.
+      if (comptimeSource.value === null || comptimeSource.value === undefined) {
+        throw new WgslTypeError(
+          `'${kind} ${stringifyNode(pattern)} = ${stringifyNode(eqNode)}' is invalid, cannot destructure '${String(comptimeSource.value)}'`,
+        );
+      }
     } else if (isStoredInMemory(source) && !source.possibleSideEffects) {
       // Already in memory with no GPU side effects (locals, buffers, args, pure member/index
       // accesses): read fields directly so we never copy large structs or add redundant temps.

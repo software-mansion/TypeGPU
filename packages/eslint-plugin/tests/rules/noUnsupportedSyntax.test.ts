@@ -345,6 +345,56 @@ describe('noUnsupportedSyntax', () => {
         ],
       },
       {
+        code: "const fn = () => { 'use gpu'; const { a: { b } = {} } = obj; }",
+        errors: [
+          {
+            messageId: 'unexpected',
+            data: {
+              snippet: '{ a: { b } = {} }',
+              syntax: 'object destructuring',
+            },
+          },
+          {
+            messageId: 'unexpected',
+            data: {
+              snippet: '{ b } = {}',
+              syntax: 'assignment pattern (default parameter)',
+            },
+          },
+        ],
+      },
+      {
+        code: "const fn = ({ a } = fallback) => { 'use gpu'; }",
+        errors: [
+          {
+            messageId: 'unexpected',
+            data: {
+              snippet: '{ a } = fallback',
+              syntax: 'assignment pattern (default parameter)',
+            },
+          },
+        ],
+      },
+      {
+        code: "const fn = ({ nested: { a } } = fallback) => { 'use gpu'; }",
+        errors: [
+          {
+            messageId: 'unexpected',
+            data: {
+              snippet: '{ nested: { a } } = fallback',
+              syntax: 'assignment pattern (default parameter)',
+            },
+          },
+          {
+            messageId: 'unexpected',
+            data: {
+              snippet: '{ nested: { a } }',
+              syntax: 'object destructuring',
+            },
+          },
+        ],
+      },
+      {
         code: "const fn = () => { 'use gpu'; const { ...rest } = obj; }",
         errors: [
           {
@@ -488,6 +538,19 @@ describe('noUnsupportedSyntax', () => {
           {
             messageId: 'unexpected',
             data: { snippet: '[[a], { b }]', syntax: 'array destructuring' },
+          },
+        ],
+      },
+      {
+        code: "const fn = () => { 'use gpu'; const [[a] = []] = arr; }",
+        errors: [
+          {
+            messageId: 'unexpected',
+            data: { snippet: '[[a] = []]', syntax: 'array destructuring' },
+          },
+          {
+            messageId: 'unexpected',
+            data: { snippet: '[a] = []', syntax: 'assignment pattern (default parameter)' },
           },
         ],
       },

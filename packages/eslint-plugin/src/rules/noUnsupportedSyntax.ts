@@ -42,9 +42,9 @@ export const noUnsupportedSyntax = createRule({
       for (const parameter of node.params) {
         if (
           parameter.type !== 'Identifier' &&
-          parameter.type !== 'ArrayPattern' &&
-          parameter.type !== 'AssignmentPattern' &&
-          parameter.type !== 'ObjectPattern'
+          parameter.type !== 'ObjectPattern' &&
+          parameter.type !== 'ArrayPattern' && // Unsupported, reported by ArrayPattern visitor
+          parameter.type !== 'AssignmentPattern' // Unsupported, reported by AssignmentPattern visitor
         ) {
           report(parameter, 'unsupported function parameter binding pattern');
         }
@@ -76,7 +76,6 @@ export const noUnsupportedSyntax = createRule({
         if (!directives.getEnclosingTypegpuFunction()) {
           return;
         }
-
         if (unsupportedAssignmentOps.includes(node.operator)) {
           report(node, `assignment expression '${node.operator}'`);
         }
@@ -196,7 +195,12 @@ export const noUnsupportedSyntax = createRule({
           parent.parent.type === 'VariableDeclaration' &&
           (parent.parent.parent.type === 'BlockStatement' ||
             parent.parent.parent.type === 'SwitchCase');
-        const isFunctionParameter = parent === gpuFunction;
+        const isFunctionParameter =
+          parent === gpuFunction ||
+          // Unwrap default parameters so AssignmentPattern reports them instead of object destructuring.
+          (parent.type === 'AssignmentPattern' &&
+            parent.left === node &&
+            parent.parent === gpuFunction);
 
         if (
           (isVariableDeclaration || isFunctionParameter) &&
@@ -290,7 +294,11 @@ const unsupportedUnaryOps = ['+', 'typeof', 'void', 'delete'];
 function isNestedInDestructuringPattern(
   node: TSESTree.ArrayPattern | TSESTree.ObjectPattern,
 ): boolean {
-  const parent = node.parent;
+  let parent = node.parent;
+  // Unwrap default values (e.g. `{ a: { b } = {} }`) so only the outer pattern reports nesting.
+  if (parent.type === 'AssignmentPattern' && parent.left === node) {
+    parent = parent.parent;
+  }
   return (
     parent.type === 'ArrayPattern' ||
     parent.type === 'RestElement' ||
