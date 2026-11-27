@@ -749,6 +749,18 @@ pass.end();
 // Whoever created `gpuEncoder` finishes and submits it.
 ```
 
+When other code also begins and ends the pass, wrap the pass with `root.createRenderPass(gpuPass)` or `root.createComputePass(gpuPass)`.
+Set pipelines and bind groups on it as on any typed pass, so code that takes a `TgpuRenderPass` or `TgpuComputePass` records into it unchanged.
+Other code may change the raw pass between draws, so each draw applies the pipeline's full state.
+
+```ts
+const pass = root.createRenderPass(gpuPass);
+
+pass.setPipeline(pipeline);
+pass.draw(3);
+// Whoever began `gpuPass` ends it.
+```
+
 It is also possible to access the underlying WebGPU resources for the TypeGPU pipelines, by calling `root.unwrap(pipeline)`.
 That way, they can be used with a regular WebGPU API, though this also requires unwrapping all the necessary resources.
 

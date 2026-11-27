@@ -38,7 +38,8 @@ import type { IORecord } from '../function/fnTypes.ts';
 import type { TgpuFragmentFn, VertexOutToVarying } from '../function/tgpuFragmentFn.ts';
 import type { TgpuVertexFn } from '../function/tgpuVertexFn.ts';
 import type { TgpuCommandEncoder } from '../commandEncoder/commandEncoder.ts';
-import type { TgpuRenderBundleEncoder } from '../commandEncoder/renderPass.ts';
+import type { TgpuComputePass } from '../commandEncoder/computePass.ts';
+import type { TgpuRenderBundleEncoder, TgpuRenderPass } from '../commandEncoder/renderPass.ts';
 import type { TgpuComputePipeline } from '../pipeline/computePipeline.ts';
 import type { FragmentOutToTargets, TgpuRenderPipeline } from '../pipeline/renderPipeline.ts';
 import type { TgpuFixedComparisonSampler, TgpuFixedSampler } from '../sampler/sampler.ts';
@@ -727,6 +728,22 @@ export interface TgpuRoot extends Unwrapper, WithBinding {
    * ```
    */
   createCommandEncoder(descriptor?: GPUCommandEncoderDescriptor): TgpuCommandEncoder;
+
+  /**
+   * Wraps an existing {@link GPURenderPassEncoder}, which other code begins and ends, so TypeGPU
+   * pipelines draw into it. Shader `console.log` output and performance callbacks are skipped.
+   *
+   * @param gpuPass A vanilla WebGPU render pass encoder.
+   */
+  createRenderPass(gpuPass: GPURenderPassEncoder): TgpuRenderPass;
+
+  /**
+   * Wraps an existing {@link GPUComputePassEncoder}, which other code begins and ends, so TypeGPU
+   * pipelines dispatch into it. Shader `console.log` output and performance callbacks are skipped.
+   *
+   * @param gpuPass A vanilla WebGPU compute pass encoder.
+   */
+  createComputePass(gpuPass: GPUComputePassEncoder): TgpuComputePass;
 
   /**
    * Creates a {@link TgpuRenderBundleEncoder} for recording draw commands into

@@ -354,6 +354,14 @@ export function INTERNAL_createRenderBundleEncoder(
 
 export function INTERNAL_adoptRenderCommands(
   root: ExperimentalTgpuRoot,
+  rawPass: GPURenderPassEncoder,
+): TgpuRenderPass;
+export function INTERNAL_adoptRenderCommands(
+  root: ExperimentalTgpuRoot,
+  rawPass: GPURenderPassEncoder | GPURenderBundleEncoder,
+): TgpuRenderCommands;
+export function INTERNAL_adoptRenderCommands(
+  root: ExperimentalTgpuRoot,
   rawPass: GPURenderPassEncoder | GPURenderBundleEncoder,
 ): TgpuRenderCommands {
   const adopted =
