@@ -38,7 +38,10 @@ export interface PackageChange {
   private: boolean;
   /** The version on `head`. */
   version: string;
-  /** The version on `base`, `undefined` if the package didn't exist there. */
+  /**
+   * The latest released version: the version on `head` if it's already on npm, otherwise the version on `base`
+   * (`undefined` if the package didn't exist there).
+   */
   releasedVersion: string | undefined;
   /** The suggested next version (a patch bump), `undefined` for prereleases. */
   nextVersion: string | undefined;
@@ -64,6 +67,42 @@ export function bumpPatch(version: string): string | undefined {
   }
   const [, major, minor, patch] = match;
   return `${major}.${minor}.${Number(patch) + 1}`;
+}
+
+/**
+ * Whether `name@version` is on npm, `undefined` if the registry couldn't be reached.
+ */
+export async function isPublished(name: string, version: string): Promise<boolean | undefined> {
+  try {
+    const response = await fetch(
+      `https://registry.npmjs.org/${encodeURIComponent(name)}/${encodeURIComponent(version)}`,
+    );
+    if (response.ok || response.status === 404) {
+      return response.ok;
+    }
+  } catch {
+    // Falling through
+  }
+  console.warn(`Could not check whether ${name}@${version} is on npm, comparing with git instead.`);
+  return undefined;
+}
+
+/**
+ * Finds the commit on `head` that set the version in `packageJsonPath` to `version`.
+ */
+async function findVersionCommit(
+  head: string,
+  packageJsonPath: string,
+  version: string,
+): Promise<string | undefined> {
+  const commit = (
+    await $`git log -1 --format=%H ${`-S"version": "${version}"`} ${head} -- ${packageJsonPath}`
+      .nothrow()
+      .quiet()
+  ).stdout
+    .toString()
+    .trim();
+  return commit || undefined;
 }
 
 async function readFileAtRef(ref: string, filePath: string): Promise<string | undefined> {
@@ -116,52 +155,80 @@ export async function getReleasePlan({
   }
 
   const changes = await Promise.all(
-    [...filesByDirname].map(async ([dirname, packageFiles]): Promise<PackageChange | undefined> => {
-      const packageJsonPath = `packages/${dirname}/package.json`;
-      const headSource =
-        head === 'HEAD'
-          ? await fs.readFile(path.join(root, packageJsonPath), 'utf-8').catch(() => undefined)
-          : await readFileAtRef(head, packageJsonPath);
+    [...filesByDirname].map(
+      async ([dirname, filesInPackage]): Promise<PackageChange | undefined> => {
+        let packageFiles = filesInPackage;
+        const packageJsonPath = `packages/${dirname}/package.json`;
+        const headSource =
+          head === 'HEAD'
+            ? await fs.readFile(path.join(root, packageJsonPath), 'utf-8').catch(() => undefined)
+            : await readFileAtRef(head, packageJsonPath);
 
-      if (headSource === undefined) {
-        // The package was removed (or isn't a package)
-        return undefined;
-      }
+        if (headSource === undefined) {
+          // The package was removed (or isn't a package)
+          return undefined;
+        }
 
-      const baseSource = await readFileAtRef(base, packageJsonPath);
-      const headPkg = JSON.parse(headSource);
-      const basePkg = baseSource === undefined ? undefined : JSON.parse(baseSource);
+        const baseSource = await readFileAtRef(base, packageJsonPath);
+        const headPkg = JSON.parse(headSource);
+        let basePkg = baseSource === undefined ? undefined : JSON.parse(baseSource);
+        const published = headPkg.private
+          ? false
+          : await isPublished(headPkg.name, headPkg.version);
 
-      const sourceFiles = packageFiles.filter((file) => isSourceFile(file, basePkg, headPkg));
-      const nonSourceFiles = packageFiles.filter((file) => !sourceFiles.includes(file));
+        if (published && basePkg?.version !== headPkg.version) {
+          // Released after `base`, without a release tag (only releases of typegpu are tagged),
+          // so only the changes made since the commit that set the released version count.
+          const releaseCommit = await findVersionCommit(head, packageJsonPath, headPkg.version);
+          if (releaseCommit) {
+            const releasedSource = await readFileAtRef(releaseCommit, packageJsonPath);
+            basePkg = releasedSource === undefined ? undefined : JSON.parse(releasedSource);
+            const dir = `packages/${dirname}/`;
+            packageFiles = (
+              await $`git diff --name-only ${`${releaseCommit}..${head}`} -- ${dir}`.text()
+            )
+              .split('\n')
+              .filter(Boolean)
+              .map((file) => file.slice(dir.length));
+            if (packageFiles.length === 0) {
+              // Nothing changed since that release
+              return undefined;
+            }
+          }
+        }
 
-      let status: ReleaseStatus;
-      if (headPkg.private) {
-        status = 'private';
-      } else if (!basePkg) {
-        // Not released yet, so the version in package.json is the first one to publish
-        status = 'new';
-      } else if (basePkg && basePkg.version !== headPkg.version) {
-        status = 'already-bumped';
-      } else if (sourceFiles.length === 0) {
-        status = 'non-source-only';
-      } else {
-        status = 'needs-release';
-      }
+        const sourceFiles = packageFiles.filter((file) => isSourceFile(file, basePkg, headPkg));
+        const nonSourceFiles = packageFiles.filter((file) => !sourceFiles.includes(file));
 
-      return {
-        name: headPkg.name,
-        dirname,
-        dir: path.join(root, 'packages', dirname),
-        private: headPkg.private ?? false,
-        version: headPkg.version,
-        releasedVersion: basePkg?.version,
-        nextVersion: status === 'needs-release' ? bumpPatch(headPkg.version) : undefined,
-        sourceFiles,
-        nonSourceFiles,
-        status,
-      };
-    }),
+        let status: ReleaseStatus;
+        if (headPkg.private) {
+          status = 'private';
+        } else if (published !== true && basePkg && basePkg.version !== headPkg.version) {
+          // Bumped, but not published yet
+          status = 'already-bumped';
+        } else if (published === false || (published === undefined && !basePkg)) {
+          // Not released yet, so the version in package.json is the first one to publish
+          status = 'new';
+        } else if (sourceFiles.length === 0) {
+          status = 'non-source-only';
+        } else {
+          status = 'needs-release';
+        }
+
+        return {
+          name: headPkg.name,
+          dirname,
+          dir: path.join(root, 'packages', dirname),
+          private: headPkg.private ?? false,
+          version: headPkg.version,
+          releasedVersion: published ? headPkg.version : basePkg?.version,
+          nextVersion: status === 'needs-release' ? bumpPatch(headPkg.version) : undefined,
+          sourceFiles,
+          nonSourceFiles,
+          status,
+        };
+      },
+    ),
   );
 
   return changes

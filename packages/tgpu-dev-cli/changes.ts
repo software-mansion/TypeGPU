@@ -72,7 +72,7 @@ async function main() {
   }
 
   if (newPackages.length > 0) {
-    consola.info(`${colors.Bold}New packages (not on '${base}' yet):${colors.Reset}`);
+    consola.info(`${colors.Bold}New packages (not released yet):${colors.Reset}`);
     logRows(newPackages.map((pkg) => row(pkg, `${pkg.version}  ${fileCount(pkg)}`)));
   }
 
