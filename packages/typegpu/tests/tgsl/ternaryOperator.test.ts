@@ -439,6 +439,7 @@ describe('ternary operator', () => {
 
   it('should mark the selected branch of a comptime ternary iterated with for...of as modified', () => {
     const mainFn = tgpu.fn([])(() => {
+      'use gpu';
       const a = [d.vec2f(1, 2), d.vec2f(3, 4)];
       const b = [d.vec2f(5, 6), d.vec2f(7, 8)];
       let result = d.vec2f();
