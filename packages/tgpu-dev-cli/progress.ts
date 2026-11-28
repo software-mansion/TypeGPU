@@ -1,18 +1,7 @@
-// @ts-check
-
-/**
- * @typedef {object} ProgressTracker
- * @prop {string} value
- * @prop {() => void} end
- */
-
-/**
- * @template T
- * @param {string} initial
- * @param {(update: (val: string) => void) => Promise<T>} task
- * @returns {Promise<T>}
- */
-export async function progress(initial, task) {
+export async function progress<T>(
+  initial: string,
+  task: (update: (val: string) => void) => Promise<T>,
+): Promise<T> {
   const ciMode =
     typeof process.stdout.clearLine !== 'function' || typeof process.stdout.cursorTo !== 'function';
 
@@ -27,9 +16,7 @@ export async function progress(initial, task) {
 
   try {
     return await task((val) => {
-      if (process.stdout.clearLine && typeof process.stdout.clearLine === 'function') {
-        process.stdout.clearLine(0);
-      }
+      process.stdout.clearLine(0);
       process.stdout.cursorTo(0);
       process.stdout.write(val);
     });
