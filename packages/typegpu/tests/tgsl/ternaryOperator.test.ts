@@ -358,4 +358,106 @@ describe('ternary operator', () => {
       - fn*:main(): Ternary operator 'runtimeBool ? boid.pos : boid.vel' is invalid. For more complex branching, please use 'std.select' or if/else statements.]
     `);
   });
+
+  it('should mark the selected branch of a comptime ternary as modified', () => {
+    const writeFn = tgpu.fn([])(() => {
+      const a = d.vec2f(1, 2);
+      const b = d.vec2f(3, 4);
+      const c = (true ? (false ? b : a) : b).x;
+      (true ? (false ? b : a) : b).x = c;
+    });
+
+    const aliasFn = tgpu.fn([])(() => {
+      const a = d.vec2f(1, 2);
+      const b = d.vec2f(3, 4);
+      const alias = false ? a : b;
+      alias.y = 5;
+    });
+
+    expect(tgpu.resolve([writeFn, aliasFn])).toMatchInlineSnapshot(`
+      "fn writeFn() {
+        var a = vec2f(1, 2);
+        let b = vec2f(3, 4);
+        let c = a.x;
+        a.x = c;
+      }
+
+      fn aliasFn() {
+        let a = vec2f(1, 2);
+        var b = vec2f(3, 4);
+        let alias_1 = (&b);
+        (*alias_1).y = 5f;
+      }"
+    `);
+  });
+
+  it('should mark the selected branch of a comptime ternary passed to d.ref as modified', () => {
+    const modifyVec = tgpu.fn([d.ptrFn(d.vec2f)])((ptr) => {
+      ptr.$.x = 5;
+    });
+
+    const mainFn = tgpu.fn([])(() => {
+      const a = d.vec2f(1, 2);
+      const b = d.vec2f(3, 4);
+      modifyVec(d.ref(true ? a : b));
+    });
+
+    expect(tgpu.resolve([mainFn])).toMatchInlineSnapshot(`
+      "fn modifyVec(ptr_1: ptr<function, vec2f>) {
+        (*ptr_1).x = 5f;
+      }
+
+      fn mainFn() {
+        var a = vec2f(1, 2);
+        let b = vec2f(3, 4);
+        modifyVec((&a));
+      }"
+    `);
+  });
+
+  it('should mark the selected branch of a comptime ternary passed to tgpu.unroll as modified', () => {
+    const mainFn = tgpu.fn([])(() => {
+      const a = [d.vec2f(1, 2), d.vec2f(3, 4)];
+      const b = [d.vec2f(5, 6), d.vec2f(7, 8)];
+      for (const elem of tgpu.unroll(true ? a : b)) {
+        elem.x = 0;
+      }
+    });
+
+    expect(tgpu.resolve([mainFn])).toMatchInlineSnapshot(`
+      "fn mainFn() {
+        var a = array<vec2f, 2>(vec2f(1, 2), vec2f(3, 4));
+        let b = array<vec2f, 2>(vec2f(5, 6), vec2f(7, 8));
+        // unrolled iteration #0
+        a[0u].x = 0f;
+        // unrolled iteration #1
+        a[1u].x = 0f;
+        // ---
+      }"
+    `);
+  });
+
+  it('should mark the selected branch of a comptime ternary iterated with for...of as modified', () => {
+    const mainFn = tgpu.fn([])(() => {
+      'use gpu';
+      const a = [d.vec2f(1, 2), d.vec2f(3, 4)];
+      const b = [d.vec2f(5, 6), d.vec2f(7, 8)];
+      let result = d.vec2f();
+      for (const v of false ? a : b) {
+        result += v;
+      }
+    });
+
+    expect(tgpu.resolve([mainFn])).toMatchInlineSnapshot(`
+      "fn mainFn() {
+        let a = array<vec2f, 2>(vec2f(1, 2), vec2f(3, 4));
+        var b = array<vec2f, 2>(vec2f(5, 6), vec2f(7, 8));
+        var result = vec2f();
+        for (var i = 0u; i < 2u; i += 1u) {
+          let v = (&b[i]);
+          result += (*v);
+        }
+      }"
+    `);
+  });
 });
