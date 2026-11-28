@@ -77,13 +77,24 @@ async function readWorkspacePackages(root: string): Promise<WorkspacePackage[]> 
 }
 
 /**
- * Whether `pkg` requires exactly the current version of `depName`
- * (`workspace:` or `workspace:*`, which pnpm publishes as an exact version).
+ * The range `pkg` requires `depName` with, if it would no longer match after a `kind` bump of `depName`.
+ *
+ * `workspace:` and `workspace:*` are published as the exact current version, so any bump breaks them.
+ * `workspace:^` and `workspace:~` are published as `^x.y.z` and `~x.y.z`, which (with every package
+ * still on 0.x) don't span minor versions, so a minor bump breaks them too.
  */
-function pinsExactly(pkg: WorkspacePackage, depName: string) {
-  return [pkg.json.dependencies, pkg.json.peerDependencies, pkg.json.optionalDependencies].some(
-    (deps) => deps?.[depName] === 'workspace:' || deps?.[depName] === 'workspace:*',
-  );
+function getOutdatedRange(
+  pkg: WorkspacePackage,
+  depName: string,
+  kind: 'patch' | 'minor',
+): string | undefined {
+  const outdated =
+    kind === 'minor'
+      ? (spec: string) => spec.startsWith('workspace:')
+      : (spec: string) => spec === 'workspace:' || spec === 'workspace:*';
+  return [pkg.json.dependencies, pkg.json.peerDependencies, pkg.json.optionalDependencies]
+    .map((deps) => deps?.[depName])
+    .find((spec) => spec !== undefined && outdated(spec));
 }
 
 async function main() {
@@ -239,16 +250,19 @@ async function main() {
     await alignWithMainPackage();
   }
 
-  // Packages that pin one of the released packages exactly (including ones bumped earlier) have
-  // to be released along with it, otherwise they'd conflict with the new version. Repeating until
-  // nothing changes, since these bumps can cascade.
+  // Packages whose range of one of the released packages (including ones bumped earlier) wouldn't
+  // match the new version have to be released along with it, otherwise they'd conflict with it.
+  // Repeating until nothing changes, since these bumps can cascade.
   let changed = true;
   while (changed) {
     changed = false;
     for (const pkg of packages) {
       for (const releasedName of [...bumps.keys(), ...unreleasedNames]) {
-        if (pinsExactly(pkg, releasedName)) {
+        const range = getOutdatedRange(pkg, releasedName, kind);
+        if (range === 'workspace:' || range === 'workspace:*') {
           changed ||= addDependentBump(pkg, `pins ${releasedName} exactly`);
+        } else if (range) {
+          changed ||= addDependentBump(pkg, `requires ${releasedName}@${range}`);
         }
       }
     }
