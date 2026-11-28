@@ -67,4 +67,13 @@ if (!(command in COMMANDS)) {
   exit(1);
 }
 
-await COMMANDS[command as keyof typeof COMMANDS].execute();
+try {
+  await COMMANDS[command as keyof typeof COMMANDS].execute();
+} catch (err) {
+  if (err instanceof arg.ArgError) {
+    // An unknown or malformed option, e.g. a typo in `--dry-run`
+    console.error(`\n${Frog}: ${err.message}\n`);
+    exit(1);
+  }
+  throw err;
+}

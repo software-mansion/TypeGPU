@@ -98,16 +98,13 @@ function getOutdatedRange(
 }
 
 async function main() {
-  const args = arg(
-    {
-      '--base': String,
-      '--skip': [String],
-      '--dry-run': Boolean,
-      '--patch': Boolean,
-      '--minor': Boolean,
-    },
-    { permissive: true },
-  );
+  const args = arg({
+    '--base': String,
+    '--skip': [String],
+    '--dry-run': Boolean,
+    '--patch': Boolean,
+    '--minor': Boolean,
+  });
 
   if (Boolean(args['--patch']) === Boolean(args['--minor'])) {
     consola.error('Pass either --patch or --minor, to say what kind of release this is.');
