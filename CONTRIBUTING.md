@@ -36,9 +36,15 @@ on your PR.
 1. Create a new branch from the latest `main`.
 2. Run `pnpm run changes`. It fetches `origin` itself and compares `origin/main` with the latest release tag, so local
    `main` and `release` branches don't need to be up to date. It sorts the changed packages into:
-   - **Packages to release:** public packages with changes to shipped code
-   - **Already bumped:** versions that differ from the latest release
-   - **Changed, but no release needed:** private packages, or packages where only tests, docs or configs changed
+   - **Packages to release:** public packages with changes to shipped code (including their READMEs and other
+     markdown)
+   - **New packages:** public packages that were never released
+   - **Already bumped:** versions that aren't on npm yet (bumped by hand, or in an earlier run of `pnpm run bump`)
+   - **Changed, but no release needed:** private packages, or packages where only tests, configs or `docs/` folders
+     changed
+
+   Packages released without `typegpu` (and so without a release tag) are compared against the commit that bumped
+   them, so changes that already shipped with them don't show up again.
 3. List everything that landed since the last release, for the release notes. Commits pushed straight to `release`
    (usually docs fixes) belong in the notes too, including ones that haven't been merged back into `main` yet:
 
@@ -52,9 +58,10 @@ on your PR.
    release also moves every package on `typegpu`'s minor line (e.g. 0.12.x) to the next minor (0.13.0), even if it
    didn't change. If you're an agent and weren't told which one, ask before bumping anything.
 5. Run `pnpm run bump --patch` or `pnpm run bump --minor`, depending on step 4 (it refuses to run without one of
-   them). It bumps every package from "Packages to release", plus packages that have to ship with them (packages that
-   pin a bumped package exactly, and `@typegpu/cli`, which bakes in the versions of the other packages). With
-   `--minor`, it also aligns the rest of the ecosystem as described in step 4. It prints the PR title and the
+   them). It bumps every package from "Packages to release", plus packages that have to ship with them: packages whose
+   range of a released package wouldn't match its new version (exact pins, plus `workspace:^` and `workspace:~` with
+   `--minor`), and `@typegpu/cli`, which bakes in the versions of the other packages. Packages that were already bumped
+   count as released too. With `--minor`, it also aligns the rest of the ecosystem as described in step 4. It prints the PR title and the
    `Released packages:` list. Use `--skip <name>` to leave a package out (e.g. when its only change is removing dead
    code), and `--dry-run` to preview. Prereleases aren't bumped, it tells you to bump those by hand.
 
@@ -92,5 +99,8 @@ pnpm publish --dry-run # (if alpha, --tag alpha)
 > ```
 
 11. Rebase _release_ branch on _main_
-12. Create the GitHub release, using the notes from the release PR
+12. Create the GitHub release, using the notes from the release PR. If `typegpu` was released, tag the bump commit
+    from step 8 as `v<typegpu version>` (not the tip of `main`, which GitHub picks by default), since
+    `pnpm run changes` and `pnpm run bump` compare against the latest of these tags. Releases without `typegpu` don't
+    get a tag.
 13. Run `npx automd@latest`
