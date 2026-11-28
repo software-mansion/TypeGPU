@@ -12,15 +12,12 @@ function logRows(rows: string[]) {
 }
 
 async function main() {
-  const args = arg(
-    {
-      '--base': String,
-      '--head': String,
-      '--verbose': Boolean,
-      '-v': '--verbose',
-    },
-    { permissive: true },
-  );
+  const args = arg({
+    '--base': String,
+    '--head': String,
+    '--verbose': Boolean,
+    '-v': '--verbose',
+  });
 
   const base = await resolveBase(args['--base']);
   const head = args['--head'] ?? 'origin/main';

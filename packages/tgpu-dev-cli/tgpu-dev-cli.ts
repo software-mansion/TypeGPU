@@ -2,6 +2,7 @@
 import arg from 'arg';
 import { exit } from 'node:process';
 
+import bump from './bump.ts';
 import changes from './changes.ts';
 import color from './colors.ts';
 import { Frog } from './log.ts';
@@ -23,6 +24,9 @@ const COMMANDS = {
   changes: {
     execute: changes,
   },
+  bump: {
+    execute: bump,
+  },
 };
 
 function printHelp() {
@@ -40,6 +44,15 @@ ${color.Bold}Commands:${color.Reset}
                          and which of them need a release (with their next patch versions).
                          --base <ref>, --head <ref>  Compare other refs.
                          --verbose                   Also list the changed files.
+  tgpu-dev-cli bump      Bumps the versions of packages that need a release (see 'changes'),
+                         along with packages that have to be released with them.
+                         --patch        Bump patch versions (e.g. 0.12.9 → 0.12.10).
+                         --minor        Bump minor versions (e.g. 0.12.9 → 0.13.0). Every package on
+                                        typegpu's minor line moves to its next minor, changed or not.
+                                        One of the two is required.
+                         --skip <name>  Don't bump this package (repeatable).
+                         --dry-run      Only print what would be bumped.
+                         --base <ref>   Compare against this ref instead of the latest release tag.
 `);
 }
 
@@ -54,4 +67,13 @@ if (!(command in COMMANDS)) {
   exit(1);
 }
 
-await COMMANDS[command as keyof typeof COMMANDS].execute();
+try {
+  await COMMANDS[command as keyof typeof COMMANDS].execute();
+} catch (err) {
+  if (err instanceof arg.ArgError) {
+    // An unknown or malformed option, e.g. a typo in `--dry-run`
+    console.error(`\n${Frog}: ${err.message}\n`);
+    exit(1);
+  }
+  throw err;
+}

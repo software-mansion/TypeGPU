@@ -60,13 +60,19 @@ export interface ReleasePlanOptions {
 }
 
 export function bumpPatch(version: string): string | undefined {
+  return bumpVersion(version, 'patch');
+}
+
+export function bumpVersion(version: string, kind: 'patch' | 'minor'): string | undefined {
   const match = /^(\d+)\.(\d+)\.(\d+)$/.exec(version);
   if (!match) {
     // Prereleases (and anything unusual) have to be bumped by hand.
     return undefined;
   }
   const [, major, minor, patch] = match;
-  return `${major}.${minor}.${Number(patch) + 1}`;
+  return kind === 'minor'
+    ? `${major}.${Number(minor) + 1}.0`
+    : `${major}.${minor}.${Number(patch) + 1}`;
 }
 
 /**
@@ -105,7 +111,7 @@ async function findVersionCommit(
   return commit || undefined;
 }
 
-async function readFileAtRef(ref: string, filePath: string): Promise<string | undefined> {
+export async function readFileAtRef(ref: string, filePath: string): Promise<string | undefined> {
   const { stdout, exitCode } = await $`git show ${`${ref}:${filePath}`}`.nothrow().quiet();
   return exitCode === 0 ? stdout.toString() : undefined;
 }
