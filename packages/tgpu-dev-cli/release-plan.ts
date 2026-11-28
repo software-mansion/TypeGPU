@@ -14,7 +14,6 @@ const NON_SOURCE_PATTERNS = [
   /^vitest(\.\w+)*\.config\.[cm]?[jt]s$/,
   /^setupVitest\.[cm]?[jt]s$/,
   /^tsconfig\.json$/,
-  /\.md$/i,
 ];
 
 /**
