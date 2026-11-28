@@ -1,15 +1,24 @@
-import { $ } from 'bun';
+import arg from 'arg';
 import { consola } from 'consola';
+import { getChangedFiles, getPackageDirnames, resolveBase } from './changed-files.ts';
 import colors from './colors.ts';
 
-const packageNameRegex = /^packages\/([@\w-]+)\//;
-
 async function main() {
-  consola.start('Estimating change between release and main branches...');
+  const args = arg(
+    {
+      '--base': String,
+      '--head': String,
+    },
+    { permissive: true },
+  );
+
+  const base = await resolveBase(args['--base']);
+  const head = args['--head'] ?? 'origin/main';
+
+  consola.start(`Estimating changes made on '${head}' since it diverged from '${base}'...`);
   consola.log('');
 
-  const diffMsg = await $`git diff --name-only release..main`.text();
-  const filesChanged = diffMsg.split('\n').filter(Boolean).toSorted();
+  const filesChanged = await getChangedFiles({ base, head });
 
   consola.info(`${colors.Bold}Files changed:${colors.Reset}`);
   for (const file of filesChanged) {
@@ -17,11 +26,8 @@ async function main() {
   }
   consola.log('');
 
-  const packagesChanged = new Set(
-    filesChanged.map((file) => packageNameRegex.exec(file)?.[1]).filter(Boolean),
-  );
   consola.info(`${colors.Bold}Packages changed:${colors.Reset}`);
-  for (const pkg of packagesChanged) {
+  for (const pkg of getPackageDirnames(filesChanged)) {
     consola.log(`⋅ ${pkg}`);
   }
   consola.log('');
