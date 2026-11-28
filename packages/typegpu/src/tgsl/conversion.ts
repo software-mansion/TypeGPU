@@ -18,7 +18,7 @@ import {
   type U32,
   type WgslStruct,
 } from '../data/wgslTypes.ts';
-import { invariant, WgslTypeError } from '../errors.ts';
+import { invariant, SignatureNotSupportedError, WgslTypeError } from '../errors.ts';
 import { getName } from '../shared/meta.ts';
 import { safeStringify } from '../shared/stringify.ts';
 import { assertExhaustive } from '../shared/utilityTypes.ts';
@@ -370,6 +370,19 @@ export function unify<T extends (BaseData | UnknownData)[] | []>(
   return inTypes.map((type) => (isVec(type) || isMat(type) ? type : conversion.targetType)) as {
     [K in keyof T]: BaseData;
   };
+}
+
+/**
+ * Creates an error for when `unify(args, restrictTo)` fails, telling apart
+ * arguments that aren't supported at all from arguments that are each supported,
+ * but have no common type.
+ */
+export function signatureError(
+  args: BaseData[],
+  restrictTo: BaseData[],
+): SignatureNotSupportedError {
+  const unsupported = args.filter((arg) => !unify([arg], restrictTo));
+  return new SignatureNotSupportedError(args, restrictTo, unsupported);
 }
 
 /**

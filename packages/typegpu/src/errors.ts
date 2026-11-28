@@ -226,13 +226,28 @@ export class WgslForbiddenStatementError extends Error {
   }
 }
 
+function typeList(types: BaseData[]): string {
+  return types.map((t) => t.type).join(', ');
+}
+
 export class SignatureNotSupportedError extends Error {
-  constructor(actual: BaseData[], candidates: BaseData[]) {
-    super(
-      `Unsupported data types: ${actual
-        .map((a) => a.type)
-        .join(', ')}. Supported types are: ${candidates.map((r) => r.type).join(', ')}.`,
-    );
+  /**
+   * @param actual The argument types that were passed in.
+   * @param candidates The types that the function accepts.
+   * @param unsupported Which of the `actual` types aren't supported on their own.
+   *   When given, the message points out the culprits, or explains that the
+   *   arguments can't be used together if all of them are supported on their own.
+   */
+  constructor(actual: BaseData[], candidates: BaseData[], unsupported?: BaseData[]) {
+    let message: string;
+    if (unsupported && unsupported.length === 0 && actual.length > 1) {
+      message = `Data types ${typeList(actual)} cannot be used together, because they have no common type. Convert them explicitly to the same type.`;
+    } else {
+      const culprits = unsupported && unsupported.length > 0 ? unsupported : actual;
+      message = `Unsupported data types: ${typeList(culprits)}.`;
+    }
+
+    super(`${message} Supported types are: ${typeList(candidates)}.`);
 
     // Set the prototype explicitly.
     Object.setPrototypeOf(this, SignatureNotSupportedError.prototype);
