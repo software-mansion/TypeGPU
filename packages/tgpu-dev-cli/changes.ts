@@ -1,20 +1,15 @@
-// @ts-check
-
+import { $ } from 'bun';
 import { consola } from 'consola';
-import { execa } from 'execa';
-import { filter, map, pipe, unique } from 'remeda';
-import colors from './colors.mjs';
+import colors from './colors.ts';
 
 const packageNameRegex = /^packages\/([@\w-]+)\//;
 
 async function main() {
-  const $ = execa({ all: true });
-
   consola.start('Estimating change between release and main branches...');
   consola.log('');
 
-  const diffMsg = (await $`git diff --name-only release..main`.pipe('sort')).stdout;
-  const filesChanged = diffMsg.split('\n');
+  const diffMsg = await $`git diff --name-only release..main`.text();
+  const filesChanged = diffMsg.split('\n').filter(Boolean).toSorted();
 
   consola.info(`${colors.Bold}Files changed:${colors.Reset}`);
   for (const file of filesChanged) {
@@ -22,13 +17,9 @@ async function main() {
   }
   consola.log('');
 
-  const packagesChanged = pipe(
-    filesChanged,
-    map((file) => packageNameRegex.exec(file)?.[1]),
-    filter(Boolean),
-    unique(),
+  const packagesChanged = new Set(
+    filesChanged.map((file) => packageNameRegex.exec(file)?.[1]).filter(Boolean),
   );
-  // consola.log(diffMsg.split('\n'));
   consola.info(`${colors.Bold}Packages changed:${colors.Reset}`);
   for (const pkg of packagesChanged) {
     consola.log(`⋅ ${pkg}`);

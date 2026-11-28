@@ -1,29 +1,25 @@
-// @ts-check
 /*
  * Used as a pre-publishing step.
  */
 
 import arg from 'arg';
+import { $ } from 'bun';
 import { consola } from 'consola';
-import { execa } from 'execa';
 import * as fs from 'node:fs/promises';
 import process from 'node:process';
-import { entries, mapValues } from 'remeda';
-import color from './colors.mjs';
-import { FAIL, IN_PROGRESS, SUCCESS } from './icons.mjs';
-import { Frog } from './log.mjs';
-import { progress } from './progress.mjs';
-import { verifyPublishTag } from './verify-publish-tag.mjs';
+import color from './colors.ts';
+import { FAIL, IN_PROGRESS, SUCCESS } from './icons.ts';
+import { Frog } from './log.ts';
+import { progress } from './progress.ts';
+import { verifyPublishTag } from './verify-publish-tag.ts';
 
 const cwd = new URL(`file:${process.cwd()}/`);
 
-/**
- * @param {*} value
- * @param {(path: string, value: string) => string} transform
- * @param {string=} path
- * @returns {*}
- */
-function deepMapStrings(value, transform, path = '') {
+function deepMapStrings(
+  value: unknown,
+  transform: (path: string, value: string) => string,
+  path = '',
+): unknown {
   if (value === undefined || value === null) {
     return value;
   }
@@ -79,7 +75,7 @@ async function transformPackageJSON() {
   });
 
   // Erroring out on any wildcard dependencies
-  for (const [moduleKey, versionSpec] of entries(distPackageJson.dependencies ?? {})) {
+  for (const [moduleKey, versionSpec] of Object.entries(distPackageJson.dependencies ?? {})) {
     if (versionSpec === '*' || versionSpec === 'workspace:*') {
       throw new Error(
         `Cannot depend on a module with a wildcard version. (${moduleKey}: ${versionSpec})`,
@@ -107,12 +103,21 @@ async function transformReadme() {
   await fs.writeFile(distReadmeUrl, readme, 'utf-8');
 }
 
-/**
- * @typedef {'in_progress' | 'success' | 'fail'} TaskStatus
- */
+type TaskStatus = 'in_progress' | 'success' | 'fail';
+type TaskName = 'style' | 'build' | 'unit' | 'types' | 'circular-deps';
 
-/** @type {Record<TaskStatus, string>} */
-const ICON = {
+class TaskError extends Error {
+  readonly taskName: TaskName;
+  readonly stderr: string;
+
+  constructor(taskName: TaskName, cause: unknown) {
+    super(`Task '${taskName}' failed`, { cause });
+    this.taskName = taskName;
+    this.stderr = cause instanceof $.ShellError ? cause.stderr.toString() : String(cause);
+  }
+}
+
+const ICON: Record<TaskStatus, string> = {
   in_progress: IN_PROGRESS,
   success: SUCCESS,
   fail: FAIL,
@@ -132,12 +137,8 @@ async function main() {
     verifyPublishTag();
   }
 
-  /** @type {PromiseSettledResult<*>[]} */
   const results = await progress('', async (update) => {
-    /** @typedef {'style' | 'build' | 'unit' | 'types' | 'circular-deps' } TaskName */
-
-    /** @type {Record<TaskName, TaskStatus>} */
-    const status = {
+    const status: Record<TaskName, TaskStatus> = {
       build: 'in_progress',
       style: 'in_progress',
       unit: 'in_progress',
@@ -145,7 +146,7 @@ async function main() {
       'circular-deps': 'in_progress',
     };
 
-    const taskString = (/** @type {TaskName} */ name) =>
+    const taskString = (name: TaskName) =>
       `${
         {
           in_progress: color.Magenta,
@@ -163,41 +164,30 @@ async function main() {
         )}, ${taskString('circular-deps')}`,
       );
 
-    /**
-     * @template {Promise<*>} T
-     * @param {TaskName} name
-     * @param {T} promise
-     * @returns {T}
-     */
-    const withStatusUpdate = (name, promise) =>
-      /** @type {T} */ (
-        promise
-          .then((result) => {
-            status[name] = 'success';
-            updateMsg();
-            return result;
-          })
-          .catch((err) => {
-            status[name] = 'fail';
-            updateMsg();
-            err.taskName = name;
-            throw err;
-          })
-      );
-
-    const $ = execa({ all: true });
+    const withStatusUpdate = <T>(name: TaskName, promise: Promise<T>): Promise<T> =>
+      promise
+        .then((result) => {
+          status[name] = 'success';
+          updateMsg();
+          return result;
+        })
+        .catch((err) => {
+          status[name] = 'fail';
+          updateMsg();
+          throw new TaskError(name, err);
+        });
 
     const results = [
       // First build
-      ...(await Promise.allSettled([withStatusUpdate('build', $`pnpm build`)])),
+      ...(await Promise.allSettled([withStatusUpdate('build', $`pnpm build`.quiet())])),
       // Then the rest
       ...(skipTests
         ? []
         : await Promise.allSettled([
-            withStatusUpdate('style', $`pnpm -w test:style`),
-            withStatusUpdate('unit', $`pnpm -w test:unit`),
-            withStatusUpdate('types', $`pnpm -w test:types`),
-            withStatusUpdate('circular-deps', $`pnpm -w test:circular-deps`),
+            withStatusUpdate('style', $`pnpm -w test:style`.quiet()),
+            withStatusUpdate('unit', $`pnpm -w test:unit`.quiet()),
+            withStatusUpdate('types', $`pnpm -w test:types`.quiet()),
+            withStatusUpdate('circular-deps', $`pnpm -w test:circular-deps`.quiet()),
           ])),
     ];
 
@@ -214,12 +204,13 @@ async function main() {
 
   console.log('');
 
-  const rejected = /** @type {PromiseRejectedResult[]} */ (
-    results.filter((result) => result.status === 'rejected')
+  const rejected = results.filter(
+    (result): result is PromiseRejectedResult => result.status === 'rejected',
   );
 
   for (const rej of rejected) {
-    consola.error(`Task '${rej.reason.taskName}' failed\n`, rej.reason.stderr);
+    const reason = rej.reason as TaskError;
+    consola.error(`Task '${reason.taskName}' failed\n`, reason.stderr);
   }
   if (rejected.length > 0) {
     process.exit(1);

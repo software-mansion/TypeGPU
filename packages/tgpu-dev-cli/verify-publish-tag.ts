@@ -1,15 +1,9 @@
-// @ts-check
-/// <reference types="node" />
-
 import { type } from 'arktype';
 import { readPackageJSON } from 'pkg-types';
 
-const PublishTags = /** @type {const} */ (['alpha', 'beta', 'rc', 'nightly']);
+const PublishTags = ['alpha', 'beta', 'rc', 'nightly'] as const;
 
-const PublishTag = type.or(
-  'undefined',
-  ...PublishTags.map((tag) => /** @type {const} */ (`"${tag}"`)),
-);
+const PublishTag = type.or('undefined', ...PublishTags.map((tag) => `"${tag}"` as const));
 
 const packageJSON = await readPackageJSON();
 const chosenPublishTag = PublishTag.assert(process.env.npm_config_tag);
