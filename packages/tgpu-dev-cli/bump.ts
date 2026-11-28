@@ -5,7 +5,7 @@ import * as fs from 'node:fs/promises';
 import * as path from 'node:path';
 import { resolveBase } from './changed-files.ts';
 import colors from './colors.ts';
-import { bumpVersion, getReleasePlan, readFileAtRef } from './release-plan.ts';
+import { bumpVersion, getReleasePlan, isPublished, readFileAtRef } from './release-plan.ts';
 
 /**
  * Packages that read the versions of the other public packages when they're built
@@ -150,6 +150,28 @@ async function main() {
   }
 
   /**
+   * Whether the current version of `pkg` is still waiting to be published, because it was bumped
+   * by hand or in an earlier run, or because `pkg` is a new package.
+   */
+  async function isUnreleased(pkg: WorkspacePackage) {
+    const published = await isPublished(pkg.name, pkg.json.version);
+    if (published === undefined) {
+      // Couldn't reach npm
+      return (await getReleasedVersion(pkg)) !== pkg.json.version;
+    }
+    return !published;
+  }
+
+  const unreleased = (
+    await Promise.all(
+      packages
+        .filter((pkg) => !pkg.json.private)
+        .map(async (pkg) => ((await isUnreleased(pkg)) ? pkg : undefined)),
+    )
+  ).filter((pkg) => pkg !== undefined);
+  const unreleasedNames = new Set(unreleased.map((pkg) => pkg.name));
+
+  /**
    * A minor release moves every public package on the main package's minor line
    * (e.g. 0.12.x) to the next minor version (e.g. 0.13.0), changed or not, so the
    * ecosystem stays aligned. Packages with their own version line (e.g. `tinyest`)
@@ -193,15 +215,15 @@ async function main() {
 
   /**
    * Adds a bump of the same kind for `pkg`, unless it is private, skipped, a prerelease,
-   * or was already bumped since `base`.
+   * or its current version wasn't published yet.
    */
-  async function addDependentBump(pkg: WorkspacePackage, reason: string) {
-    if (bumps.has(pkg.name) || pkg.json.private || skip.includes(pkg.name)) {
-      return false;
-    }
-    const releasedVersion = await getReleasedVersion(pkg);
-    if (releasedVersion !== pkg.json.version) {
-      // Already bumped (or not released yet)
+  function addDependentBump(pkg: WorkspacePackage, reason: string) {
+    if (
+      bumps.has(pkg.name) ||
+      unreleasedNames.has(pkg.name) ||
+      pkg.json.private ||
+      skip.includes(pkg.name)
+    ) {
       return false;
     }
     const to = bumpVersion(pkg.json.version, kind);
@@ -217,35 +239,36 @@ async function main() {
     await alignWithMainPackage();
   }
 
-  // Packages that pin one of the bumped packages exactly have to be released along with it,
-  // otherwise they'd conflict with the new version. Repeating until nothing changes, since
-  // these bumps can cascade.
+  // Packages that pin one of the released packages exactly (including ones bumped earlier) have
+  // to be released along with it, otherwise they'd conflict with the new version. Repeating until
+  // nothing changes, since these bumps can cascade.
   let changed = true;
   while (changed) {
     changed = false;
     for (const pkg of packages) {
-      for (const bumpedName of bumps.keys()) {
-        if (pinsExactly(pkg, bumpedName)) {
-          changed ||= await addDependentBump(pkg, `pins ${bumpedName} exactly`);
+      for (const releasedName of [...bumps.keys(), ...unreleasedNames]) {
+        if (pinsExactly(pkg, releasedName)) {
+          changed ||= addDependentBump(pkg, `pins ${releasedName} exactly`);
         }
       }
     }
   }
 
-  if (bumps.size > 0) {
+  const releasesAnyPackage = [...bumps.keys(), ...unreleasedNames].some(
+    (name) => !RELEASED_WITH_ANY_PACKAGE.includes(name),
+  );
+  if (releasesAnyPackage) {
     for (const name of RELEASED_WITH_ANY_PACKAGE) {
       const pkg = byName.get(name);
       if (pkg) {
-        await addDependentBump(pkg, 'bakes in the versions of other packages when built');
+        addDependentBump(pkg, 'bakes in the versions of other packages when built');
       }
     }
   }
 
-  const alreadyBumped = plan.filter((change) => change.status === 'already-bumped');
-
   if (bumps.size === 0) {
     consola.success(
-      alreadyBumped.length > 0
+      unreleased.length > 0
         ? 'Nothing more to bump, all changed packages are already bumped.'
         : 'Nothing to bump.',
     );
@@ -282,12 +305,12 @@ async function main() {
     }
   }
 
-  // Everything released in this cycle, including packages bumped in earlier runs
+  // Everything released in this cycle, including packages bumped earlier and new packages
   const released = [
     ...sortedBumps.map(({ pkg, to }) => ({ name: pkg.name, version: to })),
-    ...alreadyBumped
-      .filter((change) => !bumps.has(change.name))
-      .map((change) => ({ name: change.name, version: change.version })),
+    ...unreleased
+      .filter((pkg) => !bumps.has(pkg.name))
+      .map((pkg) => ({ name: pkg.name, version: pkg.json.version })),
   ].toSorted((a, b) => {
     // The main package first, then by name
     if (a.name === MAIN_PACKAGE) return -1;
