@@ -123,6 +123,7 @@ const anyFloat = [...anyFloatPrimitive, ...anyFloatVec];
 const anyConcreteIntegerPrimitive = [i32, u32];
 const anyConcreteIntegerVec = [vec2i, vec3i, vec4i, vec2u, vec3u, vec4u];
 const anyConcreteInteger = [...anyConcreteIntegerPrimitive, ...anyConcreteIntegerVec];
+const anyNumericVec = [...anyFloatVec, ...anyConcreteIntegerVec];
 
 // std
 
@@ -429,10 +430,16 @@ export const distance = dualImpl({
 
 export const dot = dualImpl({
   name: 'dot',
-  signature: (...args) => ({
-    argTypes: args,
-    returnType: (args[0] as VecData).primitive,
-  }),
+  signature: (...args) => {
+    const uargs = unify(args, anyNumericVec);
+    if (!uargs) {
+      throw new SignatureNotSupportedError(args, anyNumericVec);
+    }
+    return {
+      argTypes: uargs,
+      returnType: (uargs[0] as VecData).primitive,
+    };
+  },
   normalImpl: <T extends NumVec>(lhs: T, rhs: T): number => {
     assertKind([lhs, rhs], numericKind, true);
     assertEqualKinds(lhs, rhs);
@@ -535,7 +542,7 @@ function cpuFirstLeadingBit<T extends AnyIntegerVecInstance | number>(_value: T)
 
 export const firstLeadingBit = dualImpl<typeof cpuFirstLeadingBit>({
   name: 'firstLeadingBit',
-  signature: unaryIdentitySignature,
+  signature: unifyRestrictedSignature(anyConcreteInteger),
   normalImpl:
     'CPU implementation for firstLeadingBit not implemented yet. Please submit an issue at https://github.com/software-mansion/TypeGPU/issues',
   codegenImpl: (_ctx, [value]) => stitch`firstLeadingBit(${value})`,
