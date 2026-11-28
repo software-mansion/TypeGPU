@@ -358,4 +358,36 @@ describe('ternary operator', () => {
       - fn*:main(): Ternary operator 'runtimeBool ? boid.pos : boid.vel' is invalid. For more complex branching, please use 'std.select' or if/else statements.]
     `);
   });
+
+  it('should mark the selected branch of a comptime ternary as modified', () => {
+    const writeFn = tgpu.fn([])(() => {
+      const a = d.vec2f(1, 2);
+      const b = d.vec2f(3, 4);
+      const c = (true ? (false ? b : a) : b).x;
+      (true ? (false ? b : a) : b).x = c;
+    });
+
+    const aliasFn = tgpu.fn([])(() => {
+      const a = d.vec2f(1, 2);
+      const b = d.vec2f(3, 4);
+      const alias = false ? a : b;
+      alias.y = 5;
+    });
+
+    expect(tgpu.resolve([writeFn, aliasFn])).toMatchInlineSnapshot(`
+      "fn writeFn() {
+        var a = vec2f(1, 2);
+        let b = vec2f(3, 4);
+        let c = a.x;
+        a.x = c;
+      }
+
+      fn aliasFn() {
+        let a = vec2f(1, 2);
+        var b = vec2f(3, 4);
+        let alias_1 = (&b);
+        (*alias_1).y = 5f;
+      }"
+    `);
+  });
 });

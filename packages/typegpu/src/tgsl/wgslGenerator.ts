@@ -271,6 +271,8 @@ export class WgslGenerator implements ShaderGenerator {
   // used to detect `continue` and `break` nodes in loop body, as well as label
   // unrolled blocks with comments
   #unrollingChain: number[] = [];
+  // comptime-known conditionals mapped to the branch they folded to
+  #foldedConditionals = new WeakMap<tinyest.ConditionalExpression, tinyest.Expression>();
 
   // prototype properties
   declare languageKey: string;
@@ -1012,9 +1014,9 @@ The generated shader will evaluate them in declaration order.`,
 
       const knownTest = asComptime(test);
       if (knownTest) {
-        return knownTest.value
-          ? this._expression(consequentNode)
-          : this._expression(alternativeNode);
+        const selected = knownTest.value ? consequentNode : alternativeNode;
+        this.#foldedConditionals.set(expression, selected);
+        return this._expression(selected);
       } else {
         const convertedTest = tryConvertSnippet(this.ctx, test, bool, false);
         const consequent = this._expression(consequentNode);
@@ -2216,7 +2218,7 @@ ${stringifyNode(statement)}`);
     if (!expr) {
       return;
     }
-    const maybeObject = extractObject(expr);
+    const maybeObject = extractObject(expr, this.#foldedConditionals);
     if (maybeObject !== undefined) {
       const snippet = this.ctx.getById(maybeObject);
       const scope = this.ctx.topFunctionScope;
@@ -2291,13 +2293,19 @@ function blockifySingleStatement(statement: tinyest.Statement): tinyest.Block {
     : statement;
 }
 
-function extractObject(expr: tinyest.Expression): string | undefined {
+function extractObject(
+  expr: tinyest.Expression,
+  foldedConditionals: WeakMap<tinyest.ConditionalExpression, tinyest.Expression>,
+): string | undefined {
   let object = expr;
-  while (
-    Array.isArray(object) &&
-    (object[0] === NODE.memberAccess || object[0] === NODE.indexAccess)
-  ) {
-    object = object[1];
+  while (typeof object === 'object') {
+    if (object[0] === NODE.memberAccess || object[0] === NODE.indexAccess) {
+      object = object[1];
+    } else if (object[0] === NODE.conditionalExpr && foldedConditionals.has(object)) {
+      object = foldedConditionals.get(object) as tinyest.Expression;
+    } else {
+      break;
+    }
   }
   if (isId(object)) {
     return extractId(object);
