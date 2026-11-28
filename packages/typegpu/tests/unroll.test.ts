@@ -695,7 +695,7 @@ describe('tgpu.unroll', () => {
     `);
     expect(tgpu.resolve([tgpu.fn(f).with(unroll, false)])).toMatchInlineSnapshot(`
       "fn f() {
-        let arr = array<i32, 3>(1, 2, 3);
+        var arr = array<i32, 3>(1, 2, 3);
         var r = 0f;
         for (var i = 0u; i < 3u; i += 1u) {
           let foo = arr[i];

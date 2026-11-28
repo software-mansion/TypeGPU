@@ -799,10 +799,6 @@ export class WgslGenerator implements ShaderGenerator {
       const _callee = this._expression(calleeNode);
       const callee = mathToStd.get(_callee.value as AnyFn) ?? (_callee.value as AnyFn);
 
-      if ((callee === _ref || callee === unroll) && argNodes[0]) {
-        this.tryMarkModified(argNodes[0]);
-      }
-
       let args: readonly Snippet[];
 
       if (isGPUCallable(callee) && callee[$gpuCallableStrictSignature]) {
@@ -823,6 +819,10 @@ export class WgslGenerator implements ShaderGenerator {
         });
       } else {
         args = argNodes.map((arg) => this._expression(arg));
+      }
+
+      if ((callee === _ref || callee === unroll) && argNodes[0]) {
+        this.tryMarkModified(argNodes[0]);
       }
 
       return this.call(callee, args, _callee);
@@ -1867,14 +1867,13 @@ ${this.ctx.pre}else ${alternate}`,
         throw new WgslTypeError('Only `for (const ... of ... )` loops are supported');
       }
 
-      this.tryMarkModified(iterable); // overly-defensive, but let's not tempt fate
-
       let ctxIndent = false;
       const prevUnrollingChain = this.#unrollingChain;
 
       try {
         this.ctx.pushBlockScope();
         const iterableExpr = this._expression(iterable);
+        this.tryMarkModified(iterable); // overly-defensive, but let's not tempt fate
         const shouldUnroll = iterableExpr.value instanceof UnrollableIterable;
         const iterableSnippet = shouldUnroll ? iterableExpr.value.snippet : iterableExpr;
         const range = forOfUtils.getRangeSnippets(this.ctx, iterableSnippet, shouldUnroll);
